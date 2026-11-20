@@ -9,8 +9,10 @@
 
 Python 3.11+ &nbsp;|&nbsp; MCP &nbsp;|&nbsp; sürüm 0.1.0 &nbsp;|&nbsp; [MIT lisansı](LICENSE)
 
+<br>
+
 <a id="ne-ise-yarar"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-ne-ise-yarar-koyu.svg"><img src="docs/assets/baslik-ne-ise-yarar-acik.svg" height="30" alt="Ne işe yarar"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-ne-ise-yarar-koyu.svg"><img src="docs/assets/baslik-ne-ise-yarar-acik.svg" height="30" alt="Ne işe yarar"></picture></p>
 
 Yapay zekâ yardımcıları sohbet bitince her şeyi unutur. COUNCIL bu boşluğu doldurur:
 
@@ -22,8 +24,10 @@ Yapay zekâ yardımcıları sohbet bitince her şeyi unutur. COUNCIL bu boşluğ
 | Aynı hatayı tekrar tekrar düzeltirsin. | Düzeltmen tarihli tek satır olarak kurallara girer ve sonraki her oturumda yüklenir. |
 | Hafızanın ne bildiğini ve neye dayandığını göremezsin. | Notlar düz metindir. Her değişiklik ne zaman ve neden yapıldığıyla birlikte geçmişte durur. |
 
+<br>
+
 <a id="nasil-calisir"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-nasil-calisir-koyu.svg"><img src="docs/assets/baslik-nasil-calisir-acik.svg" height="30" alt="Nasıl çalışır"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-nasil-calisir-koyu.svg"><img src="docs/assets/baslik-nasil-calisir-acik.svg" height="30" alt="Nasıl çalışır"></picture></p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/akis-tr-koyu.svg">
@@ -76,8 +80,10 @@ Turuncu çizgi hafızadır. Her yay bir oturumdur: hafızadan çıkar, hafızaya
 | Tekrar engellemenin 10 mesajlık sohbete etkisi | eklenen bağlam %68 azaldı |
 | Servisin bellek kullanımı | yaklaşık 70 MB |
 
+<br>
+
 <a id="neden-farkli"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-neden-farkli-koyu.svg"><img src="docs/assets/baslik-neden-farkli-acik.svg" height="30" alt="Neden farklı"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-neden-farkli-koyu.svg"><img src="docs/assets/baslik-neden-farkli-acik.svg" height="30" alt="Neden farklı"></picture></p>
 
 Çoğu hafıza sistemi tek bir bilgisayardaki klasörde yaşar. COUNCIL hafızayı bir sunucuya koyar. Fark buradan doğar:
 
@@ -101,20 +107,23 @@ Son satır COUNCIL'in bedelidir: sürekli açık küçük bir sunucu ister. Tek 
 
 Windows'ta denenmedi. Sunucu tarafı Linux ya da macOS ister.
 
+<br>
+
 <a id="kurulum"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-kurulum-koyu.svg"><img src="docs/assets/baslik-kurulum-acik.svg" height="30" alt="Kurulum"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-kurulum-koyu.svg"><img src="docs/assets/baslik-kurulum-acik.svg" height="30" alt="Kurulum"></picture></p>
 
 Gerekenler: Python 3.11 ya da üstü ve git. Birden çok cihaz için alan adı olan küçük bir Linux sunucu.
 
 **En kolay yol, kurulumu yardımcına yaptırmaktır.** Şu mesajı Claude Code'a yapıştır:
 
 ```text
-https://github.com/musalkeremlboz/council/blob/main/docs/kurulum.md dosyasını oku ve COUNCIL'i kur.
-Sunucu olarak bu bilgisayarı kullan. Bitince hafızaya bir deneme notu yaz ve yeni bir oturumda
-geri okuyarak doğrula.
+Şu rehberi oku ve COUNCIL'i kur:
+https://github.com/musalkeremlboz/council/blob/main/docs/kurulum.md
+Sunucu olarak bu bilgisayarı kullan. Bitince hafızaya bir deneme notu yaz ve
+yeni bir oturumda geri okuyarak doğrula.
 ```
 
-Sunucun varsa ikinci satırı "Sunucu: ssh ile bağlandığım şu adres: ..." diye değiştir.
+Sunucun varsa üçüncü satırı "Sunucu: ssh ile bağlandığım şu adres: ..." diye değiştir.
 
 <details>
 <summary><b>Kendim kurmak istiyorum</b></summary>
@@ -144,8 +153,10 @@ Bütün adımlar, sunucu kurulumu ve yedekleme: **[docs/kurulum.md](docs/kurulum
 
 </details>
 
+<br>
+
 <a id="ilk-bes-dakika"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-ilk-bes-dakika-koyu.svg"><img src="docs/assets/baslik-ilk-bes-dakika-acik.svg" height="30" alt="İlk 5 dakika"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-ilk-bes-dakika-koyu.svg"><img src="docs/assets/baslik-ilk-bes-dakika-acik.svg" height="30" alt="İlk 5 dakika"></picture></p>
 
 | Adım | Yardımcına yaz | Ne olur |
 |---|---|---|
@@ -154,8 +165,10 @@ Bütün adımlar, sunucu kurulumu ve yedekleme: **[docs/kurulum.md](docs/kurulum
 | **Başka yerden sor** | Yeni bir oturumda, mümkünse başka bir cihazda: "Blog projesinde veritabanı kararımız neydi?" | Cevap, sen anlatmadan gelir. |
 | **Bir kez düzelt** | "Teknik terimleri ilk geçtiği yerde açıkla." | `rules.md` dosyasına tarihli bir satır eklenir. Aynı düzeltmeyi bir daha yapmazsın. |
 
+<br>
+
 <a id="hafizanin-ici"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-hafizanin-ici-koyu.svg"><img src="docs/assets/baslik-hafizanin-ici-acik.svg" height="30" alt="Hafızanın içi"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-hafizanin-ici-koyu.svg"><img src="docs/assets/baslik-hafizanin-ici-acik.svg" height="30" alt="Hafızanın içi"></picture></p>
 
 ```text
 vault/
@@ -171,8 +184,10 @@ vault/
 
 İlk dört dosya her oturumun başında yüklenir. Geri kalanı yalnız konuyla ilgili olduğunda gelir. Hepsi düz metindir: herhangi bir düzenleyiciyle açıp okuyabilir, elle düzeltebilirsin.
 
+<br>
+
 <a id="sik-sorulanlar"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-sik-sorulanlar-koyu.svg"><img src="docs/assets/baslik-sik-sorulanlar-acik.svg" height="30" alt="Sık sorulanlar"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-sik-sorulanlar-koyu.svg"><img src="docs/assets/baslik-sik-sorulanlar-acik.svg" height="30" alt="Sık sorulanlar"></picture></p>
 
 <details>
 <summary><b>Notlarım nerede durur, kim görür?</b></summary>
@@ -236,8 +251,10 @@ Avenox Beyin V3 kasasıyla denendi.
 
 </details>
 
+<br>
+
 <a id="belgeler"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-belgeler-koyu.svg"><img src="docs/assets/baslik-belgeler-acik.svg" height="30" alt="Belgeler ve katkı"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-belgeler-koyu.svg"><img src="docs/assets/baslik-belgeler-acik.svg" height="30" alt="Belgeler ve katkı"></picture></p>
 
 - **[Kurulum rehberi](docs/kurulum.md)**: sunucu, Claude Code, claude.ai, yedekleme, güncelleme
 - **[Setup guide](docs/setup.md)**: aynı rehberin İngilizcesi

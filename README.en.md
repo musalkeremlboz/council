@@ -9,8 +9,10 @@
 
 Python 3.11+ &nbsp;|&nbsp; MCP &nbsp;|&nbsp; version 0.1.0 &nbsp;|&nbsp; [MIT license](LICENSE)
 
+<br>
+
 <a id="what-it-does"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-what-it-does-koyu.svg"><img src="docs/assets/baslik-what-it-does-acik.svg" height="30" alt="What it does"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-what-it-does-koyu.svg"><img src="docs/assets/baslik-what-it-does-acik.svg" height="30" alt="What it does"></picture></p>
 
 AI agents forget everything when the chat ends. COUNCIL fills that gap:
 
@@ -22,8 +24,10 @@ AI agents forget everything when the chat ends. COUNCIL fills that gap:
 | You correct the same mistake again and again. | Your correction becomes one dated line in the rules and loads in every later session. |
 | You cannot see what the memory knows or where it came from. | Notes are plain text. Every change stays in the history with when and why it was made. |
 
+<br>
+
 <a id="how-it-works"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-how-it-works-koyu.svg"><img src="docs/assets/baslik-how-it-works-acik.svg" height="30" alt="How it works"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-how-it-works-koyu.svg"><img src="docs/assets/baslik-how-it-works-acik.svg" height="30" alt="How it works"></picture></p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/akis-en-koyu.svg">
@@ -76,8 +80,10 @@ Measured on 2026-11-16 on our own server with a set of 44 questions. The sample 
 | Effect of per-session deduplication on a 10-message chat | 68% less injected context |
 | Memory used by the service | about 70 MB |
 
+<br>
+
 <a id="why-different"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-why-different-koyu.svg"><img src="docs/assets/baslik-why-different-acik.svg" height="30" alt="Why it is different"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-why-different-koyu.svg"><img src="docs/assets/baslik-why-different-acik.svg" height="30" alt="Why it is different"></picture></p>
 
 Most memory systems live in a folder on one computer. COUNCIL puts the memory on a server. The differences follow from that:
 
@@ -101,20 +107,23 @@ The last row is the price of COUNCIL: it wants a small server that is always on.
 
 Not tried on Windows. The server side needs Linux or macOS.
 
+<br>
+
 <a id="setup"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-setup-koyu.svg"><img src="docs/assets/baslik-setup-acik.svg" height="30" alt="Setup"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-setup-koyu.svg"><img src="docs/assets/baslik-setup-acik.svg" height="30" alt="Setup"></picture></p>
 
 You need Python 3.11 or later and git. For several devices, a small Linux server with a domain name.
 
 **The easiest way is to let your agent do the setup.** Paste this message into Claude Code:
 
 ```text
-Read https://github.com/musalkeremlboz/council/blob/main/docs/setup.md and set up COUNCIL.
-Use this computer as the server. When you are done, write a test note to the memory and
-verify it by reading it back in a new session.
+Read this guide and set up COUNCIL:
+https://github.com/musalkeremlboz/council/blob/main/docs/setup.md
+Use this computer as the server. When you are done, write a test note to the
+memory and verify it by reading it back in a new session.
 ```
 
-If you have a server, change the second line to "Server: this address I reach over ssh: ...".
+If you have a server, change the third line to "Server: this address I reach over ssh: ...".
 
 <details>
 <summary><b>I want to set it up myself</b></summary>
@@ -144,8 +153,10 @@ Every step, server setup and backup: **[docs/setup.md](docs/setup.md)**
 
 </details>
 
+<br>
+
 <a id="first-five-minutes"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-first-five-minutes-koyu.svg"><img src="docs/assets/baslik-first-five-minutes-acik.svg" height="30" alt="First 5 minutes"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-first-five-minutes-koyu.svg"><img src="docs/assets/baslik-first-five-minutes-acik.svg" height="30" alt="First 5 minutes"></picture></p>
 
 | Step | Write to your agent | What happens |
 |---|---|---|
@@ -154,8 +165,10 @@ Every step, server setup and backup: **[docs/setup.md](docs/setup.md)**
 | **Ask from elsewhere** | In a new session, on another device if you can: "What did we decide about the database in the blog project?" | The answer comes without you explaining. |
 | **Correct once** | "Explain technical terms the first time they appear." | A dated line is added to `rules.md`. You do not make the same correction again. |
 
+<br>
+
 <a id="inside-the-memory"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-inside-the-memory-koyu.svg"><img src="docs/assets/baslik-inside-the-memory-acik.svg" height="30" alt="Inside the memory"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-inside-the-memory-koyu.svg"><img src="docs/assets/baslik-inside-the-memory-acik.svg" height="30" alt="Inside the memory"></picture></p>
 
 ```text
 vault/
@@ -171,8 +184,10 @@ vault/
 
 The first four files load at the start of every session. The rest arrives only when it is relevant. All of it is plain text: you can open it in any editor, read it and fix it by hand.
 
+<br>
+
 <a id="questions"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-questions-koyu.svg"><img src="docs/assets/baslik-questions-acik.svg" height="30" alt="Questions"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-questions-koyu.svg"><img src="docs/assets/baslik-questions-acik.svg" height="30" alt="Questions"></picture></p>
 
 <details>
 <summary><b>Where are my notes and who can see them?</b></summary>
@@ -236,8 +251,10 @@ Tried with an Avenox Beyin V3 vault.
 
 </details>
 
+<br>
+
 <a id="docs"></a>
-<h2><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-docs-koyu.svg"><img src="docs/assets/baslik-docs-acik.svg" height="30" alt="Docs and contributing"></picture></h2>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-docs-koyu.svg"><img src="docs/assets/baslik-docs-acik.svg" height="30" alt="Docs and contributing"></picture></p>
 
 - **[Setup guide](docs/setup.md)**: server, Claude Code, claude.ai, backup, updating
 - **[Kurulum rehberi](docs/kurulum.md)**: the same guide in Turkish
