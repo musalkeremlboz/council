@@ -1,0 +1,22 @@
+[Unit]
+Description=COUNCIL memory server (MCP + API)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=COUNCIL_DATA=/var/lib/council
+# Your time zone: dates written into notes use it.
+Environment=TZ=Europe/Istanbul
+ExecStart=/opt/council/.venv/bin/council serve --host 127.0.0.1 --port 8765 --public-host memory.example.com
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=8
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/council
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

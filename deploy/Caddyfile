@@ -1,0 +1,9 @@
+# COUNCIL public endpoint. Replace memory.example.com with your own domain;
+# Caddy gets the HTTPS certificate by itself once the domain points at this server.
+memory.example.com {
+	encode zstd gzip
+	log {
+		output file /var/log/caddy/council-access.log
+	}
+	reverse_proxy 127.0.0.1:8765
+}

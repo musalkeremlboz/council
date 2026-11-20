@@ -1,0 +1,9 @@
+[Unit]
+Description=COUNCIL: push the memory vault to its off-site git remote
+
+[Service]
+Type=oneshot
+Environment=COUNCIL_DATA=/var/lib/council
+# Your time zone: dates written into notes use it.
+Environment=TZ=Europe/Istanbul
+ExecStart=/opt/council/.venv/bin/council backup

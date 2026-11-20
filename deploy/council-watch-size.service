@@ -1,0 +1,9 @@
+[Unit]
+Description=COUNCIL: open a thread when the vault is big enough to re-test semantic search
+
+[Service]
+Type=oneshot
+Environment=COUNCIL_DATA=/var/lib/council
+# Your time zone: dates written into notes use it.
+Environment=TZ=Europe/Istanbul
+ExecStart=/opt/council/.venv/bin/council watch-size --notes 100 --chunks 1000 --title "Re-test semantic search" --body "The vault passed the size where keyword search was last measured; repeat the benchmark."

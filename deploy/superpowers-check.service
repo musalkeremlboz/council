@@ -1,0 +1,6 @@
+[Unit]
+Description=Record the latest Superpowers release for the SSH bridge hook
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /root/.council/superpowers_bridge.py check
