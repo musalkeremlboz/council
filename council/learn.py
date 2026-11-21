@@ -36,7 +36,6 @@ MIN_STEMS = 2  # a skill needs this many distinct query stems to be offered...
 MIN_SCORE = 9.0  # ...and at least this score: no skill is better than a wrong one
 SKILL_LIMIT = 2  # skills offered for one message
 SKILL_BUDGET = 1500  # characters of context the offered skills may take together, apart from the notes' budget
-SKILL_CANDIDATES = 20  # sections the index proposes before they are scored note by note
 RARITY_LIBRARY = 10  # rarity counts the library as at least this big, so scores do not depend on how many skills exist
 STEM_PREFIX_MIN = 4  # a stem matches a longer one it prefixes only when it has this many characters
 
@@ -451,43 +450,49 @@ class Learning:
             verdict = self._verdict(entry)
         return self._settle(path, verdict)
 
+    def skills(self) -> dict[str, tuple[str, dict]]:
+        """Every live skill note, by path: its text and fields. A note that cannot be read is left out."""
+        out = {}
+        for path in self.store.list():
+            if not is_skill(path):
+                continue
+            try:
+                text = self.store.read(path).text
+            except (StoreError, OSError, ValueError):  # gone since listing, unreadable, or not UTF-8
+                continue
+            out[path] = (text, parse_skill(text))
+        return out
+
     def match(self, query: str, limit: int = SKILL_LIMIT) -> list[dict]:
         """Live skills worth offering for ``query``, best first.
 
-        The index only proposes candidates; bm25 on a handful of notes is too noisy to threshold, so
-        each candidate is scored here: every query stem found in the title or When line counts
-        HEAD_WEIGHT times its rarity, a stem found only in the body counts its rarity once. A skill
-        is offered with at least MIN_STEMS distinct hits and MIN_SCORE.
+        Every live skill is scored, not only those a vault-wide search ranks high: ordinary notes
+        sharing the words must not crowd a skill out. A query stem found in the title or When line
+        counts HEAD_WEIGHT times its rarity, a stem found only in the body counts its rarity once.
+        A skill is offered with at least MIN_STEMS distinct hits and MIN_SCORE.
         """
         mine = _stems(query)
         if not mine:
             return []
-        paths = list(dict.fromkeys(h["path"] for h in self.store.index.search(
-            query, limit=SKILL_CANDIDATES, content_only=True, where=is_skill)))
-        if not paths:
+        live = self.skills()
+        if not live:
             return []
-        live = [p for p in self.store.list() if is_skill(p)]
-        parsed = {p: (self.store.read(p).text) for p in set(live) | set(paths) if self.store.exists(p)}
-        fields = {p: parse_skill(text) for p, text in parsed.items()}
-        head = {p: _stems(f"{f['title']} {f['when']}") for p, f in fields.items()}
-        body = {p: _stems(f"{f['steps']} {f['pitfalls']} {f['learned_from']}") for p, f in fields.items()}
-        n = len(live)  # floored in the rarity below: a small library must not shrink every score
+        head = {p: _stems(f"{f['title']} {f['when']}") for p, (_, f) in live.items()}
+        body = {p: _stems(f"{f['steps']} {f['pitfalls']} {f['learned_from']}") for p, (_, f) in live.items()}
+        df = {s: sum(1 for p in live if _stem_hit(s, head[p] | body[p])) for s in mine}
+        n = max(len(live), RARITY_LIBRARY)  # floored: a small library must not shrink every score
         out = []
-        for path in paths:
-            if path not in fields:
-                continue
+        for path, (text, fields) in live.items():
             score, hits = 0.0, 0
             for s in mine:
                 in_head, in_body = _stem_hit(s, head[path]), _stem_hit(s, body[path])
                 if not (in_head or in_body):
                     continue
-                df = sum(1 for p in live if _stem_hit(s, head[p] | body[p]))
-                rarity = math.log(1 + max(n, RARITY_LIBRARY) / max(df, 1))
-                score += rarity * (HEAD_WEIGHT if in_head else 1.0)
+                score += math.log(1 + n / max(df[s], 1)) * (HEAD_WEIGHT if in_head else 1.0)
                 hits += 1
             if hits >= MIN_STEMS and score >= MIN_SCORE:
-                out.append({"path": path, "title": fields[path]["title"], "status": fields[path]["status"],
-                            "text": parsed[path], "score": round(score, 3)})
+                out.append({"path": path, "title": fields["title"], "status": fields["status"],
+                            "text": text, "score": round(score, 3)})
         out.sort(key=lambda m: -m["score"])
         return out[:limit]
 

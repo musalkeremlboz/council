@@ -51,3 +51,19 @@ def test_the_decision_does_not_depend_on_how_many_skills_exist(tmp_path, k):
     shown = sum(bool(L.match(m)) for m in DATA["off_topic"])
     assert hits / len(cases) >= 0.80, f"k={k}: on-topic {hits}/{len(cases)}"
     assert shown / len(DATA["off_topic"]) <= 0.20, f"k={k}: off-topic {shown}/{len(DATA['off_topic'])}"
+
+def test_a_skill_still_matches_among_many_ordinary_notes_sharing_its_words(tmp_path):
+    """The skill is scored directly, not picked from the top of a vault-wide search."""
+    store = Store(tmp_path / "data")
+    L = Learning(store)
+    L.write_skill("Servisi yeniden kurarken beklet", when="Çalışan bir servisin üstüne yeniden kurulum yapılırken",
+                  steps="1. Eski işi durdur\n2. Bittiğini doğrula\n3. Yenisini yükle",
+                  learned_from="Yeniden kurulum 'Input/output error' verdi; bekleyince düzeldi.")
+    for i in range(300):                                  # written straight to disk: 300 commits would be slow
+        f = store.vault / "log" / f"2026-{i:04d}.md"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(f"# Log {i}\n\nçalışan servisin üstüne yeniden kurulum yapıldı, servis yeniden kuruldu {i}\n",
+                     encoding="utf-8")
+    store.index.sync(store.vault)
+    found = L.match("çalışan servisin üstüne yeniden kurulum yapacağım")
+    assert [m["path"] for m in found] == ["skills/servisi-yeniden-kurarken-beklet.md"]
