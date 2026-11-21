@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import contextlib
 import datetime as dt
-import fcntl
 import hashlib
 import json
 import os
@@ -20,6 +19,12 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from .index import Index
+
+try:
+    import fcntl
+except ImportError:  # Windows
+    fcntl = None
+    import msvcrt
 
 CORE = "core.md"
 RULES = "rules.md"
@@ -93,12 +98,25 @@ class Store:
     # ---------- locking / git ----------
     @contextlib.contextmanager
     def _locked(self):
-        with open(self._lock_path, "a") as fh:
-            fcntl.flock(fh, fcntl.LOCK_EX)
+        with open(self._lock_path, "a+") as fh:
+            if fcntl:
+                fcntl.flock(fh, fcntl.LOCK_EX)
+            else:
+                fh.seek(0)
+                while True:
+                    try:
+                        msvcrt.locking(fh.fileno(), msvcrt.LK_LOCK, 1)  # waits ten seconds, then raises
+                        break
+                    except OSError:
+                        continue
             try:
                 yield
             finally:
-                fcntl.flock(fh, fcntl.LOCK_UN)
+                if fcntl:
+                    fcntl.flock(fh, fcntl.LOCK_UN)
+                else:
+                    fh.seek(0)
+                    msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
 
     def _git(self, *args: str) -> subprocess.CompletedProcess:
         return subprocess.run(["git", "-C", str(self.vault), *args], capture_output=True, text=True)
@@ -250,6 +268,14 @@ class Store:
                 tmp.write_text(json.dumps(marks))
                 os.replace(tmp, self.data / "session-logs.json")
         return rel
+
+    def open_thread(self, entry: str, reason: str) -> None:
+        """Put ``entry`` (a `### ` block) at the top of the active threads."""
+        note = self.read(THREADS)
+        marker = "## Active\n"
+        text = note.text
+        text = text.replace(marker, marker + "\n" + entry, 1) if marker in text else text.rstrip("\n") + "\n\n" + entry
+        self.write(THREADS, text, expected_sha=note.sha, reason=reason)
 
     # ---------- off-site backup ----------
     def backup(self) -> dict:

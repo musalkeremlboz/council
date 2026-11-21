@@ -1,4 +1,4 @@
-"""Command line: `council serve | token | context | search | reindex | usage | backup | watch-* | import-avenox`."""
+"""Command line: `council install | status | update | uninstall | import | serve | token | context | search | ...`."""
 
 from __future__ import annotations
 
@@ -16,6 +16,25 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="council", description="COUNCIL memory system")
     ap.add_argument("--data", default=DEFAULT_DATA, help="data directory (default: $COUNCIL_DATA or ~/.council)")
     sub = ap.add_subparsers(dest="cmd", required=True)
+
+    ins = sub.add_parser("install", aliases=["kur"], help="set COUNCIL up on this computer: service, Claude Code, import, updates")
+    ins.add_argument("--port", type=int, default=None, help="port of the local service (default 8765)")
+    ins.add_argument("--no-auto-update", action="store_true", help="do not install new releases automatically")
+    ins.add_argument("--no-import", action="store_true", help="do not look for an existing memory to import")
+    ins.add_argument("--from", dest="sources", action="append", default=[], metavar="FOLDER",
+                     help="import this folder instead of what is found automatically (repeatable)")
+    ins.add_argument("--force", action="store_true", help="replace a connection to another COUNCIL memory")
+
+    for name, alias, text in (("uninstall", "kaldir", "remove the service, hooks and MCP tools; notes are kept"),
+                              ("status", "durum", "is the service running, are hooks and updates on"),
+                              ("update", "guncelle", "install the latest published release if it is newer")):
+        x = sub.add_parser(name, aliases=[alias], help=text)
+        x.add_argument("--port", type=int, default=None)
+        if name == "update":
+            x.add_argument("--force", action="store_true", help="reinstall the latest release even if it is not newer")
+
+    im = sub.add_parser("import", help="import an existing memory: a folder of notes, or everything found on this computer")
+    im.add_argument("source", nargs="?", help="folder to import; without it, whatever is found automatically")
 
     s = sub.add_parser("serve", help="run the MCP + API server")
     s.add_argument("--host", default="127.0.0.1")
@@ -86,10 +105,27 @@ def main(argv: list[str] | None = None) -> int:
         print(password if a.generate else "owner password set")
         return 0
 
+    if a.cmd in ("install", "kur", "uninstall", "kaldir", "status", "durum", "update", "guncelle"):
+        from . import local
+
+        setup = local.Setup(data, port=a.port)
+        if a.cmd in ("install", "kur"):
+            return local.install(setup, auto_update=not a.no_auto_update, do_import=not a.no_import,
+                                 sources=a.sources, force=a.force)
+        if a.cmd in ("uninstall", "kaldir"):
+            return local.uninstall(setup)
+        if a.cmd in ("status", "durum"):
+            return local.status(setup)
+        return local.update(setup, force=a.force)
+
     if a.cmd == "serve":
         import uvicorn
 
         from .server import build
+
+        if sys.stderr is None:  # started without a console (Windows, at login): keep a log instead
+            sys.stdout = sys.stderr = open(data / "service.log", "a", buffering=1, encoding="utf-8")
+        (data / "service.pid").write_text(str(os.getpid()))
 
         app, _ = build(str(data), public_hosts=a.public_host)
         uvicorn.run(app, host=a.host, port=a.port, log_level="warning", proxy_headers=True, timeout_graceful_shutdown=3)
@@ -128,6 +164,19 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {n['injected']:4d} injected {n['read']:4d} read {n['found']:4d} found  {path}")
         unused = [p for p in store.list() if p not in s["notes"]]
         print(f"never injected, read or found: {len(unused)} of {len(store.list())} notes" + "".join(f"\n  {p}" for p in unused))
+    elif a.cmd == "import":
+        from . import migrate
+
+        if a.source:
+            src = Path(a.source).expanduser().resolve()
+            if not src.is_dir():
+                print(f"not a folder: {src}", file=sys.stderr)
+                return 1
+            found, explicit = [{"kind": migrate.kind_of(src), "path": str(src)}], True
+        else:
+            found, explicit = migrate.detect(Path.home()), False
+        total = migrate.run(store, found, explicit=explicit)
+        print(f"{total} notes imported" if total else "nothing new to import")
     elif a.cmd == "import-avenox":
         from .importer import Importer
 
@@ -159,7 +208,7 @@ def watch_release(store, repo: str) -> int:
     if seen == tag:
         print(f"no change ({tag})")
         return 0
-    open_thread(store, (
+    store.open_thread((
         f"### New release: {repo} {tag}\n"
         f"- **Status:** published {published}, not reviewed. Do not install it; review what it brings and "
         f"summarize it for the user. Installing is the user's decision.\n"
@@ -168,17 +217,6 @@ def watch_release(store, repo: str) -> int:
     state.write_text(json.dumps({"tag": tag}))
     print(f"new release {repo} {tag}")
     return 0
-
-
-def open_thread(store, entry: str, reason: str) -> None:
-    """Put ``entry`` (a `### ` block) at the top of the active threads."""
-    from .store import THREADS
-
-    note = store.read(THREADS)
-    marker = "## Active\n"
-    text = note.text
-    text = text.replace(marker, marker + "\n" + entry, 1) if marker in text else text.rstrip("\n") + "\n\n" + entry
-    store.write(THREADS, text, expected_sha=note.sha, reason=reason)
 
 
 def watch_size(store, notes: int, chunks: int, title: str, body: str) -> int:
@@ -197,7 +235,7 @@ def watch_size(store, notes: int, chunks: int, title: str, body: str) -> int:
         print(f"not yet: {have_notes} notes, {have_chunks} sections")
         return 0
     limit = " or ".join(x for x in (f"{notes} notes" if notes else "", f"{chunks} sections" if chunks else "") if x)
-    open_thread(store, (
+    store.open_thread((
         f"### {title}\n"
         f"- **Status:** on {now_local():%Y-%m-%d} the vault reached {have_notes} notes / {have_chunks} sections "
         f"(threshold: {limit}). {body}\n\n"

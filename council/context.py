@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from .local import update_notice
 from .store import CORE, RULES, SESSIONS, THREADS, Store, StoreError
 
 HEADER = (
@@ -135,6 +136,8 @@ def bootstrap(store: Store, query: str = "", budget: int = 9000, cards: int = 2)
                        "project notes, close finished threads).")
     if problem := store.backup_problem():
         notices.append(problem + " Tell the user once.")
+    if news := update_notice(store.data):
+        notices.append(news)
     parts = [HEADER, ""]
     if notices:
         parts[1:1] = ["[COUNCIL maintenance] " + " ".join(notices)]

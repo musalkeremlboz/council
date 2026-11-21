@@ -2,46 +2,134 @@
 
 [Türkçe](kurulum.md) · [Home](../README.en.md)
 
-A person or an AI agent can follow this guide.
-
-> **If you are an agent:** apply the steps in order and run the check at the end of each section. Do not print the access token or the owner password into the chat; write them to a file and tell the user where it is. Before changing an existing settings file, back it up and keep the other settings in it.
-
-## 0. Requirements
-
-- Python 3.11 or later
-- git
-- To connect from several devices: a Linux server that is always on, with a domain name
-
-There are two kinds of setup. Whichever you choose, copying the `vault/` folder is enough to move to the other later.
+There are two ways to use it. The first is enough for most people.
 
 | | Who can connect | What you need |
 |---|---|---|
-| **A. One computer** | Only the agents on that computer | Nothing |
-| **B. Server** | All your devices, including claude.ai and your phone | A Linux server and a domain name |
+| **[This computer](#computer)** | The agents on this computer | Python 3.11+, git |
+| **[Your own server](#server)** | All your devices, including claude.ai and your phone | A Linux server with a domain name |
 
-## 1. Set up the server
+<a id="computer"></a>
+## 1. Install on this computer
 
-### A. One computer
-
-```sh
-python3 -m venv ~/.council/venv
-~/.council/venv/bin/pip install git+https://github.com/musalkeremlboz/council
-~/.council/venv/bin/council token
-```
-
-The last command creates and prints the access token. The token is kept in `~/.council/token`; your notes are in `~/.council/vault/`. For another folder, set the `COUNCIL_DATA` environment variable.
-
-Start the service:
+**macOS and Linux**
 
 ```sh
-nohup ~/.council/venv/bin/council serve > ~/.council/serve.log 2>&1 &
+curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/install.sh | sh
 ```
 
-The service runs on `127.0.0.1:8765` and stops when the computer restarts; run the same command again then.
+**Windows** (PowerShell)
 
-### B. Server
+```powershell
+irm https://raw.githubusercontent.com/musalkeremlboz/council/main/install.ps1 | iex
+```
 
-The commands are for Debian or Ubuntu and need administrator rights.
+Setup needs no administrator rights and does four things:
+
+1. **Memory.** Puts COUNCIL in the `~/.council` folder with its own Python environment. Your notes are in `~/.council/vault/`. It brings in the agent memory already on your computer ([details](#import)).
+2. **Service.** Starts the memory service on `127.0.0.1:8765`. The service starts by itself when you log in and can be reached only from this computer.
+3. **Claude Code.** Connects the hooks (small scripts Claude Code runs by itself at set moments) and the MCP tools. It keeps your other settings in `~/.claude/settings.json` and `~/.claude.json`, and saves a copy of each with the extension `.before-council` before changing it.
+4. **Updates.** Turns on the daily update check ([details](#updates)).
+
+When it is done, open a new Claude Code session.
+
+### Options
+
+Options go at the end of the command after `sh -s --`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/install.sh | sh -s -- --no-auto-update
+```
+
+| Option | What it does |
+|---|---|
+| `--no-auto-update` | Turns the automatic update off |
+| `--no-import` | Does not look for an existing memory |
+| `--from FOLDER` | Imports this folder instead of what is found |
+| `--port 8765` | Changes the port the service listens on |
+| `--force` | If this computer is connected to another COUNCIL memory, switches it to the local one |
+
+If this computer is already connected to another COUNCIL memory, setup stops without changing anything and says so.
+
+### Check
+
+```sh
+~/.council/venv/bin/council status
+```
+
+On Windows the command is at `%USERPROFILE%\.council\venv\Scripts\council.exe`.
+
+```text
+version      0.2.0
+service      running on http://127.0.0.1:8765 (0.2.0)
+hooks        installed
+auto-update  on
+notes        /Users/you/.council/vault
+```
+
+### Remove
+
+```sh
+~/.council/venv/bin/council uninstall
+```
+
+Removes the service, the update check, the hooks and the MCP connection. It does not touch other tools' settings. Your notes stay in `~/.council/vault/`.
+
+<a id="import"></a>
+## 2. Bringing your existing memory over
+
+No list of memory systems can be complete, so the import has two layers.
+
+**During setup, what can be recognised from files is copied:**
+
+| Source | Read from | Goes to |
+|---|---|---|
+| Claude Code | `~/.claude/CLAUDE.md`, `~/.claude/projects/*/memory/*.md` | `imported/claude-code/` |
+| Codex | `~/.codex/AGENTS.md`, `~/.codex/memories/` | `imported/codex/` |
+| Gemini | `~/.gemini/GEMINI.md` | `imported/gemini/` |
+| Note vaults with a known layout | Folders you opened in Claude Code | Straight into `core.md`, `rules.md`, `threads.md` and project notes |
+
+Notes under `imported/` can be searched but are not loaded in every session. A note vault is placed directly only while the memory is still empty; it never overwrites a memory in use.
+
+**In the first session, your agent finishes the job.** Setup leaves a task in the memory. Your agent:
+
+1. Checks whether any other memory system is in use on this computer: notes folders, instruction files, memory MCP servers, hooks that add context. If there is one, it reads it and moves what is still true.
+2. Sorts what is under `imported/`: lasting facts and preferences into `core.md`, corrections into `rules.md`, project knowledge into `projects/<name>/`.
+3. Tells you what it moved and closes the task.
+
+No step changes or deletes the source files. The same source is not imported twice.
+
+To import a folder later:
+
+```sh
+council import ~/Documents/MyNotes    # a folder of notes
+council import                         # everything found on this computer
+```
+
+<a id="updates"></a>
+## 3. Automatic updates
+
+Once a day the latest published release of this repository is looked up. If it is newer:
+
+1. The new release is installed into COUNCIL's own Python environment.
+2. The hook script is refreshed and the service restarted.
+3. Your agent tells you in the next session that the version changed.
+
+Your notes are not touched. Only published releases are installed, not the work in progress in the repository. If updates keep failing, your agent reports that too.
+
+| | |
+|---|---|
+| Update now | `council update` |
+| See the state | `council status` |
+| Turn off | `council install --no-auto-update` |
+| Turn back on | `council install` |
+
+An automatic update means letting whoever publishes this repository run code on your computer. If you do not want that, turn it off and review the releases yourself.
+
+<a id="server"></a>
+## 4. Install on your own server
+
+To connect your phone, claude.ai and several computers to the same memory, the memory has to be at an address reachable from the internet. The commands are for Debian or Ubuntu and need administrator rights.
 
 ```sh
 sudo mkdir -p /opt/council /var/lib/council
@@ -51,7 +139,7 @@ sudo COUNCIL_DATA=/var/lib/council /opt/council/.venv/bin/council token
 sudo COUNCIL_DATA=/var/lib/council /opt/council/.venv/bin/council set-password --generate
 ```
 
-The last command shows the owner password once. You are asked for it when connecting claude.ai; write it somewhere safe.
+The fourth command shows the access token and the fifth shows the owner password, once. Write both somewhere safe.
 
 **Service.** Copy [`deploy/council.service`](../deploy/council.service) into `/etc/systemd/system/`. Replace `memory.example.com` with your domain and `Europe/Istanbul` with your time zone. Then:
 
@@ -62,38 +150,28 @@ sudo systemctl enable --now council
 
 **HTTPS.** Point your domain's A record at the server. Install [Caddy](https://caddyserver.com), put the contents of [`deploy/Caddyfile`](../deploy/Caddyfile) with your domain into `/etc/caddy/Caddyfile` and run `sudo systemctl reload caddy`. Caddy gets the certificate by itself.
 
-The service listens only on `127.0.0.1`. Caddy is the only door to the outside.
+The service listens only on `127.0.0.1`. Caddy is the only door to the outside. `curl https://your-domain/health` should print `{"ok":true,...}`.
 
-### Check
+**Move your notes.** If you have a memory on your computer, copy the `~/.council/vault/` folder to `/var/lib/council/vault/` on the server and run `council reindex`.
 
-```sh
-curl http://127.0.0.1:8765/health
-```
+### Connect your computers to the server
 
-It should print `{"ok":true,"version":"0.1.0"}`. On a server setup, `curl https://your-domain/health` should give the same answer.
-
-<a id="claude-code"></a>
-## 2. Connect Claude Code
-
-Do this on every computer where you use Claude Code. `ADDRESS` is `http://127.0.0.1:8765` for a one-computer setup and `https://your-domain` for a server setup.
+On every computer where you use Claude Code:
 
 **Settings file.** `~/.config/council/config.json`:
 
 ```json
-{"url": "ADDRESS", "token": "YOUR_TOKEN", "timezone": "Europe/Istanbul"}
-```
-
-```sh
-chmod 600 ~/.config/council/config.json
+{"url": "https://your-domain", "token": "YOUR_TOKEN", "timezone": "Europe/Istanbul"}
 ```
 
 `timezone` is optional. It keeps the time written into notes right on a machine set to another time zone.
 
-**Hook script.** A hook is a small script Claude Code runs by itself at set moments. It uses only Python's standard library, so there is nothing else to install.
+**Hook script.**
 
 ```sh
 mkdir -p ~/.council
 curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/council/hook.py -o ~/.council/hook.py
+chmod 600 ~/.config/council/config.json
 ```
 
 **Registering the hooks.** Add these to the `hooks` section of `~/.claude/settings.json`. If the file has other hooks, do not remove them; add these next to them.
@@ -120,26 +198,22 @@ curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/council
 | `UserPromptSubmit` | With each of your messages | Adds the notes relevant to the message |
 | `Stop` | When the agent finishes its reply | Reminds once if there is unrecorded work |
 
-**MCP tools.** So the agent can search the memory and write notes:
+**MCP tools.**
 
 ```sh
-claude mcp add --scope user --transport http council ADDRESS/mcp \
+claude mcp add --scope user --transport http council https://your-domain/mcp \
   --header "Authorization: Bearer YOUR_TOKEN"
 ```
 
-### Check
+**Check.**
 
 ```sh
 echo '{"hook_event_name":"SessionStart","session_id":"test"}' | python3 ~/.council/hook.py
 ```
 
-The output should contain a context starting with `COUNCIL session=test`. If it says `COUNCIL memory is unreachable`, the address or the token is wrong or the service is not running.
+The output should contain a context starting with `COUNCIL session=test`.
 
-Then open a new Claude Code session and ask "What is in your memory?".
-
-## 3. Connect claude.ai and your phone
-
-Only possible with a server setup.
+### Connect claude.ai and your phone
 
 1. In claude.ai: Settings → Connectors → Add custom connector.
 2. Enter `https://your-domain/mcp` as the address. Leave the advanced settings empty.
@@ -147,7 +221,7 @@ Only possible with a server setup.
 
 The connector also appears in the desktop and phone apps signed in to the same account. These agents have no hooks; they load the memory themselves with a tool call at the start of a session.
 
-## 4. Set up the backup
+### Set up the backup
 
 Your notes are already a git repository. The backup pushes that repository to a private remote of yours.
 
@@ -166,15 +240,20 @@ It should print `backup ok`. For a regular backup, copy [`deploy/council-backup.
 sudo systemctl enable --now council-backup.timer
 ```
 
-The timer runs every 15 minutes. If the backup fails for two days, your agent tells you at the start of a session.
+The timer runs every 15 minutes. If the backup fails for two days, your agent tells you at the start of a session. Only the notes go into the backup; the access token, the owner password and the sign-in records are kept outside the `vault/` folder.
 
-Only the notes go into the backup. The access token, the owner password and the sign-in records are kept outside the `vault/` folder.
+The same backup works for the memory on your own computer: add the remote inside `~/.council/vault` and run `council backup`.
 
 ## 5. Commands
 
 | Command | What it does |
 |---|---|
-| `council serve` | Runs the service |
+| `council install` | Sets up this computer: service, Claude Code, import, updates |
+| `council status` | Is the service running, are the hooks and updates on |
+| `council update` | Installs the latest published release if it is newer |
+| `council uninstall` | Removes the service and the connections; notes are kept |
+| `council import [FOLDER]` | Imports a folder of notes, or everything that is found |
+| `council serve` | Runs the service by hand |
 | `council token` | Prints the access token; `--rotate` creates a new one |
 | `council set-password` | Sets the owner password; `--generate` creates a random one |
 | `council context "question"` | Prints the context an agent would see |
@@ -182,25 +261,18 @@ Only the notes go into the backup. The access token, the owner password and the 
 | `council reindex` | Rebuilds the search index from the notes |
 | `council usage --days 7` | Summarizes what the memory handed out lately |
 | `council backup` | Pushes the notes to the remote named `backup` |
-| `council import-avenox FOLDER` | Imports an Avenox Beyin V3 vault |
 
 The data folder is `~/.council` by default. For another folder use `--data FOLDER` or `COUNCIL_DATA`.
-
-## 6. Updating
-
-```sh
-sudo /opt/council/.venv/bin/pip install -U git+https://github.com/musalkeremlboz/council
-sudo systemctl restart council
-```
-
-On a one-computer setup run the same command with `~/.council/venv/bin/pip`, then stop and start the service. If the hook script changed, repeat the `curl` command from section 2. Your notes are not touched.
 
 ## Troubleshooting
 
 | Symptom | Cause and fix |
 |---|---|
-| `no token: run council token first` | The service could not find the token. Run `council token` with the same data folder as the service. |
-| The hook says `COUNCIL memory is unreachable` | The service is down or the address in `config.json` is wrong. Try `curl ADDRESS/health`. |
+| Setup says "Python 3.11 or later is needed" | The Python on this computer is old. Install a newer one from [python.org](https://www.python.org/downloads/). |
+| Setup says "already connected to a COUNCIL memory" | This computer is connected to another memory. To switch to the local one: `council install --force`. |
+| `council status` says "not running" | Look at `~/.council/service.log`. To set it up again: `council install`. |
+| The hook says `COUNCIL memory is unreachable` | The service is down or the address in `config.json` is wrong. Try `council status`. |
+| On Linux: "systemd user services are not available" | User services do not run in this session. Run `council serve` by hand. |
 | `401` or `unauthorized` | Wrong token. Compare the output of `council token` with the one in `config.json`. |
 | The claude.ai sign-in page says "Too many wrong attempts" | Five wrong password attempts lock the sign-in for 15 minutes. Wait and try again. |
 | Search returns nothing | `council reindex` rebuilds the index. |
