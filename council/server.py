@@ -54,6 +54,17 @@ def load_token(data_dir: Path) -> str:
     return f.read_text().strip() if f.exists() else ""
 
 
+def context_for_tool(store: Store, learning: Learning, usage: Usage, query: str) -> str:
+    """Text of council_context: the start context, plus matched skills for agents without hooks."""
+    text = bootstrap(store, query)
+    usage.record("context", query=query, chars=len(text))
+    skills, shown = skills_block(learning, query, None)
+    if skills:
+        usage.record("skill", query=query, chars=len(skills), top=shown[0]["score"], hits=shown)
+        text += "\n" + skills
+    return text
+
+
 def build(data_dir: str, public_hosts: list[str] | None = None):
     store = Store(data_dir)
     token = load_token(store.data)
@@ -130,13 +141,7 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
     def council_context(query: str = "") -> str:
         """Load the user's memory: profile, rules, active threads, latest sessions and notes relevant to `query`.
         Call once at the start of a conversation."""
-        text = bootstrap(store, query)
-        usage.record("context", query=query, chars=len(text))
-        skills, shown = skills_block(learning, query, None)  # for agents without hooks
-        if skills:
-            usage.record("skill", query=query, chars=len(skills), top=shown[0]["score"], hits=shown)
-            text += "\n" + skills
-        return text
+        return context_for_tool(store, learning, usage, query)
 
     @mcp.tool()
     def council_search(query: str, limit: int = 8) -> list[dict] | dict:

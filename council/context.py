@@ -105,7 +105,7 @@ def skills_block(learning: Learning, query: str, seen: set | None, session: str 
     """Skills matching ``query`` under their own budget, and the skills shown.
 
     Skills the session's ``seen`` set already holds are skipped; each one shown is added to it and
-    recorded with the learning ledger. A learning file that cannot be read never stops the notes.
+    recorded with the learning ledger. Whatever goes wrong here yields no block: the notes still get served.
     """
     heading = "[COUNCIL · skills that may apply]"
     try:
@@ -123,11 +123,11 @@ def skills_block(learning: Learning, query: str, seen: set | None, session: str 
             used += len(block) + 1
             shown.append(m)
         for m in shown:
-            if seen is not None:
-                seen.add(("skill", m["path"]))
             learning.record_shown(m["path"], session)
-    except (StoreError, OSError, ValueError):
+    except Exception:  # nothing in the skills path may stop the notes from being served
         return "", []
+    if seen is not None:  # only now that the block is certain: a failure must not hide a skill for the session
+        seen.update(("skill", m["path"]) for m in shown)
     return ("\n".join(parts) + "\n", shown) if shown else ("", [])
 
 
