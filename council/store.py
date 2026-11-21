@@ -119,7 +119,9 @@ class Store:
                     msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
 
     def _git(self, *args: str) -> subprocess.CompletedProcess:
-        return subprocess.run(["git", "-C", str(self.vault), *args], capture_output=True, text=True)
+        # git writes UTF-8; without an explicit encoding Windows decodes it with the system code page
+        return subprocess.run(["git", "-C", str(self.vault), *args], capture_output=True, text=True,
+                              encoding="utf-8", errors="replace")
 
     def _ensure_git(self) -> None:
         if not (self.vault / ".git").exists():
@@ -311,7 +313,8 @@ class Store:
             return {"ok": False, "error": f"no `{BACKUP_REMOTE}` git remote in the vault"}
         try:
             r = subprocess.run(["git", "-C", str(self.vault), "push", "-q", BACKUP_REMOTE, "HEAD:refs/heads/main"],
-                               capture_output=True, text=True, timeout=120, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
+                               capture_output=True, text=True, encoding="utf-8", errors="replace",
+                               timeout=120, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
             error = "" if r.returncode == 0 else (r.stderr.strip().splitlines() or ["push failed"])[-1][:200]
         except subprocess.TimeoutExpired:
             error = "push timed out"

@@ -1,6 +1,8 @@
 import datetime as dt
 import json
 import re
+import subprocess
+from unittest import mock
 
 import pytest
 
@@ -67,6 +69,18 @@ def test_git_history(store):
     store.write("n.md", "bir")
     log = store._git("log", "--oneline").stdout
     assert "write n.md" in log
+
+
+def test_git_output_is_decoded_as_utf_8(store):
+    """git speaks UTF-8; reading it with the machine's code page garbles Turkish letters on Windows."""
+    with mock.patch("subprocess.run", wraps=subprocess.run) as run:
+        store.write("n.md", "içerik: ığüşöç", reason="değişiklik ığüşöç")
+        out = store._git("log", "-p").stdout
+    assert "değişiklik ığüşöç" in out
+    assert "içerik: ığüşöç" in out
+    git_calls = [c for c in run.call_args_list if c.args[0][0] == "git"]
+    assert git_calls
+    assert all(c.kwargs.get("encoding") == "utf-8" for c in git_calls)
 
 
 def test_bootstrap(store):
