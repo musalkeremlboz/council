@@ -310,7 +310,7 @@ def test_a_question_is_saved_under_the_name_the_note_has(store):
     assert check.link_report(store)["broken"] == []
 
 
-def test_a_renamed_note_is_gone_even_where_file_names_ignore_case(store):
+def test_a_renamed_note_is_gone_not_missed(store):
     check.add_question(store, "kira ne zaman ödenir", ["projects/ev/kira.md"])
     store.move("projects/ev/kira.md", "projects/ev/Kira-Odeme.md")
     r = check.search_report(store)
@@ -325,6 +325,7 @@ def test_a_renamed_note_is_gone_even_where_file_names_ignore_case(store):
     ("```\n[[icte]]\n", []),                                                         # never closed: code to the end
     ("`kod\ndevam [[icte]]` sonra [[yok-e]]", ["yok-e"]),                            # inline code over a line break
     ("bir ` işareti\n\n[[yok-f]] ve ` bir daha", ["yok-f"]),                         # not code: a paragraph apart
+    ("\\`[[yok-k]]\\` ve `[[icte]]`", ["yok-k"]),                                    # an escaped backtick is not code
     ("| a | b |\n|---|---|\n| [[projects/havuz/kurs\\|K]] | [[yok-g\\|G]] |", ["yok-g"]),   # escaped pipe in a table
     ("[[Python 3.12]] [[rapor 2026.11]] [[sekil.PNG]] [[veri.csv]]", ["Python 3.12", "rapor 2026.11"]),
     ("[x](<projects/havuz/kurs.md>) [x](<yok h.md>) [x](yok-i.md 'başlık') [x](yok-j.md (başlık))",
