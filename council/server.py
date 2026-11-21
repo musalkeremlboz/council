@@ -68,7 +68,7 @@ def context_for_tool(store: Store, learning: Learning, usage: Usage, query: str)
     usage.record("context", query=query, chars=len(text))
     skills, shown = skills_block(learning, query, None)
     if skills:
-        usage.record("skill", query=query, chars=len(skills), top=shown[0]["score"], hits=shown)
+        usage.record("pointer", query=query, chars=len(skills), top=shown[0]["score"], hits=shown)
         text += "\n" + skills
     return text
 
@@ -241,7 +241,7 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
             usage.record("inject", sid, query, len(text), trace["top"], trace["shown"])
             skills, shown = skills_block(learning, query, sent, sid)
             if skills:
-                usage.record("skill", sid, query, len(skills), shown[0]["score"], shown)
+                usage.record("pointer", sid, query, len(skills), shown[0]["score"], shown)
                 text += ("\n" if text else "") + skills
         else:
             seen.reset(sid)  # a session start (new, resumed or compacted) has nothing in its context yet

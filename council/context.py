@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 
-from .learn import INDEX_BUDGET, SKILL_BUDGET, Learning, is_retired, more_line
+from .learn import INDEX_BUDGET, INDEXABLE, POINTER_WHEN_CHARS, Learning, is_retired, more_line, parse_skill
 from .local import update_notice
 from .store import CORE, RULES, SESSIONS, THREADS, Store, StoreError
 
@@ -110,36 +110,32 @@ def relevant(store: Store, query: str, budget: int = 3500, limit: int = 5, seen:
     return "\n".join(parts) + "\n"
 
 
-def skills_block(learning: Learning, query: str, seen: set | None, session: str = "",
-                 budget: int = SKILL_BUDGET) -> tuple[str, list[dict]]:
-    """Skills matching ``query`` under their own budget, and the skills shown.
+def skills_block(learning: Learning, query: str, seen: set | None, session: str = "") -> tuple[str, list[dict]]:
+    """One pointer line per skill matching ``query``, and the skills pointed at.
 
-    Skills the session's ``seen`` set already holds are skipped; each one shown is added to it and
-    recorded with the learning ledger. Whatever goes wrong here yields no block: the notes still get served.
+    The line holds the path and the skill's ``When``; the text stays in the note until the agent reads it.
+    Skills the session's ``seen`` set already holds are skipped; each one shown is added to it. Whatever goes
+    wrong here yields no block: the notes still get served.
     """
-    heading = "[COUNCIL · skills that may apply]"
+    heading = ("[COUNCIL · a saved skill may fit this message · open it with council_read only if it is "
+               "the work being asked]")
     try:
         found = learning.match(query) if query.strip() else []
         if seen is not None:
             found = [m for m in found if ("skill", m["path"]) not in seen]
-        parts, shown, used = [heading], [], len(heading)
+        shown, lines = [], []
         for m in found:
-            head = f"- {m['path']} ({m['status']})"
-            room = budget - used - len(head) - 2
-            if room < 200:
-                break
-            block = head + "\n" + _clip(m["text"], room)
-            parts.append(block)
-            used += len(block) + 1
+            if not INDEXABLE.fullmatch(m["path"]):
+                continue
+            when = " ".join(parse_skill(m["text"])["when"].split())[:POINTER_WHEN_CHARS].rstrip()
+            lines.append(f"- {m['path']} — {when}")
             shown.append(m)
-        for m in shown:
-            learning.record_shown(m["path"], session)
     except Exception:  # nothing in the skills path may stop the notes from being served
         logging.getLogger("council").exception("skills block left out")
         return "", []
     if seen is not None:  # only now that the block is certain: a failure must not hide a skill for the session
         seen.update(("skill", m["path"]) for m in shown)
-    return ("\n".join(parts) + "\n", shown) if shown else ("", [])
+    return (heading + "\n" + "\n".join(lines) + "\n", shown) if shown else ("", [])
 
 
 def skills_index(learning: Learning, budget: int = INDEX_BUDGET) -> str:

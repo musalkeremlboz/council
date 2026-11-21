@@ -37,7 +37,7 @@ HEAD_WEIGHT = 4.0  # a message word in a skill's title or When line counts this 
 MIN_HEAD_WORDS = 2  # a skill is offered only when this many different message words are in its title or When line...
 MIN_SCORE = 6.0  # ...and its score, divided by the square root of the message's word count, reaches this
 SKILL_LIMIT = 2  # skills offered for one message
-SKILL_BUDGET = 1500  # characters of context the offered skills may take together, apart from the notes' budget
+POINTER_WHEN_CHARS = 200  # a pointer line carries at most this much of the skill's When
 RARITY_LIBRARY = 10  # rarity counts the library as at least this big, so scores do not depend on how many skills exist
 INDEX_BUDGET = 3000  # characters of the skill index served at session start, heading and "more" line included
 STEM_PREFIX_MIN = 4  # a stem matches a longer one it prefixes only when it has this many characters
@@ -174,7 +174,7 @@ def _with_status(text: str, status: str) -> str | None:
 LIVE = ("candidate", "established")  # statuses a skill is offered with
 
 
-_INDEXABLE = re.compile(r"(projects/[a-z0-9-]+/)?skills/[a-z0-9-]+\.md")
+INDEXABLE = re.compile(r"(projects/[a-z0-9-]+/)?skills/[a-z0-9-]+\.md")
 _LEAD_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
@@ -573,7 +573,7 @@ class Learning:
         """
         rows = []
         for path, (_, f) in self.skills().items():
-            if f["status"] not in LIVE or not _INDEXABLE.fullmatch(path):
+            if f["status"] not in LIVE or not INDEXABLE.fullmatch(path):
                 continue
             day = next((m.group() for v in (f["revised"], f["source"]) if (m := _LEAD_DATE.match(v))), "")
             rows.append((f["status"] == "established", day, path))
