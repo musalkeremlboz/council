@@ -13,6 +13,7 @@ _WORD = re.compile(r"[\w]+", re.UNICODE)
 _FOLD = str.maketrans("ıİçÇğĞöÖşŞüÜâÂîÎûÛ", "iIcCgGoOsSuUaAiIuU")
 _ITEM = re.compile(r"^(?:[-*+] |\d+[.)] )")
 MAX_CHUNK = 700
+ABSENT_WORDS = 40  # different words of one query that absent() looks up
 CHUNKER = "2"  # bump when chunks() changes shape; indexes built by another version rebuild themselves
 
 # Filler words (folded) that say nothing about the topic of a message.
@@ -87,10 +88,13 @@ def build_query(q: str, content_only: bool = False) -> str:
     for w in _WORD.findall(fold(q)):
         if len(w) < 2 or (content_only and w in STOP):
             continue
-        # Agglutinative languages (Turkish) add suffixes; match on a stem prefix.
-        stem = w if len(w) < 6 else w[: max(5, len(w) - 3)]
-        terms.append(f'"{stem}"*')
+        terms.append(f'"{_stem(w)}"*')
     return " OR ".join(terms)
+
+
+def _stem(w: str) -> str:
+    """Agglutinative languages (Turkish) add suffixes; match on a stem prefix."""
+    return w if len(w) < 6 else w[: max(5, len(w) - 3)]
 
 
 class Index:
@@ -169,3 +173,25 @@ class Index:
             scored.append({"path": path, "heading": heading, "text": body, "score": round(-score * weight, 3)})
         scored.sort(key=lambda h: -h["score"])
         return scored[:limit]
+
+    def absent(self, q: str, limit: int = 8) -> list[str]:
+        """Content words of ``q`` that no note contains in any form, as first typed, at most ``limit``.
+
+        Forms are matched the way search matches them. Only the first ABSENT_WORDS different words are
+        looked up: a pasted page must not turn into hundreds of queries.
+        """
+        out: list[str] = []
+        seen: set[str] = set()
+        for word in _WORD.findall(q):
+            w = fold(word)
+            if len(w) < 2 or w in STOP or _stem(w) in seen:
+                continue
+            if len(seen) == ABSENT_WORDS or len(out) == limit:
+                break
+            seen.add(_stem(w))
+            with self._lock:
+                row = self.db.execute("SELECT 1 FROM chunks WHERE chunks MATCH ? LIMIT 1",
+                                      (f'folded : ("{_stem(w)}"*)',)).fetchone()
+            if row is None:
+                out.append(word)
+        return out

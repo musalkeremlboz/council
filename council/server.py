@@ -153,12 +153,19 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
         return context_for_tool(store, learning, usage, query)
 
     @mcp.tool()
-    def council_search(query: str, limit: int = 8) -> list[dict] | dict:
-        """Full-text search across all notes. Returns matching sections with their note path."""
+    def council_search(query: str, limit: int = 8) -> dict:
+        """Full-text search across all notes. `hits` are the matching sections with their note path;
+        `not_found` are the query words no note contains at all (nothing is saved about them)."""
         hits = run(lambda: store.index.search(query, limit=max(1, min(limit, 25))))
-        if isinstance(hits, list):
-            usage.record("search", query=query, top=hits[0]["score"] if hits else None, hits=hits)
-        return hits
+        if not isinstance(hits, list):
+            return hits
+        usage.record("search", query=query, top=hits[0]["score"] if hits else None, hits=hits)
+        try:
+            not_found = store.index.absent(query)
+        except Exception:  # the search is done: this extra is not worth failing it over
+            logging.getLogger("council").exception("words not in memory left out")
+            not_found = []
+        return {"hits": hits, "not_found": not_found}
 
     @mcp.tool()
     def council_read(path: str) -> dict:

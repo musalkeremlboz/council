@@ -266,7 +266,9 @@ The same backup works for the memory on your own computer: add the remote inside
 | `council token` | Prints the access token; `--rotate` creates a new one |
 | `council set-password` | Sets the owner password; `--generate` creates a random one |
 | `council context "question"` | Prints the context an agent would see |
-| `council search "word"` | Searches the notes |
+| `council search "word"` | Searches the notes; also names the words no note contains |
+| `council check` | Checks that saved questions still find their notes and lists broken links between notes; changes no note |
+| `council check add "question" NOTE` | Saves a question and the note it should find (`remove "question"` drops it) |
 | `council reindex` | Rebuilds the search index from the notes |
 | `council usage --days 7` | Summarizes what the memory handed out lately |
 | `council backup` | Pushes the notes to the remote named `backup` |

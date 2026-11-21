@@ -266,7 +266,9 @@ Aynı yedek kendi bilgisayarındaki hafıza için de kurulabilir: uzak depoyu `~
 | `council token` | Erişim anahtarını gösterir; `--rotate` yenisini üretir |
 | `council set-password` | Sahip şifresini belirler; `--generate` rastgele üretir |
 | `council context "soru"` | Yardımcının göreceği bağlamı yazdırır |
-| `council search "kelime"` | Notlarda arar |
+| `council search "kelime"` | Notlarda arar; hiçbir notta geçmeyen sözcükleri de söyler |
+| `council check` | Kayıtlı soruların notlarını hâlâ bulup bulmadığına ve notlar arası kırık bağlantılara bakar; hiçbir notu değiştirmez |
+| `council check add "soru" NOT` | Bir soruyu ve getirmesi beklenen notu kaydeder (`remove "soru"` çıkarır) |
 | `council reindex` | Arama indeksini notlardan yeniden kurar |
 | `council usage --days 7` | Hafızanın son günlerde neyi verdiğini özetler |
 | `council backup` | Notları `backup` adlı uzak depoya gönderir |

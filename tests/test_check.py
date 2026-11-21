@@ -1,0 +1,277 @@
+import json
+
+import pytest
+
+from council import check, cli
+from council.store import Store
+
+
+@pytest.fixture
+def store(tmp_path):
+    s = Store(tmp_path / "data")
+    s.write("projects/havuz/kurs.md", "# Kurs açılışı\n\nKurs açarken önce proje, sonra federasyon seçilir.")
+    s.write("projects/havuz/turnike.md", "# Turnike\n\nTurnike kartı okumazsa kayıt tarihine bakılır.")
+    s.write("projects/ev/kira.md", "# Kira\n\nKira her ayın yirmi beşinde ödenir.")
+    return s
+
+
+def put(store, path, text):
+    """Write a note whether or not the store already has one of that name (a new store starts with a few)."""
+    store.write(path, text, expected_sha=store.read(path).sha if store.exists(path) else "")
+
+
+# ---------- questions ----------
+
+def test_a_question_is_saved_with_its_notes_and_a_date_and_can_be_removed(store):
+    q = check.add_question(store, "  kurs nasıl açılıyordu  ", ["projects/havuz/kurs.md", "/projects/havuz/kurs.md"])
+    assert q["question"] == "kurs nasıl açılıyordu" and q["expect"] == ["projects/havuz/kurs.md"]
+    assert len(q["added"]) == 10 and q["added"][4] == "-"
+    saved = json.loads((store.data / "questions.json").read_text(encoding="utf-8"))
+    assert saved == [q]
+    assert check.questions(store) == [q]
+    assert check.remove_question(store, "Kurs nasıl açılıyordu ") is True
+    assert check.questions(store) == [] and check.remove_question(store, "kurs nasıl açılıyordu") is False
+
+
+def test_adding_the_same_question_again_replaces_it(store):
+    check.add_question(store, "kira ne zaman", ["projects/ev/kira.md"])
+    check.add_question(store, "Kira ne zaman", ["projects/ev/kira.md", "projects/havuz/kurs.md"])
+    got = check.questions(store)
+    assert len(got) == 1 and got[0]["expect"] == ["projects/ev/kira.md", "projects/havuz/kurs.md"]
+
+
+@pytest.mark.parametrize("question, paths", [
+    ("", ["projects/ev/kira.md"]), ("   ", ["projects/ev/kira.md"]),      # nothing to ask
+    ("kira ne zaman", []),                                              # nothing expected
+    ("kira ne zaman", ["projects/ev/yok.md"]),                          # no such note
+    ("kira ne zaman", ["../etc/passwd.md"]),                            # refused by the store
+])
+def test_a_question_needs_text_and_notes_that_exist(store, question, paths):
+    with pytest.raises(check.CheckError):
+        check.add_question(store, question, paths)
+    assert not (store.data / "questions.json").exists()
+
+
+def test_an_unreadable_questions_file_is_reported_not_replaced(store):
+    (store.data / "questions.json").write_text("{not json", encoding="utf-8")
+    with pytest.raises(check.CheckError):
+        check.questions(store)
+    with pytest.raises(check.CheckError):
+        check.add_question(store, "kira ne zaman", ["projects/ev/kira.md"])
+    assert (store.data / "questions.json").read_text(encoding="utf-8") == "{not json"
+
+
+# ---------- search report ----------
+
+def test_search_report_counts_both_ways_and_says_what_came_instead(store):
+    check.add_question(store, "kurs açarken ne seçilir", ["projects/havuz/kurs.md"])
+    check.add_question(store, "turnike kartı okumuyor", ["projects/ev/kira.md"])          # the wrong note is expected
+    r = check.search_report(store)
+    assert (r["questions"], r["measured"], r["auto"], r["search"]) == (2, 2, 1, 1)
+    assert r["gone"] == []
+    [miss] = r["missed"]
+    assert miss["question"] == "turnike kartı okumuyor" and miss["expect"] == ["projects/ev/kira.md"]
+    assert miss["auto"] is False and miss["search"] is False
+    assert miss["got_auto"][0] == "projects/havuz/turnike.md" and miss["got_search"][0] == "projects/havuz/turnike.md"
+
+
+def test_any_of_the_expected_notes_is_a_hit(store):
+    check.add_question(store, "kira ne zaman ödenir", ["projects/havuz/kurs.md", "projects/ev/kira.md"])
+    r = check.search_report(store)
+    assert (r["auto"], r["search"], r["missed"]) == (1, 1, [])
+
+
+def test_a_note_always_in_context_counts_as_coming_by_itself(store):
+    put(store, "core.md", "# Çekirdek\n\nKısa cevap ver.")
+    check.add_question(store, "zzzz qqqq", ["core.md"])                                    # matches nothing
+    r = check.search_report(store)
+    assert r["auto"] == 1 and r["search"] == 0
+    [miss] = r["missed"]
+    assert miss["auto"] is True and miss["search"] is False
+
+
+def test_a_question_whose_note_is_gone_is_listed_apart_not_as_a_miss(store):
+    check.add_question(store, "kira ne zaman ödenir", ["projects/ev/kira.md"])
+    check.add_question(store, "kurs açarken ne seçilir", ["projects/havuz/kurs.md"])
+    store.remove("projects/ev/kira.md")
+    r = check.search_report(store)
+    assert (r["questions"], r["measured"], r["auto"], r["search"]) == (2, 1, 1, 1)
+    assert r["gone"] == [{"question": "kira ne zaman ödenir", "expect": ["projects/ev/kira.md"]}] and r["missed"] == []
+
+
+def test_search_report_changes_nothing(store):
+    check.add_question(store, "kurs açarken ne seçilir", ["projects/havuz/kurs.md"])
+    before = store._git("rev-parse", "HEAD").stdout, (store.data / "questions.json").read_bytes()
+    check.search_report(store); check.link_report(store)
+    assert (store._git("rev-parse", "HEAD").stdout, (store.data / "questions.json").read_bytes()) == before
+    assert not (store.data / "usage.sqlite3").exists()
+
+
+def test_no_questions_is_an_empty_report(store):
+    r = check.search_report(store)
+    assert (r["questions"], r["measured"], r["auto"], r["search"], r["missed"], r["gone"]) == (0, 0, 0, 0, [], [])
+
+
+# ---------- links ----------
+
+def broken(store):
+    return {(b["note"], b["target"]) for b in check.link_report(store)["broken"]}
+
+
+def test_wiki_and_markdown_links_resolve_from_the_root_and_from_the_note(store):
+    store.write("projects/havuz/project.md", "\n".join([
+        "# Havuz",
+        "[[projects/havuz/kurs]] [[projects/havuz/kurs.md]] [[kurs]] [[turnike|kart]] [[projects/ev/kira#Ödeme]]",
+        "[kurs](kurs.md) [kira](../ev/kira.md) [kira](projects/ev/kira.md) [bölüm](kurs.md#adimlar) [boşluk](../ev/kira.md \"başlık\")",
+        "[[projects/havuz/yok]] [[eski-not]] [eski](eski.md) [dış](../../disari.md)",
+    ]))
+    r = check.link_report(store)
+    assert r["checked"] == 14
+    assert broken(store) == {("projects/havuz/project.md", t) for t in
+                             ("projects/havuz/yok", "eski-not", "eski.md", "../../disari.md")}
+
+
+def test_what_is_not_a_link_to_a_note_is_not_checked(store):
+    store.write("notes/a.md", "\n".join([
+        "# A",
+        "`[[yok-bir]]` ve ``[x](yok-iki.md)`` satır içi kod",
+        "```", "[[yok-uc]]", "[x](yok-dort.md)", "```",
+        "~~~text", "[[yok-bes]]", "~~~",
+        "[site](https://example.com/a.md) [posta](mailto:a@example.com) [bölüm](#baslik) ![resim](sekil.png) [dosya](rapor.pdf)",
+        "[[sekil.png]] `projects/yok/dosya.md`",
+    ]))
+    r = check.link_report(store)
+    assert r["checked"] == 0 and r["broken"] == []
+
+
+def test_history_notes_are_not_checked(store):
+    for path in ("log/2026-11.md", "sessions/2026-11.md", "sessions.md"):
+        put(store, path, "# Kayıt\n\n[[projects/havuz/eski-ad]]")
+    put(store, "threads.md", "# Threads\n\n[[projects/havuz/eski-ad]]")
+    assert broken(store) == {("threads.md", "projects/havuz/eski-ad")}
+
+
+def test_a_broken_link_names_where_the_note_may_have_gone(store):
+    store.write("projects/yeni/Testak.md", "# Testak\n\nkart")
+    store.write("arsiv/Testak.md", "# Testak\n\neski")
+    store.write("notes/a.md", "# A\n\n[[projects/eski/Testak]] [[projects/eski/Testak]] [x](../eski/Baska.md)")
+    r = check.link_report(store)
+    assert r["checked"] == 3
+    assert r["broken"] == [
+        {"note": "notes/a.md", "target": "../eski/Baska.md", "maybe": []},
+        {"note": "notes/a.md", "target": "projects/eski/Testak", "maybe": ["arsiv/Testak.md", "projects/yeni/Testak.md"]},
+    ]
+
+
+def test_link_names_are_compared_exactly(store):
+    store.write("notes/a.md", "# A\n\n[[projects/havuz/Kurs]] [[KURS]] [x](../projects/havuz/kurs.md)")
+    assert broken(store) == {("notes/a.md", "projects/havuz/Kurs"), ("notes/a.md", "KURS")}
+
+
+# ---------- words no note contains ----------
+
+def test_absent_lists_the_content_words_no_note_contains(store):
+    absent = store.index.absent
+    assert absent("turnike kartı ve Testak ayarı nasıl") == ["Testak", "ayarı"]
+    assert absent("turnikeler kartının") == []                      # other forms of words the notes have
+    assert absent("ve ile bir bu") == [] and absent("") == [] and absent("a ! ?") == []
+    assert absent("zebra Zebra zebralar testak") == ["zebra", "testak"]         # one per word, as first typed
+    assert absent(" ".join(f"yok{i:02d}x" for i in range(30))) == [f"yok{i:02d}x" for i in range(8)]
+    assert absent(" ".join(f"yok{i:02d}x" for i in range(30)), limit=2) == ["yok00x", "yok01x"]
+
+
+@pytest.fixture
+def search_tool(tmp_path, monkeypatch):
+    """The council_search tool of a built server, called the way a client calls it, and the server's store."""
+    import asyncio
+
+    from council import server
+
+    made = []
+    real = server.MCPServer
+    monkeypatch.setattr(server, "MCPServer", lambda *a, **k: made.append(real(*a, **k)) or made[-1])
+    monkeypatch.setenv("COUNCIL_TOKEN", "t0k")
+    _, store = server.build(str(tmp_path / "data"))
+    store.write("projects/havuz/turnike.md", "# Turnike\n\nTurnike kartı okumazsa kayıt tarihine bakılır.")
+
+    def call(query):
+        result = asyncio.run(made[0].call_tool("council_search", {"query": query}))
+        return json.loads(result.content[0].text)
+
+    return call, store
+
+
+def test_the_search_tool_answers_with_hits_and_the_words_not_found(search_tool):
+    call, _ = search_tool
+    got = call("turnike testak")
+    assert [h["path"] for h in got["hits"]] == ["projects/havuz/turnike.md"] and got["not_found"] == ["testak"]
+    got = call("turnike kartı")
+    assert got["hits"] and got["not_found"] == []
+    assert call("zzzz") == {"hits": [], "not_found": ["zzzz"]}
+
+
+def test_a_failing_absent_check_does_not_fail_the_search(search_tool, monkeypatch, caplog):
+    call, store = search_tool
+    monkeypatch.setattr(type(store.index), "absent", lambda self, q, limit=8: 1 / 0)
+    got = call("turnike testak")
+    assert [h["path"] for h in got["hits"]] == ["projects/havuz/turnike.md"] and got["not_found"] == []
+    assert "words not in memory left out" in caplog.text
+
+
+# ---------- command line ----------
+
+def run(store, *args):
+    return cli.main(["--data", str(store.data), *args])
+
+
+def test_check_prints_both_reports_and_fails_when_something_needs_attention(store, capsys):
+    assert run(store, "check") == 0
+    out = capsys.readouterr().out
+    assert "search: no questions yet" in out and 'council check add "question" path/to/note.md' in out
+    assert "links: 0 checked, 0 broken" in out
+
+    assert run(store, "check", "add", "kurs açarken ne seçilir", "projects/havuz/kurs.md") == 0
+    assert run(store, "check", "add", "turnike kartı okumuyor", "projects/ev/kira.md") == 0
+    assert "saved" in capsys.readouterr().out
+    store.write("notes/a.md", "# A\n\n[[projects/havuz/kurs]] [[projects/eski/turnike]]")
+    assert run(store, "check") == 1
+    out = capsys.readouterr().out
+    assert "search: 2 questions · comes by itself 1/2 · found by search 1/2" in out
+    assert 'missed: "turnike kartı okumuyor"' in out and "expected: projects/ev/kira.md" in out
+    assert "by itself came: projects/havuz/turnike.md" in out and "search found: projects/havuz/turnike.md" in out
+    assert "links: 2 checked, 1 broken" in out
+    assert "notes/a.md → projects/eski/turnike  (maybe: projects/havuz/turnike.md)" in out
+
+
+def test_check_parts_run_alone_and_gone_notes_are_named(store, capsys):
+    run(store, "check", "add", "kira ne zaman ödenir", "projects/ev/kira.md")
+    store.remove("projects/ev/kira.md")
+    store.write("notes/a.md", "# A\n\n[[projects/yok/x]]")
+    capsys.readouterr()
+    assert run(store, "check", "search") == 1
+    out = capsys.readouterr().out
+    assert 'note gone: "kira ne zaman ödenir" (expected projects/ev/kira.md)' in out and "links:" not in out
+    assert "search: 1 questions · 1 with no note left" in out
+    assert run(store, "check", "links") == 1
+    out = capsys.readouterr().out
+    assert "links: 1 checked, 1 broken" in out and "search:" not in out
+    assert run(store, "check", "remove", "kira ne zaman ödenir") == 0 and run(store, "check", "search") == 0
+    assert run(store, "check", "remove", "kira ne zaman ödenir") == 1
+
+
+def test_check_refuses_what_it_cannot_do(store, capsys):
+    assert run(store, "check", "add", "kira ne zaman") == 2                       # no note named
+    assert run(store, "check", "add", "kira ne zaman", "projects/ev/yok.md") == 2
+    assert run(store, "check", "remove") == 2
+    assert run(store, "check", "links", "fazla") == 2
+    (store.data / "questions.json").write_text("[", encoding="utf-8")
+    assert run(store, "check") == 2
+    assert "questions.json" in capsys.readouterr().err
+
+
+def test_search_command_names_the_words_no_note_contains(store, capsys):
+    assert run(store, "search", "turnike testak") == 0
+    out = capsys.readouterr().out
+    assert "projects/havuz/turnike.md" in out and out.rstrip().endswith("no note contains: testak")
+    run(store, "search", "turnike kartı")
+    assert "no note contains" not in capsys.readouterr().out

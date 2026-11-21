@@ -51,6 +51,11 @@ def main(argv: list[str] | None = None) -> int:
     q.add_argument("query")
     q.add_argument("--limit", type=int, default=8)
 
+    k = sub.add_parser("check", help="do saved questions still find their notes, do links still lead to a note (changes no note)")
+    k.add_argument("what", nargs="?", choices=["search", "links", "add", "remove"],
+                   help='one report alone, or: add "question" NOTE [NOTE ...] / remove "question"')
+    k.add_argument("args", nargs="*")
+
     sub.add_parser("reindex", help="rebuild the search index from the notes")
 
     i = sub.add_parser("import-avenox", help="import an Avenox Beyin V3 vault (source is not modified)")
@@ -141,6 +146,10 @@ def main(argv: list[str] | None = None) -> int:
     elif a.cmd == "search":
         for h in store.index.search(a.query, limit=a.limit):
             print(f"{h['path']} › {h['heading']}  ({h['score']})")
+        if absent := store.index.absent(a.query):
+            print(f"no note contains: {', '.join(absent)}")
+    elif a.cmd == "check":
+        return run_check(store, a.what, a.args)
     elif a.cmd == "reindex":
         store.index.db.execute("DELETE FROM files")
         store.index.db.commit()
@@ -195,6 +204,41 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{old}  ->  {new}")
         print(f"log entries: {res['log_entries']}{' (dry run)' if a.dry_run else ''}")
     return 0
+
+
+def run_check(store, what: str | None, args: list[str]) -> int:
+    """`council check`: 0 when nothing needs attention, 1 when a question missed its note, a note is gone,
+    a link is broken or the question to remove was not there, 2 when the command cannot be carried out."""
+    from . import check
+
+    try:
+        if what == "add":
+            if len(args) < 2:
+                raise check.CheckError('usage: council check add "question" NOTE [NOTE ...]')
+            q = check.add_question(store, args[0], args[1:])
+            print(f'saved: "{q["question"]}" should find {", ".join(q["expect"])}')
+            return 0
+        if what == "remove":
+            if len(args) != 1:
+                raise check.CheckError('usage: council check remove "question"')
+            removed = check.remove_question(store, args[0])
+            print("removed" if removed else "no such question")
+            return 0 if removed else 1
+        if args:
+            raise check.CheckError(f"unexpected: {' '.join(args)}")
+        attention = False
+        if what in (None, "search"):
+            r = check.search_report(store)
+            sys.stdout.write(check.render_search(r))
+            attention |= bool(r["missed"] or r["gone"])
+        if what in (None, "links"):
+            r = check.link_report(store)
+            sys.stdout.write(check.render_links(r))
+            attention |= bool(r["broken"])
+        return 1 if attention else 0
+    except check.CheckError as e:
+        print(f"council check: {e}", file=sys.stderr)
+        return 2
 
 
 def watch_release(store, repo: str) -> int:

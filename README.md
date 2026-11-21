@@ -72,7 +72,7 @@ Oturum olaylarına bağlanabilen yardımcılarda bu üç an kendiliğinden gerç
 | Araç | Ne yapar |
 |---|---|
 | `council_context` | Oturum başı bağlamını yükler |
-| `council_search` | Bütün notlarda tam metin arar |
+| `council_search` | Bütün notlarda tam metin arar; hiçbir notta geçmeyen sözcükleri de bildirir |
 | `council_read` | Bir notu ve sürüm özetini okur |
 | `council_list` | Not yollarını listeler |
 | `council_write` | Yeni not yazar ya da bir notu bütünüyle değiştirir |

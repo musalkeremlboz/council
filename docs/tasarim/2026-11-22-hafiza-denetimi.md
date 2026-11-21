@@ -1,6 +1,6 @@
 # Hafıza denetimi: arama soruları, bulunamayan terimler, kırık bağlantılar
 
-**Durum:** onay bekliyor (2026-11-22). Kod yazılmadı.
+**Durum:** onaylandı (2026-11-22 00:44), `hafiza-denetimi` dalında yapıldı. Ana dala birleştirilmedi.
 **Kaynak:** proje sahibinin isteği (2026-11-22 00:28, 00:38). Üç fikir başka bir hafıza aracının sürüm notlarından esinlendi; kod alınmaz.
 
 ## Neden
@@ -35,7 +35,10 @@ Hafıza büyüdükçe iki şey sessizce bozulur: bir soru doğru notu getirmez o
 
 **Ölçüm (sahibinin sunucusu, 2026-11-22, yalnız okuma):** hafızada hiç geçmeyen en az bir terim, kendiliğinden bağlam eklenen 276 mesajın 133'ünde (%48) var ve çoğu anlamsız (kimlik parçaları, dolgu sözcükler). Açık aramalarda 20 sorgunun 1'inde (%5).
 
-**Karar:** yalnız açık aramada. Arama aracı ve sorgulu bağlam aracı, sorgudaki terimlerden hafızanın hiçbir notunda geçmeyenleri ayrıca bildirir (en çok 8 terim). Mesaj başına eklenen bağlama dokunulmaz.
+**Karar:** yalnız açık aramada. Arama aracı ve `council search` komutu, sorgudaki terimlerden hafızanın hiçbir notunda geçmeyenleri ayrıca bildirir (en çok 8 terim). Mesaj başına eklenen bağlama dokunulmaz.
+
+- **Yapım sırasında daraltıldı:** onaylanan metinde sorgulu bağlam aracı da vardı. O aracın sorgusu, yönergeye göre kullanıcının ilk mesajıdır; yani yukarıda gürültü olduğu ölçülen durumun aynısı. Bu yüzden bağlam aracına eklenmedi.
+- "Geçmeyen" aramanın kendi eşleştirmesine göredir: arama bir sözcüğün ekli hâlini bulamıyorsa (kısa kök, uzun ek) o sözcük de geçmiyor sayılır.
 
 - Arama aracının yanıtı `{"hits": [...], "not_found": [...]}` olur (bugün yalnız liste). Bu, aracı kullanan betikler için biçim değişikliğidir.
 - Beklenen yarar küçük: yirmi aramada bir tetiklenir. Tetiklendiğinde yardımcıya "bu konuda hafızada hiçbir şey yok" bilgisini verir; yardımcı var saymaz, sorar ya da başka yere bakar.
@@ -47,12 +50,13 @@ Hafıza büyüdükçe iki şey sessizce bozulur: bir soru doğru notu getirmez o
 **Ne:** `council check` aynı çalışmada bağlantıları da denetler.
 
 - **Denetlenen:** `[[hedef]]` ve `[metin](hedef.md)`. Hedef, hafıza köküne ve notun klasörüne göre, `.md` ekli ve eksiz denenir.
-- **Denetlenmeyen:** ters tırnak içindeki yollar; web adresleri; `log/` ve `sessions/` (geçmiş kayıtları, yazıldıkları günün hâlini gösterir).
+- **Denetlenmeyen:** kod içindeki (ters tırnak ya da kod bloğu) her şey; web adresleri, resimler ve `.md` olmayan dosyalar; `log/`, `sessions/` ve `sessions.md` (geçmiş kayıtları, yazıldıkları günün hâlini gösterir).
+- Yalnız adıyla yazılan bağlantı (`[[ad]]`), o adı taşıyan not herhangi bir klasörde varsa geçerlidir.
 - **Çıktı:** not → kırık hedef. Aynı dosya adı başka bir klasörde varsa "olası yeni yer" olarak yanına yazılır.
 
 ## Komutun biçimi
 
-`council check` ikisini birlikte çalıştırır; `council check search` ve `council check links` ayrı ayrı. Hiçbiri hafızayı değiştirmez. Kaçan soru ya da kırık bağlantı varsa çıkış kodu 1'dir (zamanlanmış görevlerde kullanılabilsin diye).
+`council check` ikisini birlikte çalıştırır; `council check search` ve `council check links` ayrı ayrı. Hiçbiri hafızayı değiştirmez. Kaçan soru, notu kalmamış soru ya da kırık bağlantı varsa çıkış kodu 1'dir (zamanlanmış görevlerde kullanılabilsin diye); komut yerine getirilemiyorsa 2.
 
 ## Doğrulama
 

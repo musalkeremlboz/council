@@ -72,7 +72,7 @@ In agents that can hook into session events, these three moments happen by thems
 | Tool | What it does |
 |---|---|
 | `council_context` | Loads the session-start context |
-| `council_search` | Full-text search across all notes |
+| `council_search` | Full-text search across all notes; also reports the words no note contains |
 | `council_read` | Reads a note and its version fingerprint |
 | `council_list` | Lists note paths |
 | `council_write` | Writes a new note or replaces a whole note |
