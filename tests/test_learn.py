@@ -510,3 +510,6 @@ def test_live_among_reports_paths_as_the_store_keys_them(store):
     assert all(L.is_live_skill(p) for p in ["./skills/ilk.md", "/skills/ilk.md", " skills/ilk.md", a])
     assert not L.is_live_skill("skills/ILK.md")              # never listed under that name, whatever the file system says
     assert L.live_among(["skills/ILK.md", "skills/../skills/ilk.md", 7]) == []
+    b = L.write_skill("ikinci", project="Ev", **SK)["path"]
+    assert b == "projects/ev/skills/ikinci.md"
+    assert L.live_among(["projects/EV/skills/ikinci.md", "Projects/ev/skills/ikinci.md", b]) == [b]   # folders too

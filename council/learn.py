@@ -493,10 +493,17 @@ class Learning:
     def _canonical(self, path: str) -> str | None:
         """``path`` the way the store keys it (what ``council_read`` served), or None if the store refuses it
         or no file of exactly that name is there (a case-insensitive file system serves ``skills/X.md`` for
-        ``skills/x.md``, but the note is only ever listed under the name it has)."""
+        ``skills/x.md``, but the note is only ever listed under the name it has). Every part of the path is
+        compared with the directory listing: the resolved path cannot be used, since Windows rewrites it in
+        the spelling on disk."""
         try:
-            canonical, full = self.store.resolve(path)
-            return canonical if full.name in {p.name for p in full.parent.iterdir()} else None
+            canonical, _ = self.store.resolve(path)
+            at = self.store.vault
+            for part in PurePosixPath(canonical).parts:
+                if part not in os.listdir(at):
+                    return None
+                at = at / part
+            return canonical
         except (StoreError, OSError, ValueError):
             return None
 
