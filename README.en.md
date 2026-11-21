@@ -3,15 +3,17 @@
   <img src="docs/assets/kapak-en-acik.svg" width="100%" alt="COUNCIL: one memory, every agent. Claude Code, claude.ai, phone, server, Hermes and Antigravity around the same memory.">
 </picture>
 
-**COUNCIL is an open-source system that gives AI agents a lasting memory.** One command installs it on your computer. Your notes stay with you as plain Markdown files. Move the memory to a server and Claude on your phone and your other devices read and write the same notes.
+**COUNCIL is an open-source system that gives AI agents a lasting memory.** Your agent installs it on your computer. Your notes stay with you as plain Markdown files. Move the memory to a server and Claude on your phone and your other devices read and write the same notes.
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/install.sh | sh
+To set it up, paste this sentence to your AI agent. It does the rest:
+
+```text
+Read these instructions and set up COUNCIL: https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
 ```
 
 **[Setup](#setup)** · [How it works](#how-it-works) · [Why it is different](#why-different) · [Questions](#questions) · [Türkçe](README.md)
 
-macOS · Linux · Windows &nbsp;|&nbsp; Python 3.11+ &nbsp;|&nbsp; version 0.2.0 &nbsp;|&nbsp; [MIT license](LICENSE)
+macOS · Linux · Windows &nbsp;|&nbsp; Python 3.11+ &nbsp;|&nbsp; version 0.2.1 &nbsp;|&nbsp; [MIT license](LICENSE)
 
 <br>
 
@@ -91,7 +93,7 @@ Measured on 2026-11-16 on a Linux server with a set of 44 questions. The sample 
 <a id="why-different"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-why-different-koyu.svg"><img src="docs/assets/baslik-why-different-acik.svg" height="30" alt="Why it is different"></picture></p>
 
-- **One command, nothing to configure.** The service, the Claude Code connection, the import and the updates are set up in one step. No administrator rights needed.
+- **One sentence, nothing to configure.** You write one sentence to your agent; the service, the connection, the import and the updates set themselves up. No administrator rights needed.
 - **It does not leave your old memory behind.** It copies the memory files your agents keep. If there is a system it does not recognise, your agent finds it and moves it in the first session.
 - **It updates itself.** When a new release is published it reaches you within a day.
 - **It is not tied to one agent.** The memory is in your files, not inside the agent. Any agent that speaks MCP can connect.
@@ -102,7 +104,7 @@ Measured on 2026-11-16 on a Linux server with a set of 44 questions. The sample 
 
 | | This computer | Your own server |
 |---|---|---|
-| **Setup** | One command | [The steps in the guide](docs/setup.md#server) |
+| **Setup** | One sentence to your agent | [The steps in the guide](docs/setup.md#server) |
 | **Who can connect** | The agents on this computer | All your devices, including your phone and claude.ai |
 | **What you need** | Python and git | A small Linux server with a domain name |
 
@@ -121,6 +123,17 @@ You can start on your computer and move to a server later. Copying the `vault/` 
 <a id="setup"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-setup-koyu.svg"><img src="docs/assets/baslik-setup-acik.svg" height="30" alt="Setup"></picture></p>
 
+**Let your agent do it.** Paste this sentence to Claude Code or whichever agent you use:
+
+```text
+Read these instructions and set up COUNCIL: https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
+```
+
+Your agent reads [the instructions](INSTALL.md) and, without asking you questions, checks what is needed, runs the installer, verifies the result, brings in any other memory it knows about and tells you in a few lines what it did. When it is done, all you do is open a new session.
+
+<details>
+<summary><b>I want to set it up myself</b></summary>
+
 You need Python 3.11 or later and git.
 
 **macOS and Linux**
@@ -136,6 +149,8 @@ irm https://raw.githubusercontent.com/musalkeremlboz/council/main/install.ps1 | 
 ```
 
 When the command finishes, open a new Claude Code session. The memory is ready.
+
+</details>
 
 | What setup does | |
 |---|---|
@@ -297,12 +312,13 @@ Updates are installed only from this repository's published releases, over an en
 <a id="docs"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-docs-koyu.svg"><img src="docs/assets/baslik-docs-acik.svg" height="30" alt="Docs and contributing"></picture></p>
 
+- **[INSTALL.md](INSTALL.md)**: the setup instructions your agent reads and follows
 - **[Setup guide](docs/setup.md)**: server, Claude Code, claude.ai, backup, updating
 - **[Kurulum rehberi](docs/kurulum.md)**: the same guide in Turkish
 - **[deploy/](deploy)**: example service and timer files for a Linux server
 - **[brand/](brand)**: logo files and the Council Halka typeface
 
-COUNCIL is at version 0.2.0 and grows through one person's daily use. Its idea was inspired by [Avenox Beyin](https://github.com/avenoxai/avenoxbeyin). The code has 57 tests, and setup is tried on Linux, macOS and Windows with every change: `pip install -e ".[dev]" && pytest`. To report a bug or suggest something, [open an issue](https://github.com/musalkeremlboz/council/issues).
+COUNCIL is at version 0.2.1 and grows through one person's daily use. Its idea was inspired by [Avenox Beyin](https://github.com/avenoxai/avenoxbeyin). The code has 60 tests, and setup is tried on Linux, macOS and Windows with every change: `pip install -e ".[dev]" && pytest`. To report a bug or suggest something, [open an issue](https://github.com/musalkeremlboz/council/issues).
 
 <p align="center">
   <picture>

@@ -12,6 +12,14 @@
 <a id="bilgisayar"></a>
 ## 1. Bu bilgisayara kur
 
+**En kolay yol, kurulumu yardımcına yaptırmaktır.** Şu cümleyi yapay zekâ yardımcına yapıştır:
+
+```text
+Şu yönergeyi oku ve COUNCIL'i kur: https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
+```
+
+Yardımcın [INSTALL.md](../INSTALL.md) dosyasını okur ve aşağıdaki adımları senin yerine uygular. Kendin kurmak istersen:
+
 **macOS ve Linux**
 
 ```sh
@@ -60,8 +68,8 @@ Bu bilgisayar zaten başka bir COUNCIL hafızasına bağlıysa kurulum hiçbir �
 Windows'ta komut `%USERPROFILE%\.council\venv\Scripts\council.exe` yolundadır.
 
 ```text
-version      0.2.0
-service      running on http://127.0.0.1:8765 (0.2.0)
+version      0.2.1
+service      running on http://127.0.0.1:8765 (0.2.1)
 hooks        installed
 auto-update  on
 notes        /Users/sen/.council/vault

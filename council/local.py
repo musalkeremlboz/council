@@ -361,6 +361,14 @@ def _spawn_detached(argv: list[str]) -> None:
                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def _port_taken(port: int) -> bool:
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1)
+        return sock.connect_ex(("127.0.0.1", port)) == 0
+
+
 def _quote(arg: str) -> str:
     return arg if re.fullmatch(r"[\w./:@+-]+", arg) else '"' + arg.replace('"', '\\"') + '"'
 
@@ -389,6 +397,10 @@ def install(s: Setup, auto_update: bool = True, do_import: bool = True, sources:
         if not found:
             say("    no existing memory found on this computer")
         migrate.run(store, found, say=say, explicit=bool(sources))
+    if not s.healthy() and _port_taken(s.port):
+        say(f"2/4 service       port {s.port} on this computer is used by another program.")
+        say(f"    Run the installer again with another port, for example: --port {s.port + 1}")
+        return 1
     try:
         s.install_service(auto_update)
     except SetupError as e:
@@ -427,10 +439,19 @@ def status(s: Setup) -> int:
     s.say(f"service      {'running on ' + s.url + (' (' + version + ')' if version else '') if version else 'not running'}"
           + ("" if s.service_installed() else " · not installed as a background service"))
     s.say(f"hooks        {'installed' if s.hooks_installed() else 'not installed'}")
+    mcp = (s._read_json(s.claude_json) or {}).get("mcpServers", {}).get("council", {}).get("url", "")
+    s.say(f"mcp tools    {'connected to Claude Code' if mcp.startswith(s.url) else 'not connected to Claude Code'}")
     s.say(f"auto-update  {'on' if s.updater_installed() else 'off'}"
           + (f" · last check {time.strftime('%Y-%m-%d %H:%M', time.localtime(info['checked']))}" if info.get("checked") else "")
           + (f" · problem: {info['error']}" if info.get("error") else ""))
     s.say(f"notes        {s.data / 'vault'}")
+    if (s.data / "vault").is_dir():
+        from . import migrate
+        from .store import Store
+
+        count, sources = migrate.summary(Store(s.data))
+        if count:
+            s.say(f"imported     {count} note{'' if count == 1 else 's'}, from: {', '.join(sources)}")
     return 0 if version else 1
 
 

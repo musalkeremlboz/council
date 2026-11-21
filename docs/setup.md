@@ -12,6 +12,14 @@ There are two ways to use it. The first is enough for most people.
 <a id="computer"></a>
 ## 1. Install on this computer
 
+**The easiest way is to let your agent do the setup.** Paste this sentence to your AI agent:
+
+```text
+Read these instructions and set up COUNCIL: https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
+```
+
+Your agent reads [INSTALL.md](../INSTALL.md) and follows the steps below for you. If you would rather do it yourself:
+
 **macOS and Linux**
 
 ```sh
@@ -60,8 +68,8 @@ If this computer is already connected to another COUNCIL memory, setup stops wit
 On Windows the command is at `%USERPROFILE%\.council\venv\Scripts\council.exe`.
 
 ```text
-version      0.2.0
-service      running on http://127.0.0.1:8765 (0.2.0)
+version      0.2.1
+service      running on http://127.0.0.1:8765 (0.2.1)
 hooks        installed
 auto-update  on
 notes        /Users/you/.council/vault

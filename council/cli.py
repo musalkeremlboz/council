@@ -33,8 +33,8 @@ def main(argv: list[str] | None = None) -> int:
         if name == "update":
             x.add_argument("--force", action="store_true", help="reinstall the latest release even if it is not newer")
 
-    im = sub.add_parser("import", help="import an existing memory: a folder of notes, or everything found on this computer")
-    im.add_argument("source", nargs="?", help="folder to import; without it, whatever is found automatically")
+    im = sub.add_parser("import", help="import an existing memory: a folder of notes, one file, or everything found on this computer")
+    im.add_argument("source", nargs="?", help="folder or Markdown file to import; without it, whatever is found automatically")
 
     s = sub.add_parser("serve", help="run the MCP + API server")
     s.add_argument("--host", default="127.0.0.1")
@@ -169,8 +169,8 @@ def main(argv: list[str] | None = None) -> int:
 
         if a.source:
             src = Path(a.source).expanduser().resolve()
-            if not src.is_dir():
-                print(f"not a folder: {src}", file=sys.stderr)
+            if not src.exists():
+                print(f"not found: {src}", file=sys.stderr)
                 return 1
             found, explicit = [{"kind": migrate.kind_of(src), "path": str(src)}], True
         else:

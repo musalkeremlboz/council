@@ -87,7 +87,15 @@ def detect(home: Path) -> list[dict]:
 
 
 def kind_of(path: Path) -> str:
+    if path.is_file():
+        return "file"
     return "vault" if _is_mapped_vault(path) else "folder"
+
+
+def summary(store: Store) -> tuple[int, list[str]]:
+    """How many imported notes the memory holds, and the sources they came from."""
+    notes = [n for n in store.list() if n.startswith("imported/")]
+    return len(notes), sorted(_state(store)["sources"])
 
 
 def is_fresh(store: Store) -> bool:
@@ -159,25 +167,32 @@ def run(store: Store, sources: list[dict], say=print, explicit: bool = False, as
                 continue
             count = len(Importer(path, store).run()["notes"])
         else:
-            notes = import_agent_files(store, path) if kind == "agents" else import_folder(store, path)
+            if kind == "agents":
+                notes = import_agent_files(store, path)
+            elif kind == "file":
+                target = f"imported/files/{_slug(path.stem) or 'note'}.md"
+                notes = [target] if _write_new(store, target, path) else []
+            else:
+                notes = import_folder(store, path)
             count = len(notes)
             loose += notes
         state["sources"][str(path)] = {"kind": kind, "at": time.time(), "notes": count}
         total += count
-        what = {"vault": "notes vault", "agents": "agent memory files", "folder": "folder"}[kind]
-        say(f"    imported {count} notes from {path} ({what})")
+        what = {"vault": "notes vault", "agents": "agent memory files", "folder": "folder", "file": "file"}[kind]
+        say(f"    imported {count} note{'' if count == 1 else 's'} from {path} ({what})")
     if ask_agent and not state.get("asked"):
-        folders = sorted({"/".join(n.split("/")[:2]) for n in loose})
-        copied = (f"{len(loose)} notes were copied into {', '.join(f'`{f}/`' for f in folders)}; they can be searched "
-                  "but are not loaded at session start." if loose else "No loose notes were copied.")
         store.open_thread(
             "### Bring the user's existing memory over\n"
-            f"- **Status:** COUNCIL was set up on {now_local():%Y-%m-%d}. {copied}\n"
-            "- **Next:** (1) Check whether the agents on this computer use any other memory system: memory or "
-            "notes folders, instruction files, memory MCP servers, hooks that add context. If one exists, read it "
-            "and move what is still true into COUNCIL; never change or delete the source. (2) Sort what is under "
-            "`imported/`: lasting facts and preferences into core.md, corrections into rules.md, project knowledge "
-            "into projects/<name>/. (3) Tell the user what was moved, then close this thread.\n\n",
+            f"- **Status:** COUNCIL was set up on {now_local():%Y-%m-%d}. Notes copied from other systems are under "
+            "`imported/` (council_list shows them); they can be searched but are not loaded at session start.\n"
+            "- **Next:** (1) Check whether the agents on this computer use a memory system that is not under "
+            "`imported/` yet: memory or notes folders, instruction files, memory MCP servers, hooks that add context. "
+            "If one exists, read it and move what is still true into COUNCIL; never change or delete the source. "
+            "(2) Sort what is under `imported/`: lasting facts and preferences into core.md, corrections into "
+            "rules.md, project knowledge into projects/<name>/. (3) If an instruction file still tells agents to "
+            "keep memory in the old place, show the user those lines and offer to retire them, so memory does not "
+            "split in two; change the file only after they agree. (4) Tell the user what was moved, then close "
+            "this thread.\n\n",
             "existing memory to bring over",
         )
         state["asked"] = True

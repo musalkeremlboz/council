@@ -3,15 +3,17 @@
   <img src="docs/assets/kapak-tr-acik.svg" width="100%" alt="COUNCIL: tek hafıza, her yardımcı. Claude Code, claude.ai, telefon, sunucu, Hermes ve Antigravity aynı hafızanın çevresinde.">
 </picture>
 
-**COUNCIL, yapay zekâ yardımcılarına kalıcı hafıza veren açık kaynak bir sistemdir.** Tek komutla bilgisayarına kurulur. Notların düz Markdown dosyaları olarak sende kalır. Hafızayı bir sunucuya taşırsan telefonundaki Claude ve öbür cihazların da aynı notları okur ve yazar.
+**COUNCIL, yapay zekâ yardımcılarına kalıcı hafıza veren açık kaynak bir sistemdir.** Bilgisayarına yardımcın kurar. Notların düz Markdown dosyaları olarak sende kalır. Hafızayı bir sunucuya taşırsan telefonundaki Claude ve öbür cihazların da aynı notları okur ve yazar.
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/install.sh | sh
+Kurmak için şu cümleyi yapay zekâ yardımcına yapıştır. Gerisini o yapar:
+
+```text
+Şu yönergeyi oku ve COUNCIL'i kur: https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
 ```
 
 **[Kurulum](#kurulum)** · [Nasıl çalışır](#nasil-calisir) · [Neden farklı](#neden-farkli) · [Sık sorulanlar](#sik-sorulanlar) · [English](README.en.md)
 
-macOS · Linux · Windows &nbsp;|&nbsp; Python 3.11+ &nbsp;|&nbsp; sürüm 0.2.0 &nbsp;|&nbsp; [MIT lisansı](LICENSE)
+macOS · Linux · Windows &nbsp;|&nbsp; Python 3.11+ &nbsp;|&nbsp; sürüm 0.2.1 &nbsp;|&nbsp; [MIT lisansı](LICENSE)
 
 <br>
 
@@ -91,7 +93,7 @@ Turuncu çizgi hafızadır. Her yay bir oturumdur: hafızadan çıkar, hafızaya
 <a id="neden-farkli"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-neden-farkli-koyu.svg"><img src="docs/assets/baslik-neden-farkli-acik.svg" height="30" alt="Neden farklı"></picture></p>
 
-- **Tek komut, sıfır ayar.** Servis, Claude Code bağlantısı, içe aktarma ve güncelleme tek adımda kurulur. Yönetici yetkisi istemez.
+- **Tek cümle, sıfır ayar.** Yardımcına bir cümle yazarsın; servis, bağlantı, içe aktarma ve güncelleme kendiliğinden kurulur. Yönetici yetkisi istemez.
 - **Eski hafızanı geride bırakmaz.** Yardımcılarının tuttuğu hafıza dosyalarını kopyalar. Tanımadığı bir sistem varsa ilk oturumda yardımcın onu bulup taşır.
 - **Kendini günceller.** Yeni sürüm yayınlandığında bir gün içinde sana ulaşır.
 - **Yardımcıya bağlı değildir.** Hafıza yardımcının içinde değil, senin dosyalarındadır. MCP konuşan her yardımcı bağlanır.
@@ -102,7 +104,7 @@ Turuncu çizgi hafızadır. Her yay bir oturumdur: hafızadan çıkar, hafızaya
 
 | | Bu bilgisayar | Kendi sunucun |
 |---|---|---|
-| **Kurulum** | Tek komut | [Rehberdeki adımlar](docs/kurulum.md#sunucu) |
+| **Kurulum** | Yardımcına tek cümle | [Rehberdeki adımlar](docs/kurulum.md#sunucu) |
 | **Kimler bağlanır** | Bu bilgisayardaki yardımcılar | Bütün cihazların, telefon ve claude.ai dahil |
 | **Ne gerekir** | Python ve git | Alan adı olan küçük bir Linux sunucu |
 
@@ -121,6 +123,17 @@ Bilgisayarında başlayıp sonradan sunucuya geçebilirsin. Taşımak için `vau
 <a id="kurulum"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-kurulum-koyu.svg"><img src="docs/assets/baslik-kurulum-acik.svg" height="30" alt="Kurulum"></picture></p>
 
+**Yardımcına yaptır.** Şu cümleyi Claude Code'a ya da kullandığın başka bir yardımcıya yapıştır:
+
+```text
+Şu yönergeyi oku ve COUNCIL'i kur: https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
+```
+
+Yardımcın [yönergeyi](INSTALL.md) okur ve sana soru sormadan şunları yapar: gerekenleri denetler, kurulumu çalıştırır, sonucu doğrular, bildiği başka hafıza kaynaklarını içeri alır ve ne yaptığını birkaç satırla sana bildirir. Bittiğinde yeni bir oturum açman yeter.
+
+<details>
+<summary><b>Kendim kurmak istiyorum</b></summary>
+
 Gerekenler: Python 3.11 ya da üstü ve git.
 
 **macOS ve Linux**
@@ -136,6 +149,8 @@ irm https://raw.githubusercontent.com/musalkeremlboz/council/main/install.ps1 | 
 ```
 
 Komut bittiğinde yeni bir Claude Code oturumu aç. Hafıza hazırdır.
+
+</details>
 
 | Kurulum ne yapar | |
 |---|---|
@@ -297,12 +312,13 @@ Güncelleme yalnız bu deponun yayınlanmış sürümlerinden, şifreli bağlant
 <a id="belgeler"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-belgeler-koyu.svg"><img src="docs/assets/baslik-belgeler-acik.svg" height="30" alt="Belgeler ve katkı"></picture></p>
 
+- **[INSTALL.md](INSTALL.md)**: yardımcının okuyup uyguladığı kurulum yönergesi
 - **[Kurulum rehberi](docs/kurulum.md)**: sunucu, Claude Code, claude.ai, yedekleme, güncelleme
 - **[Setup guide](docs/setup.md)**: aynı rehberin İngilizcesi
 - **[deploy/](deploy)**: Linux sunucu için örnek servis ve zamanlayıcı dosyaları
 - **[brand/](brand)**: logo dosyaları ve Council Halka yazı tipi
 
-COUNCIL 0.2.0 sürümündedir ve tek kişinin günlük kullanımında gelişiyor. Fikir olarak [Avenox Beyin](https://github.com/avenoxai/avenoxbeyin)'den esinlenmiştir. Kodun 57 testi var ve kurulum her değişiklikte Linux, macOS ve Windows'ta denenir: `pip install -e ".[dev]" && pytest`. Hata bildirimi ve öneri için [bir konu aç](https://github.com/musalkeremlboz/council/issues).
+COUNCIL 0.2.1 sürümündedir ve tek kişinin günlük kullanımında gelişiyor. Fikir olarak [Avenox Beyin](https://github.com/avenoxai/avenoxbeyin)'den esinlenmiştir. Kodun 60 testi var ve kurulum her değişiklikte Linux, macOS ve Windows'ta denenir: `pip install -e ".[dev]" && pytest`. Hata bildirimi ve öneri için [bir konu aç](https://github.com/musalkeremlboz/council/issues).
 
 <p align="center">
   <picture>

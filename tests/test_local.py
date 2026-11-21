@@ -236,7 +236,8 @@ def test_agent_memory_files_are_found_and_copied_once(home):
     assert notes == ["imported/claude-code/blog/db-choice.md", "imported/claude-code/claude.md", "imported/codex/agents.md"]
     assert "The blog uses SQLite." in store.read(notes[0]).text and "Imported from" in store.read(notes[0]).text
     thread = store.read("threads.md").text
-    assert "Bring the user's existing memory over" in thread and "`imported/claude-code/`" in thread
+    assert "Bring the user's existing memory over" in thread and "offer to retire them" in thread
+    assert migrate.summary(store) == (3, [str(home)])
     assert store.index.search("SQLite")[0]["path"] == "imported/claude-code/blog/db-choice.md"
     assert migrate.run(store, migrate.detect(home), say=lambda *_: None) == 0
     assert (home / ".claude/CLAUDE.md").read_text() == "# About me\n\nShort answers, please."
@@ -246,7 +247,7 @@ def test_agent_is_asked_even_when_nothing_was_found(home):
     store = Store(home / ".council")
     assert migrate.detect(home) == []
     migrate.run(store, [], say=lambda *_: None)
-    assert "any other memory system" in store.read("threads.md").text
+    assert "not under `imported/` yet" in store.read("threads.md").text
 
 
 def vault_folder(tmp_path):
@@ -283,3 +284,36 @@ def test_named_folder_is_copied_with_its_layout(home, tmp_path):
     assert migrate.kind_of(src) == "folder"
     migrate.run(store, [{"kind": "folder", "path": str(src)}], say=lambda *_: None, explicit=True)
     assert [n for n in store.list() if n.startswith("imported/")] == ["imported/my-notes/work/plan-one.md"]
+
+
+def test_single_file_can_be_imported_and_repeating_adds_nothing(home, tmp_path):
+    f = tmp_path / "Facts About Me.md"
+    f.write_text("Lives in Izmir.")
+    store = Store(home / ".council")
+    assert migrate.kind_of(f) == "file"
+    said = []
+    assert migrate.run(store, [{"kind": "file", "path": str(f)}], say=said.append, explicit=True) == 1
+    assert "imported 1 note from" in said[0]
+    assert "imported/files/facts-about-me.md" in store.list()
+    assert migrate.run(store, [{"kind": "file", "path": str(f)}], say=said.append, explicit=True) == 0
+
+
+def test_install_stops_when_the_port_belongs_to_another_program(home, monkeypatch):
+    s = make(home)
+    s.healthy = lambda wait=0: None
+    monkeypatch.setattr(local, "_port_taken", lambda port: True)
+    said = []
+    s.say = said.append
+    assert local.install(s) == 1
+    assert any("--port 8800" in line for line in said) and not s.run.ran("launchctl", "bootstrap")
+
+
+def test_status_reports_connections_and_imports(home):
+    agent_home(home)
+    s = make(home)
+    local.install(s)
+    said = []
+    s.say = said.append
+    assert local.status(s) == 0
+    text = "\n".join(said)
+    assert "mcp tools    connected to Claude Code" in text and "imported     3 notes, from:" in text
