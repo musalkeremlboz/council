@@ -2,6 +2,8 @@
 
 Tarih: 2026-11-21 · Durum: onaylandı (2026-11-21 04:39) · Hedef sürüm: 0.3.0
 
+Ek tasarım `2026-11-21-skill-dizini.md` (onay bekliyor) "Bağlama gelmesi", "İnceleme sorusu" ve "Ölçüm" bölümlerini değiştirir; değişen satırlar aşağıda işaretlidir.
+
 Halkanın ikinci parçası. Birincisi hafızaydı.
 
 ## Amaç ve neden
@@ -33,7 +35,7 @@ COUNCIL'e özgü değer: öğrenilen şey tek bir yardımcıda kalmaz. Bir yard�
 - Kendi öğrenme düzeneği olan yardımcıların skill'leriyle köprü.
 - Skill'lerin yardımcıların kendi skill klasörlerine aktarılması.
 - Anlam tabanlı eşleştirme. Eşleştirme bugünkü kelime aramasıyla yapılır.
-- Oturum başında skill adlarının dizini. Dizinin yararı ancak bir model onu okuyup skill'i kendisi getirirse ortaya çıkar; bunu ölçecek düzenek yok. Gerçek kullanım verisi geldiğinde yeniden ele alınır.
+- Oturum başında skill adlarının dizini. Dizinin yararı ancak bir model onu okuyup skill'i kendisi getirirse ortaya çıkar; bunu ölçecek düzenek yok. Gerçek kullanım verisi geldiğinde yeniden ele alınır. (Ek tasarımla değişiyor: `2026-11-21-skill-dizini.md`.)
 - Düzeltmeyi sunucunun kendisinin fark etmesi. Neyin öğrenmeye değer olduğuna yardımcı karar verir.
 
 ## Olmaması gerekenler
@@ -70,8 +72,8 @@ yardımcı cevabını bitirir
   → bir şey yazdıysa cevabının sonuna tek satır ekler: "Öğrendim: …"
 
 sonraki oturumlar
-  → kullanıcının mesajı bir skill'in konusuna uyuyorsa skill bağlama eklenir
-  → inceleme sırasında yardımcı, o oturumda gelen skill'ler için bildirir: işe yaradı / yaramadı
+  → kullanıcının mesajı bir skill'in konusuna uyuyorsa skill bağlama eklenir (ek tasarımla: skill'in metni değil, tek satırlık işaret; skill'i yardımcı açar)
+  → inceleme sırasında yardımcı, o oturumda gelen skill'ler için bildirir: işe yaradı / yaramadı (ek tasarımla: yalnız açtığı skill'ler için)
   → ayrı oturumlarda üç kez işe yarayan aday kalıcı olur
   → beş ayrı oturum "işe yaramadı" deyip hiçbiri "yaradı" demediyse ya da iki kez "yanlış" dendiyse skill emekliye ayrılır
 ```
@@ -113,7 +115,7 @@ Yardımcının çağırdığı dört yeni araç. Adlar ve parametreler yapana b�
 
 Emekli skill `skills/retired/` altına taşınır: aranabilir, ama bağlama eklenmez. Emeklilik hem adaylar hem kalıcılar için geçerlidir. Emekli bir skill, aynı adla yeniden yazıldığında aday olarak geri döner.
 
-Emeklilik süreye değil kanıta bağlıdır. Seyrek yapılan bir işin skill'i aylarca hiç gelmeyebilir; bağlama gelmediği sürece yer tutmaz ve bekler. Bir skill'in yalnızca gösterilmiş olması da onu emekli etmez: kısa oturumlarda ve hook'u olmayan yardımcılarda geri bildirim hiç sorulmaz, sorulmayan oturum "yaramadı" demiş sayılamaz. Emekli olan, beş ayrı oturumun "işe yaramadı" dediği ve hiçbirinin "yaradı" demediği skill'dir. (Yapım sırasında değişti: ilk tasarım beşinci gösterimde emekli ediyordu ve o oturum daha cevap veremeden skill çekiliyordu.)
+Emeklilik süreye değil kanıta bağlıdır. Seyrek yapılan bir işin skill'i aylarca hiç gelmeyebilir; bağlama gelmediği sürece yer tutmaz ve bekler (ek tasarımla: dizinde tek satır tutar). Bir skill'in yalnızca gösterilmiş olması da onu emekli etmez: kısa oturumlarda ve hook'u olmayan yardımcılarda geri bildirim hiç sorulmaz, sorulmayan oturum "yaramadı" demiş sayılamaz. Emekli olan, beş ayrı oturumun "işe yaramadı" dediği ve hiçbirinin "yaradı" demediği skill'dir. (Yapım sırasında değişti: ilk tasarım beşinci gösterimde emekli ediyordu ve o oturum daha cevap veremeden skill çekiliyordu.)
 
 Oturum kimliği bildirmeyen yardımcıların geri bildirimi gün başına bir oturum sayılır.
 
