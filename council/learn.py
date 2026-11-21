@@ -313,7 +313,9 @@ class Learning:
                       if isinstance(e, dict) and not e.get("undone") and (not key or e.get("session") == key)), None)
         if entry is None:
             raise StoreError("nothing to undo" + (" in this session" if key else ""))
-        path, kind = entry["path"], entry["kind"]
+        path, kind = entry.get("path"), entry.get("kind")
+        if not isinstance(path, str) or kind not in ("rule", "skill_edit", "skill_new"):
+            raise StoreError("the latest ledger entry is damaged or of an unknown kind; not undoing anything")
 
         def changed() -> StoreError:
             return StoreError(f"{path} changed since it was learned; not undoing it. Look at the note and fix it by hand")
@@ -340,6 +342,8 @@ class Learning:
             for e in state.get("ledger", []):
                 if isinstance(e, dict) and e.get("id") == entry["id"]:
                     e["undone"] = True
+            if kind == "skill_new" and isinstance(state.get("skills"), dict):
+                state["skills"].pop(path, None)  # a new skill under the same name must not inherit these counters
             self._save(state)
         return {"undone": kind, "path": path,
                 "notice": f"Undone ({kind.replace('_', ' ')}) in {path}; tell the user in one line, in their language."}
@@ -497,8 +501,8 @@ class Learning:
             asked.append(now_local().isoformat(timespec="seconds"))
             self._save(state)
 
-    def summary(self, days: int = 7) -> dict:
-        """Counts of what was learned in the last ``days``; the keys a later task completes are empty for now."""
+    def summary(self, days: float = 7) -> dict:
+        """What was learned in the last ``days``, plus how many skills are established or retired right now."""
         state = self._load()
         cutoff = now_local() - dt.timedelta(days=days)
 
@@ -508,12 +512,22 @@ class Learning:
             except (TypeError, ValueError):
                 return False
 
-        ledger = state.get("ledger") if isinstance(state.get("ledger"), list) else []
+        def events(key: str) -> list[dict]:
+            raw = state.get(key) if isinstance(state.get(key), list) else []
+            return [e for e in raw if isinstance(e, dict) and recent(e.get("ts"))]
+
+        ledger = events("ledger")
+        kinds = [e.get("kind") for e in ledger]
         reviews = state.get("reviews") if isinstance(state.get("reviews"), list) else []
+        verdicts = [e.get("outcome") for e in events("feedback")]
+        paths = self.store.list()
+        established = sum(1 for p in paths if is_skill(p) and parse_skill(self.store.read(p).text)["status"] == "established")
         return {
             "reviews_asked": sum(1 for ts in reviews if recent(ts)),
-            "skills_new": sum(1 for e in ledger if isinstance(e, dict) and e.get("kind") == "skill_new"
-                              and recent(e.get("ts"))),
-            "skills_revised": 0, "rules": 0, "undone": 0, "established": 0, "retired": 0,
-            "helped_rate": None, "possible_repeats": [],
+            "skills_new": kinds.count("skill_new"), "skills_revised": kinds.count("skill_edit"),
+            "rules": kinds.count("rule"), "undone": sum(1 for e in ledger if e.get("undone")),
+            "established": established, "retired": sum(1 for p in paths if is_retired(p)),
+            "helped_rate": verdicts.count("helped") / len(verdicts) if verdicts else None,
+            "possible_repeats": [{"line": e.get("line"), "repeat_of": e["repeat_of"]}
+                                 for e in ledger if e.get("kind") == "rule" and e.get("repeat_of")],
         }

@@ -252,7 +252,7 @@ def test_project_skill_feedback_and_summary_counts(store):
     s = L.summary()
     assert s["skills_new"] == 1 and s["reviews_asked"] == 2
     assert s["skills_revised"] == s["rules"] == s["undone"] == s["established"] == s["retired"] == 0
-    assert s["helped_rate"] is None and s["possible_repeats"] == []
+    assert s["helped_rate"] == 0.0 and s["possible_repeats"] == []  # one feedback, a wrong one
     assert Learning(store).summary(days=0)["skills_new"] == 0
 
 def _on(monkeypatch, day):
@@ -327,3 +327,58 @@ def test_undo_refuses_when_a_learned_skill_was_retired_since(store):
     store.move(out["path"], "skills/retired/beklet.md")
     with pytest.raises(StoreError, match="changed"):
         L.unlearn("s1")
+
+def test_summary_counts_learning(store):
+    L = Learning(store)
+    first = L.write_skill("beklet", session="a", **SK)
+    L.write_skill("beklet", expected_sha=first["sha"], session="a", **SK)
+    L.add_rule("Teknik terimleri ilk geçtiği yerde bir iki cümleyle açıkla.", session="a")
+    L.add_rule("Teknik terimleri açıklamadan kullanma, ilk geçtiği yerde açıkla.", session="b")
+    L.feedback("beklet", "helped", session="a"); L.feedback("beklet", "not_helped", session="b")
+    L.note_review_asked(); L.unlearn("b")
+    s = L.summary()
+    assert (s["skills_new"], s["skills_revised"], s["rules"], s["undone"], s["reviews_asked"]) == (1, 1, 2, 1, 1)
+    assert s["helped_rate"] == 0.5 and len(s["possible_repeats"]) == 1 and s["established"] == s["retired"] == 0
+    assert Learning(store).summary(days=0)["rules"] == 0
+
+def test_summary_counts_skills_by_their_status_in_the_vault(store):
+    L = Learning(store)
+    L.write_skill("kalici", **SK); L.write_skill("eski", **SK)
+    for n in range(3):
+        L.feedback("kalici", "helped", session=f"s{n}")
+    L.feedback("eski", "wrong"); L.feedback("eski", "wrong")
+    s = L.summary(days=0)
+    assert s["established"] == 1 and s["retired"] == 1
+
+def _tamper_ledger(store, **changes):
+    path = store.data / "learning.json"
+    state = json.loads(path.read_text(encoding="utf-8"))
+    state["ledger"][-1].update(changes)
+    path.write_text(json.dumps(state), encoding="utf-8")
+
+def test_undo_refuses_an_unknown_kind_or_a_damaged_entry_and_changes_nothing(store):
+    L = Learning(store)
+    L.write_skill("beklet", session="s1", **SK)
+    for change in ({"kind": "mystery"}, {"kind": None}, {"path": None}):
+        _tamper_ledger(store, **change)
+        with pytest.raises(StoreError):
+            L.unlearn("s1")
+        assert store.exists("skills/beklet.md")
+        _tamper_ledger(store, kind="skill_new", path="skills/beklet.md")
+    state = json.loads((store.data / "learning.json").read_text(encoding="utf-8"))
+    del state["ledger"][-1]["kind"]
+    (store.data / "learning.json").write_text(json.dumps(state), encoding="utf-8")
+    with pytest.raises(StoreError):
+        L.unlearn("s1")
+    assert store.exists("skills/beklet.md")
+
+def test_undoing_a_new_skill_drops_its_counters(store):
+    L = Learning(store)
+    L.write_skill("beklet", session="s1", **SK)
+    L.feedback("beklet", "helped", session="s1"); L.feedback("beklet", "wrong", session="s1")
+    L.record_shown("skills/beklet.md", "s1")
+    L.unlearn("s1")
+    assert "skills/beklet.md" not in json.loads((store.data / "learning.json").read_text(encoding="utf-8")).get("skills", {})
+    L.write_skill("beklet", session="s2", **SK)
+    L.feedback("beklet", "wrong", session="s2")                      # inherited counters would make this the second: retired
+    assert store.exists("skills/beklet.md") and not store.exists("skills/retired/beklet.md")

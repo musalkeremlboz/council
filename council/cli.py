@@ -164,6 +164,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {n['injected']:4d} injected {n['read']:4d} read {n['found']:4d} found  {path}")
         unused = [p for p in store.list() if p not in s["notes"]]
         print(f"never injected, read or found: {len(unused)} of {len(store.list())} notes" + "".join(f"\n  {p}" for p in unused))
+        from .learn import Learning
+
+        ls = Learning(store).summary(a.days)
+        print(f"learning: {ls['reviews_asked']} reviews asked, {ls['skills_new']} skills learned, "
+              f"{ls['skills_revised']} revised, {ls['rules']} rules, {ls['undone']} undone")
+        rate = "no feedback yet" if ls["helped_rate"] is None else f"helped {ls['helped_rate']:.0%}"
+        print(f"skills now: {ls['established']} established, {ls['retired']} retired, {rate}")
+        for r in ls["possible_repeats"]:
+            print(f"possible repeat: {r['line']}  ~  {r['repeat_of']}")
     elif a.cmd == "import":
         from . import migrate
 
