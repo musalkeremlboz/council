@@ -36,6 +36,7 @@ MIN_STEMS = 2  # a skill needs this many distinct query stems to be offered...
 MIN_SCORE = 9.0  # ...and at least this score: no skill is better than a wrong one
 SKILL_LIMIT = 2  # skills offered for one message
 SKILL_CANDIDATES = 20  # sections the index proposes before they are scored note by note
+RARITY_LIBRARY = 10  # rarity counts the library as at least this big, so scores do not depend on how many skills exist
 STEM_PREFIX_MIN = 4  # a stem matches a longer one it prefixes only when it has this many characters
 
 # ---------- paths and names ----------
@@ -465,7 +466,7 @@ class Learning:
         fields = {p: parse_skill(text) for p, text in parsed.items()}
         head = {p: _stems(f"{f['title']} {f['when']}") for p, f in fields.items()}
         body = {p: _stems(f"{f['steps']} {f['pitfalls']} {f['learned_from']}") for p, f in fields.items()}
-        n = len(live)
+        n = len(live)  # floored in the rarity below: a small library must not shrink every score
         out = []
         for path in paths:
             if path not in fields:
@@ -476,7 +477,7 @@ class Learning:
                 if not (in_head or in_body):
                     continue
                 df = sum(1 for p in live if _stem_hit(s, head[p] | body[p]))
-                rarity = math.log(1 + n / max(df, 1))
+                rarity = math.log(1 + max(n, RARITY_LIBRARY) / max(df, 1))
                 score += rarity * (HEAD_WEIGHT if in_head else 1.0)
                 hits += 1
             if hits >= MIN_STEMS and score >= MIN_SCORE:

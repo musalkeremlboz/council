@@ -37,3 +37,17 @@ def test_retired_skills_never_match(tmp_path):
     name = DATA["skills"][0]["name"]
     L.feedback(name, "wrong", session="x"); L.feedback(name, "wrong", session="y")
     assert all(m["title"] != name for case in DATA["on_topic"] for m in L.match(case["message"]))
+
+@pytest.mark.parametrize("k", [1, 2, 3, 6, 14])
+def test_the_decision_does_not_depend_on_how_many_skills_exist(tmp_path, k):
+    """Every user starts with one skill: the bars hold for the first k skills of the set."""
+    L = Learning(Store(tmp_path / "data"))
+    names = set()
+    for s in DATA["skills"][:k]:
+        L.write_skill(**s)
+        names.add(s["name"])
+    cases = [c for c in DATA["on_topic"] if c["expect"] in names]
+    hits = sum(any(m["title"] == c["expect"] for m in L.match(c["message"])) for c in cases)
+    shown = sum(bool(L.match(m)) for m in DATA["off_topic"])
+    assert hits / len(cases) >= 0.80, f"k={k}: on-topic {hits}/{len(cases)}"
+    assert shown / len(DATA["off_topic"]) <= 0.20, f"k={k}: off-topic {shown}/{len(DATA['off_topic'])}"
