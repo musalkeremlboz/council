@@ -393,7 +393,7 @@ def install(s: Setup, auto_update: bool = True, do_import: bool = True, sources:
     say("")
     say("Done. Open a new Claude Code session and say hello: it already knows what is in the memory.")
     say(f"Your notes are plain files in {store.vault}")
-    say(f"The command, for later: {Path(sys.executable).with_name('council')}")
+    say(f"The command, for later: {Path(sys.executable).with_name('council.exe' if s.system == 'Windows' else 'council')}")
     return 0
 
 
