@@ -199,14 +199,15 @@ def test_two_wrongs_or_five_unhelpful_sessions_retire(store):
     assert "- **Status:** retired" in store.read("skills/retired/yanlis.md").text
     p = L.write_skill("yaramaz", **SK)["path"]
     for s in "abcd":
-        L.record_shown(p, s)
+        L.feedback("yaramaz", "not_helped", session=s)
+    L.feedback("yaramaz", "not_helped", session="d")       # the same session counts once
     assert store.exists(p)
-    L.record_shown(p, "e")
+    assert L.feedback("yaramaz", "not_helped", session="e")["status"] == "retired"
     assert not store.exists(p) and store.exists("skills/retired/yaramaz.md")
     q = L.write_skill("yarar", **SK)["path"]; L.feedback("yarar", "helped", session="a")
     for s in "bcdefg":
-        L.record_shown(q, s)
-    assert store.exists(q)                                 # it helped once: showing it more does not retire it
+        L.feedback("yarar", "not_helped", session=s)
+    assert store.exists(q)                                 # it helped once: unhelpful sessions do not retire it
 
 def test_shown_in_lists_this_sessions_skills_and_unknown_feedback_is_refused(store):
     L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
@@ -270,9 +271,9 @@ def test_feedback_and_shown_without_a_session_count_once_per_day(store, monkeypa
     assert L.shown_in("") == []
     q = L.write_skill("yaramaz", **SK)["path"]
     for day in range(10, 14):
-        _on(monkeypatch, day); L.record_shown(q, "")
+        _on(monkeypatch, day); L.feedback("yaramaz", "not_helped"); L.feedback("yaramaz", "not_helped")
     assert store.exists(q)
-    _on(monkeypatch, 14); L.record_shown(q, "")
+    _on(monkeypatch, 14); L.feedback("yaramaz", "not_helped")
     assert not store.exists(q) and store.exists("skills/retired/yaramaz.md")
 
 def test_undo_removes_a_new_skill_restores_a_revised_one_and_drops_a_rule(store):
@@ -428,3 +429,17 @@ def test_feedback_takes_the_skill_path_the_review_question_names(store):
                                                    "status": "retired"}
     with pytest.raises(StoreError, match="no live skill"):
         L.feedback("skills/yok.md", "helped")
+
+def test_showing_a_skill_never_retires_it(store):
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
+    for s in "abcdefgh":
+        L.record_shown(p, s)
+    assert store.exists(p) and L.shown_in("h") == [p]
+
+def test_help_in_the_fifth_session_keeps_a_skill_after_four_unhelpful_ones(store):
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
+    for s in "abcd":
+        L.record_shown(p, s); L.feedback("beklet", "not_helped", session=s)
+    L.record_shown(p, "e")
+    assert L.feedback("beklet", "helped", session="e") == {"path": p, "status": "candidate"}
+    assert L.feedback("beklet", "not_helped", session="f")["status"] == "candidate"

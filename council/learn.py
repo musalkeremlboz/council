@@ -29,7 +29,7 @@ REPEAT_SHARE = 0.6  # a new rule is a possible repeat when it shares this share 
 REPEAT_MIN = 3  # ...and at least this many stems
 PROMOTE_AFTER = 3  # a candidate becomes established after 'helped' feedback in this many different sessions
 RETIRE_WRONG = 2  # a skill retires after this many 'wrong' feedbacks...
-RETIRE_SHOWN = 5  # ...or after being shown in this many different sessions with no 'helped' at all
+RETIRE_NOT_HELPED = 5  # ...or after 'not_helped' from this many different sessions and 'helped' from none
 OUTCOMES = ("helped", "not_helped", "wrong")
 HEAD_WEIGHT = 2.0  # a query stem in a skill's title or When line counts this many times its rarity
 MIN_STEMS = 2  # a skill needs this many distinct query stems to be offered...
@@ -400,6 +400,8 @@ class Learning:
             entry["shown"] = []
         if not isinstance(entry.get("helped"), list):
             entry["helped"] = []
+        if not isinstance(entry.get("not_helped"), list):
+            entry["not_helped"] = []
         if not isinstance(entry.get("wrong"), int):
             entry["wrong"] = 0
         return entry
@@ -407,7 +409,7 @@ class Learning:
     @staticmethod
     def _verdict(entry: dict) -> str:
         """What the counters say about a skill: 'retire', 'promote' or 'keep'."""
-        if entry["wrong"] >= RETIRE_WRONG or (len(entry["shown"]) >= RETIRE_SHOWN and not entry["helped"]):
+        if entry["wrong"] >= RETIRE_WRONG or (len(entry["not_helped"]) >= RETIRE_NOT_HELPED and not entry["helped"]):
             return "retire"
         return "promote" if len(entry["helped"]) >= PROMOTE_AFTER else "keep"
 
@@ -451,9 +453,16 @@ class Learning:
         return session[:SESSION_KEY] or f"day:{now_local().date().isoformat()}"
 
     def record_shown(self, path: str, session: str) -> None:
-        """Note that a skill was shown to a session (counted once per session or, with none, per day); may retire it."""
+        """Note that a skill was shown to a session (once per session or, with none, per day).
+
+        Only recorded, for the review question: showing never retires a skill, since a session may
+        end, or run without hooks, before anyone could say whether it helped.
+        """
         key = self._evidence_key(session)
-        if not is_skill(path) or not self.store.exists(path):
+        try:
+            if not is_skill(path) or not self.store.exists(path):
+                return
+        except StoreError:  # a path the store refuses: nothing to record
             return
         with self.store._locked():
             state = self._load()
@@ -461,9 +470,6 @@ class Learning:
             if key not in entry["shown"]:
                 entry["shown"].append(key)
                 self._save(state)
-            verdict = self._verdict(entry)
-        if verdict == "retire":
-            self._settle(path, verdict)
 
     def shown_in(self, session: str) -> list[str]:
         """Skills already shown to this session, so they are not shown again."""
@@ -490,8 +496,8 @@ class Learning:
         with self.store._locked():
             state = self._load()
             entry = self._skill_state(state, path)
-            if outcome == "helped" and self._evidence_key(session) not in entry["helped"]:
-                entry["helped"].append(self._evidence_key(session))
+            if outcome in ("helped", "not_helped") and self._evidence_key(session) not in entry[outcome]:
+                entry[outcome].append(self._evidence_key(session))
             elif outcome == "wrong":
                 entry["wrong"] += 1
             events = state.get("feedback")
