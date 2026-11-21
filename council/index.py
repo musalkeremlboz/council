@@ -82,8 +82,35 @@ def _split(body: str, max_len: int = MAX_CHUNK) -> list[str]:
     return pieces
 
 
+# What a request is worded with, not what it is about ("bunu yapabilir misin, istiyorum"). Rare in notes, so
+# each one that does occur would outweigh the subject. Dropped only where STOP is: for what comes unasked.
+FILLER = frozenset("""bunu bunun buna bunlar bunlari sunu sunun onu onun ona sey seyi seyler istiyorum istiyoruz istiyor
+isterim yapabilir yapabiliriz yapabilirim yapabilirsin edebilir edebiliriz olabilir lazim gerek gerekiyor gerekir misin
+misiniz musun musunuz miyim miyiz peki ayrica yani zaten lutfen sana bize size seni bizi diye""".split())
+NOTE_STEM = 6  # longest stem a note search matches on: "bağlanmasını" must find "bağlantısı"
+
+
+def note_query(q: str, content_only: bool = False) -> str:
+    """FTS5 query for searching notes. ``content_only`` drops filler words, for deciding what to inject unasked.
+
+    Long words match on a shorter stem than ``build_query`` uses: measured on the owner's questions and on
+    the older 44-question set, it finds more and loses nothing. Skills keep ``build_query``.
+    """
+    terms = []
+    for w in _WORD.findall(fold(q)):
+        if len(w) < 2 or (content_only and (w in STOP or w in FILLER)):
+            continue
+        terms.append(f'"{_note_stem(w)}"*')
+    return " OR ".join(dict.fromkeys(terms))
+
+
+def _note_stem(w: str) -> str:
+    return _stem(w)[:NOTE_STEM]
+
+
 def build_query(q: str, content_only: bool = False) -> str:
-    """FTS5 query for ``q``. ``content_only`` drops filler words, for deciding what to inject unasked."""
+    """FTS5 query for ``q`` with the stems skill matching was measured with (``council.learn``); notes are
+    searched with ``note_query``. ``content_only`` drops filler words."""
     terms = []
     for w in _WORD.findall(fold(q)):
         if len(w) < 2 or (content_only and w in STOP):
@@ -154,7 +181,7 @@ class Index:
 
     def search(self, q: str, limit: int = 8, exclude: set[str] | None = None,
                content_only: bool = False, where: Callable[[str], bool] | None = None) -> list[dict]:
-        fts = build_query(q, content_only)
+        fts = note_query(q, content_only)
         if not fts:
             return []
         exclude = exclude or set()
@@ -184,14 +211,14 @@ class Index:
         seen: set[str] = set()
         for word in _WORD.findall(q):
             w = fold(word)
-            if len(w) < 2 or w in STOP or _stem(w) in seen:
+            if len(w) < 2 or w in STOP or w in FILLER or _note_stem(w) in seen:
                 continue
             if len(seen) == ABSENT_WORDS or len(out) == limit:
                 break
-            seen.add(_stem(w))
+            seen.add(_note_stem(w))
             with self._lock:
                 row = self.db.execute("SELECT 1 FROM chunks WHERE chunks MATCH ? LIMIT 1",
-                                      (f'folded : ("{_stem(w)}"*)',)).fetchone()
+                                      (f'folded : ("{_note_stem(w)}"*)',)).fetchone()
             if row is None:
                 out.append(word)
         return out

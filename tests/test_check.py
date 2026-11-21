@@ -344,3 +344,27 @@ def test_questions_file_with_a_byte_order_mark_is_read_and_an_entry_without_note
     (store.data / "questions.json").write_text(json.dumps([{"question": "x", "expect": []}]), encoding="utf-8")
     with pytest.raises(check.CheckError):
         check.questions(store)
+
+
+# ---------- note search: stems and filler words ----------
+
+def test_a_long_word_finds_its_other_long_forms(store):
+    from council.index import build_query, note_query
+    store.write("projects/x/kurulum.md", "# Kurulum\n\nYardımcının hafıza bağlantısı kuruldu.")
+    assert [h["path"] for h in store.index.search("bağlanmasını")] == ["projects/x/kurulum.md"]
+    assert store.index.absent("bağlanmasını yapılandırılmamış") == ["yapılandırılmamış"]
+    assert note_query("bağlanmasını kartı turnikeler") == '"baglan"* OR "karti"* OR "turnik"*'
+    # skills are matched with the older, longer stems: their thresholds were measured with them
+    assert build_query("bağlanmasını kartı turnikeler") == '"baglanmas"* OR "karti"* OR "turnike"*'
+
+
+def test_request_words_do_not_pick_what_comes_with_a_message(store):
+    from council.index import build_query, note_query
+    store.write("notes/istek.md", "# İstek\n\nBunu yapabiliriz, istiyorum; lütfen bana söyler misin.")
+    said = "Turnike için bunu istiyorum, yapabiliriz, lütfen?"
+    by_itself = store.index.search(said, content_only=True)
+    assert [h["path"] for h in by_itself] == ["projects/havuz/turnike.md"]
+    assert "notes/istek.md" in [h["path"] for h in store.index.search(said)]          # a search keeps every word
+    assert note_query(said, content_only=True) == '"turni"*'
+    assert "istiyo" in build_query(said, content_only=True)                           # skill matching is untouched
+    assert store.index.absent("bunu istiyorum lütfen") == []                          # nothing to report about them
