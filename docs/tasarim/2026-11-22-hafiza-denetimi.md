@@ -1,6 +1,6 @@
 # Hafıza denetimi: arama soruları, bulunamayan terimler, kırık bağlantılar
 
-**Durum:** onaylandı (2026-11-22 00:44), `hafiza-denetimi` dalında yapıldı. Ana dala birleştirilmedi.
+**Durum:** onaylandı (2026-11-22 00:44), yapıldı ve `main`'e birleştirildi (`c0d81a5`; testler Linux, macOS ve Windows'ta geçiyor). Sahibinin sunucusuna kurulmadı.
 **Kaynak:** proje sahibinin isteği (2026-11-22 00:28, 00:38). Üç fikir başka bir hafıza aracının sürüm notlarından esinlendi; kod alınmaz.
 
 ## Neden
