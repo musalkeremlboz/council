@@ -1,4 +1,4 @@
-import json, time
+import datetime as dt, json, time
 import pytest
 from council.store import Conflict, Store, StoreError
 
@@ -257,7 +257,6 @@ def test_project_skill_feedback_and_summary_counts(store):
     assert Learning(store).summary(days=0)["skills_new"] == 0
 
 def _on(monkeypatch, day):
-    import datetime as dt
     monkeypatch.setattr(learn, "now_local", lambda: dt.datetime(2026, 11, day, 12).astimezone())
 
 def test_feedback_and_shown_without_a_session_count_once_per_day(store, monkeypatch):
