@@ -449,8 +449,9 @@ class Learning:
                 if text is None:
                     return {"path": path, "status": status}
                 self.store.write(path, text, note.sha, f"skill {new}: {path}")
+                status = new  # what the note now says, should the move below fail
             if verdict == "promote":
-                return {"path": path, "status": new}
+                return {"path": path, "status": status}
             parts = list(_parts(path))
             parts.insert(-1, "retired")
             retired = "/".join(parts)

@@ -477,3 +477,11 @@ def test_summary_survives_a_skill_that_vanished_while_counting(store, monkeypatc
     listed = store.list()
     monkeypatch.setattr(store, "list", lambda prefix="": listed + ["skills/gitti.md"])
     assert L.summary()["skills_new"] == 1
+
+def test_a_retirement_blocked_by_a_retired_twin_leaves_the_note_out_of_context(store):
+    L = Learning(store)
+    p = L.write_skill("beklet", **SK)["path"]
+    store.write("skills/retired/beklet.md", "# beklet\n\neski sürüm")   # the move to retired/ will meet it
+    L.feedback("beklet", "wrong", session="a")
+    assert L.feedback("beklet", "wrong", session="b") == {"path": p, "status": "retired"}
+    assert store.exists(p) and L.match("çalışan servisin üstüne yeniden kurulum yapacağım") == []
