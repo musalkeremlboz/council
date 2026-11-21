@@ -1,6 +1,6 @@
 # Skill dizini ve işaret (kişisel gelişim, ek tasarım)
 
-**Durum:** yapıldı (dal `skill-dizini`), ölçüm bekliyor.
+**Durum:** yapıldı ve `main`'e birleştirildi (2026-11-21, `08ffa9c`; testler Linux, macOS ve Windows'ta geçiyor). Uçtan uca ölçüm bekliyor.
 **Ana tasarım:** `2026-11-21-kisisel-gelisim.md`. Bu belge onun "Bağlama gelmesi", "İnceleme sorusu" ve "Ölçüm" bölümlerini değiştirir. Ayrıca şu cümleleri geçersiz kılar (ana belgede işaretlendi): "Kapsam dışı" altındaki dizin maddesi, "Nasıl işler" akışındaki "skill bağlama eklenir" ve "gelen skill'ler için bildirir" satırları, "bağlama gelmediği sürece yer tutmaz" cümlesi. Gerisi aynen geçerlidir.
 **Hedef sürüm:** 0.3.0.
 
