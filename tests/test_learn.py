@@ -99,3 +99,44 @@ def test_state_file_is_read_fresh_and_a_broken_one_counts_as_empty(store):
     b.write_skill("iki", **SK)
     ledger = json.loads((store.data / "learning.json").read_text())["ledger"]
     assert [e["path"] for e in ledger] == ["skills/bir.md", "skills/iki.md"]
+
+def test_comeback_ledger_keeps_the_retired_note_for_undo(store):
+    L = Learning(store)
+    L.write_skill("beklet", **SK)
+    retired = store.move("skills/beklet.md", "skills/retired/beklet.md").text
+    L.write_skill("beklet", **SK)
+    ledger = json.loads((store.data / "learning.json").read_text())["ledger"]
+    assert ledger[0]["before"] is None and ledger[0]["retired_path"] is None
+    assert ledger[1]["kind"] == "skill_new"
+    assert ledger[1]["before"] == retired and ledger[1]["retired_path"] == "skills/retired/beklet.md"
+
+def test_comeback_never_leaves_the_skill_without_a_note(store, monkeypatch):
+    L = Learning(store)
+    L.write_skill("beklet", **SK)
+    store.move("skills/beklet.md", "skills/retired/beklet.md")
+    real_write = store.write
+    seen = []
+    def spy(path, *a, **k):
+        seen.append(store.list("skills/"))                # state right before the new content lands
+        return real_write(path, *a, **k)
+    monkeypatch.setattr(store, "write", spy)
+    L.write_skill("beklet", **SK)
+    assert seen == [["skills/beklet.md"]]
+
+def test_headings_and_multiline_when_are_refused(store):
+    L = Learning(store)
+    for field in ("steps", "pitfalls", "learned_from"):
+        for line in ("# Başlık", "## Steps"):
+            with pytest.raises(StoreError, match="heading"):
+                L.write_skill("x", **{**SK, field: f"1. adım\n{line}\nson"})
+    L.write_skill("x", **{**SK, "pitfalls": "### alt başlık serbest\n#etiket"})
+    with pytest.raises(StoreError, match="When"):
+        L.write_skill("y", **{**SK, "when": "bir\niki"})
+    assert store.list("skills/") == ["skills/x.md"]
+
+def test_render_and_parse_round_trip(store):
+    text = learn.render_skill("Başlık", "Ne zaman", "1. a\n2. b", "Şundan öğrendim", "- tuzak",
+                              "candidate", "2026-11-21, session abcd1234", "2026-11-22, session efgh5678")
+    assert learn.parse_skill(text) == dict(
+        title="Başlık", when="Ne zaman", status="candidate", source="2026-11-21, session abcd1234",
+        revised="2026-11-22, session efgh5678", steps="1. a\n2. b", pitfalls="- tuzak", learned_from="Şundan öğrendim")

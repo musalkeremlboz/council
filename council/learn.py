@@ -162,6 +162,8 @@ class Learning:
     def write_skill(self, title: str, when: str, steps: str, learned_from: str, pitfalls: str = "",
                     project: str = "", expected_sha: str = "", session: str = "") -> dict:
         """Create a candidate skill, or revise one (status and source stay) when ``expected_sha`` matches."""
+        if "\n" in when.strip() or "\r" in when.strip():
+            raise StoreError("When must be a single line")
         title, when = " ".join(title.split()), " ".join(when.split())
         path = skill_path(title, project)
         if not when:
@@ -171,6 +173,10 @@ class Learning:
         for name, value in (("steps", steps), ("learned_from", learned_from)):
             if not value.strip():
                 raise StoreError(f"{name} is required")
+        for name, value in (("steps", steps), ("pitfalls", pitfalls), ("learned_from", learned_from)):
+            if any(line.startswith(("# ", "## ")) for line in value.splitlines()):
+                raise StoreError(f"{name} has a line starting with a level 1 or 2 heading; it would break the note's "
+                                 "structure (level 3 and deeper are fine)")
         if len(steps) + len(pitfalls) + len(learned_from) > MAX_SKILL_CHARS:
             raise StoreError(f"skill is too long; steps, pitfalls and learned_from together may use {MAX_SKILL_CHARS} characters")
         secret = find_secret("\n".join((title, when, steps, pitfalls, learned_from)))
@@ -178,21 +184,29 @@ class Learning:
             raise StoreError(f"refused: looks like a secret ({secret})")
 
         stamp, retired_path = _stamp(session), skill_path(title, project, retired=True)
-        before: str | None = None
+        before: str | None = None  # text an undo restores: the old version, or the retired note of a comeback
         status, source, revised = "candidate", stamp, ""
         if expected_sha:
             before = self.store.read(path).text  # missing note -> StoreError
             old = parse_skill(before)
             status, source, revised = old["status"] or "candidate", old["source"] or stamp, stamp
         text = render_skill(title, when, steps, learned_from, pitfalls, status, source, revised)
-        # A retired copy under the same name must not linger: the skill returns to its live path.
-        if not expected_sha and not self.store.exists(path) and self.store.exists(retired_path):
-            self.store.remove(retired_path, f"skill {path} rewritten; retired copy dropped")
-        note = self.store.write(path, text, expected_sha, f"skill {'edit' if before is not None else 'new'}: {path}")
+        # Comeback: move the retired note to its live path first, then write over it, so a note exists throughout.
+        retired_path_used: str | None = None
+        if expected_sha:
+            note = self.store.write(path, text, expected_sha, f"skill edit: {path}")
+        elif not self.store.exists(path) and self.store.exists(retired_path):
+            before, retired_path_used = self.store.read(retired_path).text, retired_path
+            moved = self.store.move(retired_path, path, f"skill {path} rewritten; back from retired")
+            note = self.store.write(path, text, moved.sha, f"skill new: {path}")
+        else:
+            note = self.store.write(path, text, "", f"skill new: {path}")
+        edited = bool(expected_sha)
         self._record({"id": uuid.uuid4().hex[:8], "ts": now_local().isoformat(timespec="seconds"),
-                      "kind": "skill_edit" if before is not None else "skill_new", "path": path,
-                      "session": session[:SESSION_KEY], "before": before, "undone": False})
-        verb = "Revised" if before is not None else "Learned"
+                      "kind": "skill_edit" if edited else "skill_new", "path": path,
+                      "session": session[:SESSION_KEY], "before": before, "retired_path": retired_path_used,
+                      "undone": False})
+        verb = "Revised" if edited else "Learned"
         notice = (f"{verb} skill '{title}' ({status}) and saved it as {path}; tell the user in one line, "
                   "in their language, what you learned, and that they can ask you to undo it.")
         return {"path": path, "sha": note.sha, "status": status, "notice": notice}
