@@ -9,6 +9,7 @@ import json
 import os
 import posixpath
 import re
+import unicodedata
 from urllib.parse import unquote
 
 from .context import FIXED, relevant
@@ -30,6 +31,16 @@ def _same(a: str, b: str) -> bool:
     return " ".join(a.split()).casefold() == " ".join(b.split()).casefold()
 
 
+def _nfc(text: str) -> str:
+    """One spelling for a name however its accents are stored (macOS keeps what it was given)."""
+    return unicodedata.normalize("NFC", text)
+
+
+def _listed(store: Store) -> dict[str, str]:
+    """The notes that are there, by name: only an exact name counts, whatever the file system would accept."""
+    return {_nfc(p): p for p in store.list()}
+
+
 def questions(store: Store) -> list[dict]:
     """The saved questions: ``{"question", "expect": [paths], "added"}``. A file that is not what this
     module wrote is reported, never replaced."""
@@ -37,10 +48,10 @@ def questions(store: Store) -> list[dict]:
     if not path.exists():
         return []
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8-sig"))  # an editor may have added a byte order mark
         ok = isinstance(data, list) and all(
             isinstance(q, dict) and isinstance(q.get("question"), str) and isinstance(q.get("expect"), list)
-            and all(isinstance(p, str) for p in q["expect"]) for q in data)
+            and q["expect"] and all(isinstance(p, str) for p in q["expect"]) for q in data)
     except (OSError, ValueError):
         ok = False
     if not ok:
@@ -59,41 +70,37 @@ def add_question(store: Store, question: str, paths: list[str]) -> dict:
     question = " ".join(question.split())
     if not question:
         raise CheckError("the question is empty")
+    listed = _listed(store)
     expect: list[str] = []
     for p in paths:
         try:
-            rel, full = store.resolve(p)
+            rel, _ = store.resolve(p)
         except StoreError as e:
             raise CheckError(str(e)) from e
-        if not full.is_file():
+        if _nfc(rel) not in listed:
             raise CheckError(f"note not found: {rel}")
-        if rel not in expect:
-            expect.append(rel)
+        if listed[_nfc(rel)] not in expect:
+            expect.append(listed[_nfc(rel)])
     if not expect:
         raise CheckError("name at least one note the question should find")
     entry = {"question": question, "expect": expect, "added": now_local().date().isoformat()}
-    _save(store, [q for q in questions(store) if not _same(q["question"], question)] + [entry])
+    with store._locked():  # two commands at once must not lose each other's question
+        _save(store, [q for q in questions(store) if not _same(q["question"], question)] + [entry])
     return entry
 
 
 def remove_question(store: Store, question: str) -> bool:
     """Drop a saved question; False if it was not there."""
-    data = questions(store)
-    kept = [q for q in data if not _same(q["question"], question)]
-    if len(kept) == len(data):
-        return False
-    _save(store, kept)
+    with store._locked():
+        data = questions(store)
+        kept = [q for q in data if not _same(q["question"], question)]
+        if len(kept) == len(data):
+            return False
+        _save(store, kept)
     return True
 
 
 # ---------- search ----------
-
-def _exists(store: Store, path: str) -> bool:
-    try:
-        return store.exists(path)
-    except StoreError:
-        return False
-
 
 def _paths(hits: list[dict]) -> list[str]:
     return list(dict.fromkeys(h["path"] for h in hits))
@@ -101,14 +108,16 @@ def _paths(hits: list[dict]) -> list[str]:
 
 def search_report(store: Store) -> dict:
     """For every saved question: does one of its notes come by itself with a message (what ``relevant``
-    sends, or a note every session starts with), and does the search tool find it.
+    sends, or one of the notes every session starts with, which may be clipped there), and does the search
+    tool find it.
 
-    A question whose notes are all gone is not measured; it is listed under ``gone``.
+    A question whose notes are all gone (removed or renamed) is not measured; it is listed under ``gone``.
     """
     asked = questions(store)
+    listed = _listed(store)
     out = {"questions": len(asked), "measured": 0, "auto": 0, "search": 0, "missed": [], "gone": []}
     for q in asked:
-        expect = [p for p in q["expect"] if _exists(store, p)]
+        expect = [listed[_nfc(p)] for p in q["expect"] if _nfc(p) in listed]
         if not expect:
             out["gone"].append({"question": q["question"], "expect": q["expect"]})
             continue
@@ -151,68 +160,94 @@ def render_search(r: dict) -> str:
 
 # ---------- links ----------
 
-_FENCE = re.compile(r"^[ \t]*(```|~~~).*?(?:^[ \t]*\1[ \t]*$|\Z)", re.M | re.S)
-_CODE = re.compile(r"(`+)[^\n]*?\1")
+_OPEN = re.compile(r"[ \t]{0,3}(`{3,}|~{3,})(.*)$")
+_CODE = re.compile(r"(?<!`)(`+)(?!`)(?:(?!\n[ \t]*\n).)+?(?<!`)\1(?!`)", re.S)
 _WIKI = re.compile(r"\[\[([^\[\]|#\n]+)(?:#[^\[\]|\n]*)?(?:\|[^\[\]\n]*)?\]\]")
-_MD = re.compile(r"(?<!!)\[[^\[\]\n]*\]\(\s*<?([^()\s<>]+)>?(?:\s+\"[^\"\n]*\")?\s*\)")
-_SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
-_EXT = re.compile(r"\.[A-Za-z0-9]{1,5}$")
+_MD = re.compile(r"(?<!!)\[[^\[\]\n]*\]\(\s*(?:<([^<>\n]+)>|([^()\s<>]+))"
+                 r"(?:\s+(?:\"[^\"\n]*\"|'[^'\n]*'|\([^()\n]*\)))?\s*\)")
+_SCHEME = re.compile(r"^(?:[A-Za-z][A-Za-z0-9+.-]*:|//)")
+# What a [[...]] may point at besides a note. Any other ending is part of a note's name ("Python 3.12").
+FILES = frozenset("""png jpg jpeg gif svg webp bmp ico heic pdf mp3 wav m4a ogg flac mp4 mov mkv webm avi zip gz tar
+csv tsv json yaml yml toml xml txt html htm css js ts py sh canvas base docx xlsx pptx""".split())
 HISTORY = (LOG_DIR + "/", SESSION_ARCHIVE + "/")  # records of the day they were written; never rewritten
 
 
-def _targets(text: str) -> list[str]:
-    """Link targets that claim to be notes, in order: ``[[target]]`` and ``[text](target.md)``.
+def _prose(text: str) -> str:
+    """``text`` without its code: fenced blocks (closed by a run of the same mark at least as long, or by
+    the end of the note) and inline code, which may run over a line break but not over a blank line."""
+    out, fence = [], None
+    for line in text.split("\n"):
+        if fence:
+            mark, length = fence
+            run = line.strip()
+            if len(run) >= length and set(run) == {mark} and len(line) - len(line.lstrip(" \t")) <= 3:
+                fence = None
+            out.append("")
+            continue
+        m = _OPEN.match(line)
+        if m and (m.group(1)[0] == "~" or "`" not in m.group(2)):  # a ``` line with more backticks is inline code
+            fence = (m.group(1)[0], len(m.group(1)))
+            out.append("")
+            continue
+        out.append(line)
+    return _CODE.sub(" ", "\n".join(out))
 
-    Code (fenced or inline) only shows what a link looks like; web addresses, anchors, images and other
-    files are not notes.
+
+def _targets(text: str) -> list[tuple[str, bool]]:
+    """Link targets that claim to be notes, in order, each with whether it was written ``[[target]]``
+    (the other form is ``[text](target.md)``).
+
+    Code only shows what a link looks like; web addresses, anchors, images and other files are not notes.
     """
-    text = _CODE.sub(" ", _FENCE.sub("\n", text))
+    text = _prose(text)
     out = []
     for m in _WIKI.finditer(text):
-        t = m.group(1).strip()
-        if t and not _SCHEME.match(t) and (t.endswith(".md") or not _EXT.search(t)):
-            out.append((m.start(), t))
+        t = m.group(1).rstrip("\\").strip()  # in a table the | of [[target|text]] is written \|
+        ext = t.rsplit(".", 1)[-1].lower() if "." in posixpath.basename(t) else ""
+        if t and not _SCHEME.match(t) and ext not in FILES:
+            out.append((m.start(), t, True))
     for m in _MD.finditer(text):
-        t = unquote(m.group(1)).split("#", 1)[0].strip()
+        t = unquote(m.group(1) or m.group(2)).split("#", 1)[0].strip()
         if t.endswith(".md") and not _SCHEME.match(t):
-            out.append((m.start(), t))
-    return [t for _, t in sorted(out)]
+            out.append((m.start(), t, False))
+    return [(t, wiki) for _, t, wiki in sorted(out)]
 
 
-def _resolves(note: str, target: str, notes: set[str], stems: set[str]) -> bool:
+def _resolves(note: str, target: str, wiki: bool, notes: set[str], stems: set[str]) -> bool:
     """Whether ``target`` written in ``note`` names a note: from the vault root or from the note's folder,
-    with or without ``.md``; a bare name also names a note of that name in any folder."""
+    with or without ``.md``. A bare ``[[name]]`` also names a note of that name in any folder."""
     names = [target] if target.endswith(".md") else [target, target + ".md"]
     for name in names:
         for base in ("", posixpath.dirname(note)):
-            path = posixpath.normpath(posixpath.join(base, name.lstrip("/") if not base else name))
-            if path in notes:
+            if posixpath.normpath(posixpath.join(base, name) if base else name.lstrip("/")) in notes:
                 return True
-    return "/" not in target and target.removesuffix(".md") in stems
+    return wiki and "/" not in target and target.removesuffix(".md") in stems
 
 
 def link_report(store: Store) -> dict:
     """Links between notes that lead nowhere. History (the log, session cards) is not read: it shows the
     day it was written. A broken link comes with notes of the same file name elsewhere, if there are any."""
-    notes = set(store.list())
+    listed = _listed(store)
+    notes = set(listed)
     stems = {posixpath.basename(p).removesuffix(".md") for p in notes}
     by_name: dict[str, list[str]] = {}
     for p in sorted(notes):
-        by_name.setdefault(posixpath.basename(p), []).append(p)
+        by_name.setdefault(posixpath.basename(p), []).append(listed[p])
     checked, broken = 0, {}
     for note in sorted(notes):
         if note == SESSIONS or note.startswith(HISTORY):
             continue
         try:
-            text = store.read(note).text
+            text = _nfc(store.read(listed[note]).text)
         except (StoreError, OSError, ValueError):  # gone meanwhile, or not UTF-8: nothing to check in it
             continue
-        for target in _targets(text):
+        for target, wiki in _targets(text):
             checked += 1
-            if not _resolves(note, target, notes, stems):
+            if not _resolves(note, target, wiki, notes, stems):
                 name = posixpath.basename(target)
                 name = name if name.endswith(".md") else name + ".md"
-                broken[(note, target)] = {"note": note, "target": target, "maybe": by_name.get(name, [])[:MAYBE]}
+                broken[(note, target)] = {"note": listed[note], "target": target,
+                                          "maybe": by_name.get(name, [])[:MAYBE]}
     return {"checked": checked, "broken": [broken[k] for k in sorted(broken)]}
 
 

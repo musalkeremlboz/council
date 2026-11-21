@@ -138,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from .store import Store
 
-    store = Store(data)
+    store = Store(data, readonly=a.cmd == "check")  # a check changes no note and commits nothing
     if a.cmd == "context":
         from .context import bootstrap
 

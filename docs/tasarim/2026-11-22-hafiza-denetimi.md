@@ -19,7 +19,7 @@ Hafıza büyüdükçe iki şey sessizce bozulur: bir soru doğru notu getirmez o
 **Ne:** `council check` komutu, kayıtlı her soru için hafızanın beklenen notu getirip getirmediğine bakar.
 
 - **Soru kaydı:** `<veri klasörü>/questions.json`; her kayıt bir soru, beklenen bir ya da birkaç not yolu ve eklenme tarihi. Ekleme: `council check add "soru" yol/not.md`. Çıkarma: `council check remove "soru"`.
-- **Ölçülen iki yol:** (a) mesajda kendiliğinden gelen ilgili notlar (bugünkü kural: en çok 5 bölüm), (b) açık arama (en çok 8 sonuç). Beklenen notun herhangi bir bölümü gelmişse isabettir.
+- **Ölçülen iki yol:** (a) mesajda kendiliğinden gelen ilgili notlar (bugünkü kural: en çok 5 bölüm), (b) açık arama (en çok 8 sonuç). Beklenen notun herhangi bir bölümü gelmişse isabettir. Her oturumun başında yüklenen dört not (çekirdek, kurallar, başlıklar, oturum kartları) kendiliğinden gelmiş sayılır; bunlar orada kırpılmış olabilir.
 - **Çıktı:** iki yol için ayrı ayrı `x/N`; kaçan her soru için beklenen not ve onun yerine gelen ilk üç not. Beklenen not artık yoksa kaçmış sayılmaz, "not yok" diye ayrı listelenir.
 - **Sorular nereden gelir:** sahibi "şunu bulman gerekirdi" dediğinde ya da yardımcı, kendiliğinden gelmesi gereken bir notu elle aramak zorunda kaldığında ekler. İlk küme için kullanım kaydındaki gerçek mesajlardan aday çıkarılır ve sahibine tek listede gösterilir.
 
@@ -47,6 +47,8 @@ Hafıza büyüdükçe iki şey sessizce bozulur: bir soru doğru notu getirmez o
 
 **Ölçüm (aynı sunucu):** notlarda 320 `[[...]]` bağlantısı var, 20'si var olmayan nota gidiyor (hepsi adı değişen bir proje klasörüne). Ters tırnak içindeki 138 dosya yolunun 59'u hafızanın dışındaki dosyaları gösteriyor; bunlar bağlantı değil.
 
+**Yapımdan sonra (verinin kopyasında):** bağlantıların çoğu geçmiş kayıtlarında. Onlar dışındaki notlarda 19 bağlantı var; komut 16'sını kırık buldu (14'ü adı değişen proje klasörüne) ve 15'i için olası yeni yeri gösterdi. Süre 0,4 saniye.
+
 **Ne:** `council check` aynı çalışmada bağlantıları da denetler.
 
 - **Denetlenen:** `[[hedef]]` ve `[metin](hedef.md)`. Hedef, hafıza köküne ve notun klasörüne göre, `.md` ekli ve eksiz denenir.
@@ -61,7 +63,8 @@ Hafıza büyüdükçe iki şey sessizce bozulur: bir soru doğru notu getirmez o
 ## Doğrulama
 
 - Depoda testler: soru ekleme, çıkarma, isabet ve kaçma sayımı, "not yok" durumu; bağlantı biçimlerinin her biri, göreli yol, dışarıda bırakılan klasörler, olası yeni yer; aramada bulunamayan terimler ve yanıt biçimi.
-- Sahibinin hafızasında: bağlantı denetimi yukarıdaki 20 kırık bağlantıyı bulmalıdır. Arama ölçümünün ilk sonucu bir sınır değil, başlangıç sayısıdır.
+- Sahibinin hafızasında: bağlantı denetimi adı değişen klasöre giden kırık bağlantıları bulmalıdır (buldu: yukarıdaki sayılar). Arama ölçümünün ilk sonucu bir sınır değil, başlangıç sayısıdır.
+- Bağımsız denetim sekiz kusur buldu, hepsi testleriyle düzeltildi: komut elle yapılmış değişiklikleri commit ediyordu (artık depoyu salt okunur açar); büyük/küçük harfi farklı yazılan not yolu hiç isabet sayılmıyordu; kod bloklarının üç biçimi, tablodaki `\|`, adı sürüm ya da tarihle biten notlar, yalnız adla yazılan Markdown bağlantısı, aksanları ayrık saklanan dosya adları ve soru dosyasının iki biçimi yanlış ele alınıyordu.
 
 ## Benim verdiğim kararlar
 

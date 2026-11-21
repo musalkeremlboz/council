@@ -275,3 +275,71 @@ def test_search_command_names_the_words_no_note_contains(store, capsys):
     assert "projects/havuz/turnike.md" in out and out.rstrip().endswith("no note contains: testak")
     run(store, "search", "turnike kartı")
     assert "no note contains" not in capsys.readouterr().out
+
+
+# ---------- found by review ----------
+
+def test_the_command_leaves_hand_edits_and_missing_notes_as_they_are(store, capsys):
+    (store.vault / "projects/ev/kira.md").write_text("# Kira\n\nelle değişti [[yok]]", encoding="utf-8")
+    (store.vault / "threads.md").unlink()
+    commits = store._git("rev-list", "--count", "HEAD").stdout
+    status = store._git("status", "--short").stdout
+    for args in (("check",), ("check", "links"), ("check", "search"),
+                 ("check", "add", "kurs açarken ne seçilir", "projects/havuz/kurs.md"),
+                 ("check", "remove", "kurs açarken ne seçilir")):
+        run(store, *args)
+    assert "projects/ev/kira.md → yok" in capsys.readouterr().out          # the edit on disk is what is checked
+    assert store._git("rev-list", "--count", "HEAD").stdout == commits
+    assert store._git("status", "--short").stdout == status and not (store.vault / "threads.md").exists()
+
+
+def test_a_question_is_saved_under_the_name_the_note_has(store):
+    with pytest.raises(check.CheckError):
+        check.add_question(store, "kurs açarken ne seçilir", ["Projects/Havuz/Kurs.md"])     # no note of that name
+    import unicodedata
+    nfd = unicodedata.normalize("NFD", "notes/çalışma.md")
+    (store.vault / "notes").mkdir()
+    (store.vault / nfd).write_text("# Çalışma\n\nÇalışma saatleri dokuzda başlar.", encoding="utf-8")
+    store.index.sync(store.vault)
+    on_disk = next(p for p in store.list() if p.startswith("notes/"))
+    q = check.add_question(store, "çalışma saatleri", [unicodedata.normalize("NFC", "notes/çalışma.md")])
+    assert q["expect"] == [on_disk]
+    r = check.search_report(store)
+    assert (r["auto"], r["search"], r["missed"], r["gone"]) == (1, 1, [], [])
+    store.write("notes/b.md", "# B\n\n[[notes/" + unicodedata.normalize("NFC", "çalışma") + "]]")
+    assert check.link_report(store)["broken"] == []
+
+
+def test_a_renamed_note_is_gone_even_where_file_names_ignore_case(store):
+    check.add_question(store, "kira ne zaman ödenir", ["projects/ev/kira.md"])
+    store.move("projects/ev/kira.md", "projects/ev/Kira-Odeme.md")
+    r = check.search_report(store)
+    assert r["measured"] == 0 and [g["expect"] for g in r["gone"]] == [["projects/ev/kira.md"]]
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("```code``` satır başında kod\n[[yok-a]]", ["yok-a"]),                          # not a fence: the line goes on
+    ("````\n```\n[[icte]]\n```\n````\n[[yok-b]]", ["yok-b"]),                         # a fence inside a longer one
+    ("```\n[[icte]]\n````\n[[yok-c]]", ["yok-c"]),                                   # closed by a longer run
+    ("~~~\n[[icte]]\n```\n[[icte2]]\n~~~\n[[yok-d]]", ["yok-d"]),                    # the other fence does not close it
+    ("```\n[[icte]]\n", []),                                                         # never closed: code to the end
+    ("`kod\ndevam [[icte]]` sonra [[yok-e]]", ["yok-e"]),                            # inline code over a line break
+    ("bir ` işareti\n\n[[yok-f]] ve ` bir daha", ["yok-f"]),                         # not code: a paragraph apart
+    ("| a | b |\n|---|---|\n| [[projects/havuz/kurs\\|K]] | [[yok-g\\|G]] |", ["yok-g"]),   # escaped pipe in a table
+    ("[[Python 3.12]] [[rapor 2026.11]] [[sekil.PNG]] [[veri.csv]]", ["Python 3.12", "rapor 2026.11"]),
+    ("[x](<projects/havuz/kurs.md>) [x](<yok h.md>) [x](yok-i.md 'başlık') [x](yok-j.md (başlık))",
+     ["yok h.md", "yok-i.md", "yok-j.md"]),
+    ("[x](//host/a.md) [x](kurs.md) [x](turnike.md)", ["kurs.md", "turnike.md"]),     # a bare name is for [[...]] only
+])
+def test_links_in_odd_markdown(store, text, expected):
+    store.write("notes/a.md", "# A\n\n" + text)
+    assert [b["target"] for b in check.link_report(store)["broken"]] == sorted(expected)
+
+
+def test_questions_file_with_a_byte_order_mark_is_read_and_an_entry_without_notes_is_refused(store):
+    entry = [{"question": "kira ne zaman ödenir", "expect": ["projects/ev/kira.md"], "added": "2026-11-22"}]
+    (store.data / "questions.json").write_text(json.dumps(entry), encoding="utf-8-sig")
+    assert check.questions(store) == entry
+    (store.data / "questions.json").write_text(json.dumps([{"question": "x", "expect": []}]), encoding="utf-8")
+    with pytest.raises(check.CheckError):
+        check.questions(store)

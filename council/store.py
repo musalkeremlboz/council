@@ -69,12 +69,17 @@ def now_local() -> dt.datetime:
 
 
 class Store:
-    def __init__(self, data_dir: str | os.PathLike):
+    def __init__(self, data_dir: str | os.PathLike, readonly: bool = False):
+        """``readonly`` opens the notes as they are on disk: nothing is seeded and nothing is committed (the
+        search index, a cache outside the vault, is still brought in line with the files)."""
         self.data = Path(data_dir).expanduser().resolve()
         self.vault = self.data / "vault"
         self.vault.mkdir(parents=True, exist_ok=True)
         self._lock_path = self.data / ".write.lock"
         self.index = Index(self.data / "index.sqlite3")
+        if readonly:
+            self.index.sync(self.vault)
+            return
         self._ensure_git()
         for name, text in SEED.items():
             if not (self.vault / name).exists():
