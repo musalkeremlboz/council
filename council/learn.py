@@ -339,10 +339,15 @@ class Learning:
                 self._save(state)
         return {"path": retired, "status": "retired"}
 
+    @staticmethod
+    def _evidence_key(session: str) -> str:
+        """Key a session's evidence is counted under; without a session id the day stands in for it."""
+        return session[:SESSION_KEY] or f"day:{now_local().date().isoformat()}"
+
     def record_shown(self, path: str, session: str) -> None:
-        """Note that a skill was shown to a session (counted once per session); may retire it."""
-        key = session[:SESSION_KEY]
-        if not key or not is_skill(path) or not self.store.exists(path):
+        """Note that a skill was shown to a session (counted once per session or, with none, per day); may retire it."""
+        key = self._evidence_key(session)
+        if not is_skill(path) or not self.store.exists(path):
             return
         with self.store._locked():
             state = self._load()
@@ -373,8 +378,8 @@ class Learning:
         with self.store._locked():
             state = self._load()
             entry = self._skill_state(state, path)
-            if outcome == "helped" and key and key not in entry["helped"]:
-                entry["helped"].append(key)
+            if outcome == "helped" and self._evidence_key(session) not in entry["helped"]:
+                entry["helped"].append(self._evidence_key(session))
             elif outcome == "wrong":
                 entry["wrong"] += 1
             events = state.get("feedback")

@@ -255,3 +255,24 @@ def test_project_skill_feedback_and_summary_counts(store):
     assert s["skills_revised"] == s["rules"] == s["undone"] == s["established"] == s["retired"] == 0
     assert s["helped_rate"] is None and s["possible_repeats"] == []
     assert Learning(store).summary(days=0)["skills_new"] == 0
+
+def _on(monkeypatch, day):
+    import datetime as dt
+    monkeypatch.setattr(learn, "now_local", lambda: dt.datetime(2026, 11, day, 12).astimezone())
+
+def test_feedback_and_shown_without_a_session_count_once_per_day(store, monkeypatch):
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
+    _on(monkeypatch, 1)
+    assert L.feedback("beklet", "helped")["status"] == "candidate"
+    assert L.feedback("beklet", "helped")["status"] == "candidate"        # same day counts once
+    _on(monkeypatch, 2)
+    assert L.feedback("beklet", "helped")["status"] == "candidate"
+    _on(monkeypatch, 3)
+    assert L.feedback("beklet", "helped")["status"] == "established"
+    assert L.shown_in("") == []
+    q = L.write_skill("yaramaz", **SK)["path"]
+    for day in range(10, 14):
+        _on(monkeypatch, day); L.record_shown(q, "")
+    assert store.exists(q)
+    _on(monkeypatch, 14); L.record_shown(q, "")
+    assert not store.exists(q) and store.exists("skills/retired/yaramaz.md")
