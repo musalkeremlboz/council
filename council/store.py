@@ -192,6 +192,33 @@ class Store:
             self._save(rel, full, text, reason or f"edit {rel}")
         return Note(rel, text, sha_of(text))
 
+    def remove(self, path: str, reason: str = "") -> None:
+        """Delete a note; git keeps its history."""
+        rel, full = self.resolve(path)
+        with self._locked():
+            if not full.is_file():
+                raise StoreError(f"note not found: {rel}")
+            full.unlink()
+            self.index.remove_file(rel)
+            self._commit(reason or f"remove {rel}")
+
+    def move(self, src: str, dst: str, reason: str = "") -> Note:
+        """Rename a note without changing its text; refuses to overwrite an existing note."""
+        src_rel, src_full = self.resolve(src)
+        dst_rel, dst_full = self.resolve(dst)
+        with self._locked():
+            if not src_full.is_file():
+                raise StoreError(f"note not found: {src_rel}")
+            if dst_full.exists():
+                raise Conflict(f"{dst_rel} already exists; pick another destination")
+            text = src_full.read_text(encoding="utf-8")
+            dst_full.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(src_full, dst_full)
+            self.index.remove_file(src_rel)
+            self.index.update_file(dst_rel, text)
+            self._commit(reason or f"move {src_rel} to {dst_rel}")
+        return Note(dst_rel, text, sha_of(text))
+
     def _save(self, rel: str, full: Path, content: str, message: str) -> None:
         full.parent.mkdir(parents=True, exist_ok=True)
         tmp = full.with_name(f".{full.name}.tmp")

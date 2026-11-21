@@ -6,6 +6,7 @@ import hashlib
 import re
 import sqlite3
 import threading
+from collections.abc import Callable
 from pathlib import Path
 
 _WORD = re.compile(r"[\w]+", re.UNICODE)
@@ -148,7 +149,7 @@ class Index:
         return changed
 
     def search(self, q: str, limit: int = 8, exclude: set[str] | None = None,
-               content_only: bool = False) -> list[dict]:
+               content_only: bool = False, where: Callable[[str], bool] | None = None) -> list[dict]:
         fts = build_query(q, content_only)
         if not fts:
             return []
@@ -157,11 +158,11 @@ class Index:
             rows = self.db.execute(
                 "SELECT path, heading, body, bm25(chunks, 0.0, 2.0, 0.0, 1.0) AS score "
                 "FROM chunks WHERE chunks MATCH ? ORDER BY score LIMIT ?",
-                (f"folded : ({fts})", limit * 4),
+                (f"folded : ({fts})", 200 if where else limit * 4),  # a path filter drops rows, so look deeper
             ).fetchall()
         scored = []
         for path, heading, body, score in rows:
-            if path in exclude:
+            if path in exclude or (where and not where(path)):
                 continue
             # Work logs repeat what notes already say; rank curated notes first.
             weight = 0.5 if path.startswith("log/") else 1.0
