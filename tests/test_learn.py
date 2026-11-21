@@ -140,3 +140,47 @@ def test_render_and_parse_round_trip(store):
     assert learn.parse_skill(text) == dict(
         title="Başlık", when="Ne zaman", status="candidate", source="2026-11-21, session abcd1234",
         revised="2026-11-22, session efgh5678", steps="1. a\n2. b", pitfalls="- tuzak", learned_from="Şundan öğrendim")
+
+def test_rule_is_added_as_a_dated_line_after_the_other_rules(store):
+    store.edit("rules.md", [{"old": "Project-specific rules", "new": "- 2026-01-02: Kısa yaz.\n\nProject-specific rules"}])
+    out = Learning(store).add_rule("Teknik terimleri ilk geçtiği yerde açıkla.", session="s1")
+    lines = store.read("rules.md").text.splitlines()
+    i = lines.index("- 2026-01-02: Kısa yaz.")
+    assert lines[i + 1].startswith("- 20") and lines[i + 1].endswith(": Teknik terimleri ilk geçtiği yerde açıkla.")
+    assert out["path"] == "rules.md" and out["possible_repeat"] is None
+
+def test_project_rule_creates_the_project_rules_note(store):
+    out = Learning(store).add_rule("Önce önizleme göster.", project="Havuz İşi")
+    assert out["path"] == "projects/havuz-isi/rules.md" and "Önce önizleme göster." in store.read(out["path"]).text
+    assert store.read(out["path"]).text.startswith("# Rules: Havuz İşi\n\n- 20")
+
+def test_a_rule_on_the_same_subject_is_flagged_not_refused(store):
+    L = Learning(store)
+    L.add_rule("Teknik terimleri ilk geçtiği yerde bir iki cümleyle açıkla.")
+    out = L.add_rule("Teknik terimleri açıklamadan kullanma, ilk geçtiği yerde açıkla.")
+    assert "Teknik terimleri ilk geçtiği yerde" in out["possible_repeat"]
+    assert L.add_rule("Cevapları tablo yerine düz yazıyla ver.")["possible_repeat"] is None
+    assert store.read("rules.md").text.count("Teknik terimleri") == 2
+
+def test_rule_with_a_secret_is_refused(store):
+    with pytest.raises(StoreError, match="secret"):
+        Learning(store).add_rule("Sunucuya parola: Hunter2hunter2 ile gir.")
+
+def test_rule_is_recorded_in_the_ledger_with_its_line_and_match(store):
+    L = Learning(store)
+    first = L.add_rule("Kısa yaz, gereksiz giriş yapma.", session="abcdefghijklmnopqrstuv")
+    L.add_rule("Gereksiz giriş yapma, kısa yaz.")
+    ledger = json.loads(L.state_path.read_text(encoding="utf-8"))["ledger"]
+    assert [e["kind"] for e in ledger] == ["rule", "rule"]
+    assert ledger[0]["session"] == "abcdefghijklmnop" and ledger[0]["repeat_of"] is None
+    assert ledger[0]["line"].endswith(": Kısa yaz, gereksiz giriş yapma.") and ledger[0]["path"] == first["path"]
+    assert ledger[1]["repeat_of"] == ledger[0]["line"]
+
+def test_rule_needs_text_on_one_line(store):
+    for bad in ("", "  ", "iki\nsatır"):
+        with pytest.raises(StoreError):
+            Learning(store).add_rule(bad)
+
+def test_assignment_whitespace_does_not_span_lines():
+    assert learn.find_secret("token:\nRefreshing the page") is None
+    assert learn.find_secret("token: abcdef123") == "password or key assignment"

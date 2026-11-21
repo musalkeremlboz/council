@@ -14,14 +14,16 @@ import re
 import uuid
 from pathlib import PurePosixPath
 
-from .index import fold
-from .store import Store, StoreError, now_local
+from .index import build_query, fold
+from .store import RULES, Store, StoreError, now_local, sha_of
 
 MAX_SKILL_CHARS = 4000
 MAX_WHEN_CHARS = 200
 STATE_FILE = "learning.json"
 SESSION_KEY = 16  # sessions are keyed by this many leading characters of the session id
 SESSION_SHORT = 8  # and shown in notes by this many
+REPEAT_SHARE = 0.6  # a new rule is a possible repeat when it shares this share of its stems with a rule...
+REPEAT_MIN = 3  # ...and at least this many stems
 
 # ---------- paths and names ----------
 
@@ -75,7 +77,7 @@ _SECRETS = [
     ("Slack token", re.compile(r"(?<![\w-])xox[baprs]-[A-Za-z0-9-]{10,}")),
     ("AWS key", re.compile(r"(?<![\w-])AKIA[0-9A-Z]{16}")),
     ("bearer token", re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{20,}")),
-    ("password or key assignment", re.compile(rf"(?:{_KEYWORDS})\s*[:=]\s*\S{{6,}}", re.IGNORECASE)),
+    ("password or key assignment", re.compile(rf"(?:{_KEYWORDS})[ \t]*[:=][ \t]*\S{{6,}}", re.IGNORECASE)),
 ]
 
 
@@ -127,6 +129,28 @@ def parse_skill(text: str) -> dict:
 def _stamp(session: str) -> str:
     day = now_local().date().isoformat()
     return f"{day}, session {session[:SESSION_SHORT]}" if session else day
+
+
+_DATED = re.compile(r"^- \d{4}-\d{2}-\d{2}")
+_STEM = re.compile(r'"([^"]+)"\*')
+
+
+def _stems(text: str) -> set[str]:
+    """The content stems search would use for ``text`` (filler words dropped)."""
+    return set(_STEM.findall(build_query(text, content_only=True)))
+
+
+def _closest_rule(text: str, lines: list[str]) -> str | None:
+    """The dated rule line most like ``text`` when it is similar enough to be a possible repeat."""
+    mine = _stems(text)
+    best, best_common = None, 0
+    for line in lines:
+        common = len(mine & _stems(line.split(": ", 1)[-1]))
+        if common > best_common:
+            best, best_common = line, common
+    if best is not None and best_common >= REPEAT_MIN and best_common >= REPEAT_SHARE * len(mine):
+        return best
+    return None
 
 
 # ---------- the learning layer ----------
@@ -210,3 +234,38 @@ class Learning:
         notice = (f"{verb} skill '{title}' ({status}) and saved it as {path}; tell the user in one line, "
                   "in their language, what you learned, and that they can ask you to undo it.")
         return {"path": path, "sha": note.sha, "status": status, "notice": notice}
+
+    def add_rule(self, text: str, project: str = "", session: str = "") -> dict:
+        """Append a dated rule line to the rules note; a rule on a subject already covered is flagged, not refused."""
+        if "\n" in text.strip() or "\r" in text.strip():
+            raise StoreError("a rule must be a single line")
+        text = " ".join(text.split())
+        if not text:
+            raise StoreError("rule text is required")
+        secret = find_secret(text)
+        if secret:
+            raise StoreError(f"refused: looks like a secret ({secret})")
+        path = f"projects/{slug(project)}/rules.md" if project.strip() else RULES
+        exists = self.store.exists(path)
+        old = self.store.read(path).text if exists else f"# Rules: {' '.join(project.split())}\n\n"
+        existing = [ln for ln in old.splitlines() if _DATED.match(ln)]
+        repeat = _closest_rule(text, existing)
+
+        line = f"- {now_local().date().isoformat()}: {text}"
+        rows = old.split("\n")
+        at = max((i for i, ln in enumerate(rows) if _DATED.match(ln)), default=None)
+        if at is None:
+            new = old + ("" if old.endswith("\n") else "\n") + line + "\n"
+        else:
+            rows.insert(at + 1, line)
+            new = "\n".join(rows)
+        # The sha of what we read makes a concurrent change a Conflict instead of a lost line.
+        note = self.store.write(path, new, sha_of(old) if exists else "", f"rule: {path}")
+        self._record({"id": uuid.uuid4().hex[:8], "ts": now_local().isoformat(timespec="seconds"), "kind": "rule",
+                      "path": path, "line": line, "repeat_of": repeat, "session": session[:SESSION_KEY],
+                      "undone": False})
+        notice = (f"Added a rule to {path}; tell the user in one line, in their language, what rule you saved, "
+                  "and that they can ask you to undo it.")
+        if repeat:
+            notice += f" It may repeat an existing rule ({repeat}); mention that and ask whether to keep both."
+        return {"path": path, "sha": note.sha, "notice": notice, "possible_repeat": repeat}
