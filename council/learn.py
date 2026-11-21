@@ -33,9 +33,9 @@ PROMOTE_AFTER = 3  # a candidate becomes established after 'helped' feedback in 
 RETIRE_WRONG = 2  # a skill retires after this many 'wrong' feedbacks...
 RETIRE_NOT_HELPED = 5  # ...or after 'not_helped' from this many different sessions and 'helped' from none
 OUTCOMES = ("helped", "not_helped", "wrong")
-HEAD_WEIGHT = 2.0  # a query stem in a skill's title or When line counts this many times its rarity
-MIN_STEMS = 2  # a skill needs this many distinct query stems to be offered...
-MIN_SCORE = 9.0  # ...and at least this score: no skill is better than a wrong one
+HEAD_WEIGHT = 4.0  # a message word in a skill's title or When line counts this many times its rarity
+MIN_HEAD_WORDS = 2  # a skill is offered only when this many different message words are in its title or When line...
+MIN_SCORE = 6.0  # ...and its score, divided by the square root of the message's word count, reaches this
 SKILL_LIMIT = 2  # skills offered for one message
 SKILL_BUDGET = 1500  # characters of context the offered skills may take together, apart from the notes' budget
 RARITY_LIBRARY = 10  # rarity counts the library as at least this big, so scores do not depend on how many skills exist
@@ -209,6 +209,19 @@ def _stem_hit(stem: str, stems: set[str]) -> bool:
     """Whether ``stem`` equals a stem in ``stems`` or is a prefix of one (or the other way round)."""
     return any(stem == o or (min(len(stem), len(o)) >= STEM_PREFIX_MIN and (o.startswith(stem) or stem.startswith(o)))
                for o in stems)
+
+
+def _words(stems: set[str]) -> list[list[str]]:
+    """``stems`` grouped into words: forms of one word ("sistem", "sistemi", "sistemim") count once."""
+    words: list[list[str]] = []
+    for stem in sorted(stems, key=lambda s: (len(s), s)):
+        for word in words:
+            if _stem_hit(stem, {word[0]}):
+                word.append(stem)
+                break
+        else:
+            words.append([stem])
+    return words
 
 
 def _closest_rule(text: str, lines: list[str]) -> str | None:
@@ -545,30 +558,38 @@ class Learning:
         """Live skills worth offering for ``query``, best first.
 
         Every live skill is scored, not only those a vault-wide search ranks high: ordinary notes
-        sharing the words must not crowd a skill out. A query stem found in the title or When line
-        counts HEAD_WEIGHT times its rarity, a stem found only in the body counts its rarity once.
-        A skill is offered with at least MIN_STEMS distinct hits and MIN_SCORE.
+        sharing the words must not crowd a skill out. A message word found in the title or When line
+        counts HEAD_WEIGHT times its rarity, a word found only in the body counts its rarity once.
+        The sum is divided by the square root of the number of words in the message, so a long
+        message does not match by length alone. A skill is offered with at least MIN_HEAD_WORDS
+        different words in its title or When line and a score of MIN_SCORE: the body alone, where
+        any long message finds some of its words, never brings a skill up.
         """
-        mine = _stems(query)
-        if not mine:
+        words = _words(_stems(query))
+        if not words:
             return []
         live = {p: v for p, v in self.skills().items() if v[1]["status"] in LIVE}
         if not live:
             return []
         head = {p: _stems(f"{f['title']} {f['when']}") for p, (_, f) in live.items()}
         body = {p: _stems(f"{f['steps']} {f['pitfalls']} {f['learned_from']}") for p, (_, f) in live.items()}
-        df = {s: sum(1 for p in live if _stem_hit(s, head[p] | body[p])) for s in mine}
+        whole = {p: head[p] | body[p] for p in live}
         n = max(len(live), RARITY_LIBRARY)  # floored: a small library must not shrink every score
+        rarity = []  # of each word: that of its rarest form
+        for word in words:
+            df = min(sum(1 for p in live if _stem_hit(s, whole[p])) for s in word)
+            rarity.append(math.log(1 + n / max(df, 1)))
         out = []
         for path, (text, fields) in live.items():
-            score, hits = 0.0, 0
-            for s in mine:
-                in_head, in_body = _stem_hit(s, head[path]), _stem_hit(s, body[path])
-                if not (in_head or in_body):
-                    continue
-                score += math.log(1 + n / max(df[s], 1)) * (HEAD_WEIGHT if in_head else 1.0)
-                hits += 1
-            if hits >= MIN_STEMS and score >= MIN_SCORE:
+            total, in_head = 0.0, 0
+            for word, rare in zip(words, rarity):
+                if any(_stem_hit(s, head[path]) for s in word):
+                    total += HEAD_WEIGHT * rare
+                    in_head += 1
+                elif any(_stem_hit(s, body[path]) for s in word):
+                    total += rare
+            score = total / math.sqrt(len(words))
+            if in_head >= MIN_HEAD_WORDS and score >= MIN_SCORE:
                 out.append({"path": path, "title": fields["title"], "status": fields["status"],
                             "text": text, "score": round(score, 3)})
         out.sort(key=lambda m: -m["score"])

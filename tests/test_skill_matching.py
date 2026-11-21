@@ -5,6 +5,9 @@ from council.learn import Learning
 from council.store import Store
 
 DATA = json.loads((pathlib.Path(__file__).parent / "scenarios" / "skills.json").read_text(encoding="utf-8"))
+# Long messages (150 to 650 characters), written by an author who saw neither the matching code nor the short set's
+# results. off_topic: no skill's subject. off_topic_neighbour: a skill's subject, but not the work it covers.
+LONG = json.loads((pathlib.Path(__file__).parent / "scenarios" / "skills_long.json").read_text(encoding="utf-8"))
 
 def load(data_dir):
     """A Learning holding every scenario skill."""
@@ -67,3 +70,47 @@ def test_a_skill_still_matches_among_many_ordinary_notes_sharing_its_words(tmp_p
     store.index.sync(store.vault)
     found = L.match("çalışan servisin üstüne yeniden kurulum yapacağım")
     assert [m["path"] for m in found] == ["skills/servisi-yeniden-kurarken-beklet.md"]
+
+
+# ---------- long messages ----------
+
+@pytest.fixture(scope="module")
+def long_learning(tmp_path_factory):
+    L = Learning(Store(tmp_path_factory.mktemp("long")))
+    for s in LONG["skills"]:
+        L.write_skill(**s)
+    return L
+
+def test_long_messages_on_another_subject_get_a_skill_at_most_20_percent(long_learning):
+    """Length alone must not bring a skill up: a long message shares some words with every long note."""
+    shown = sum(bool(long_learning.match(m)) for m in LONG["off_topic"])
+    assert shown / len(LONG["off_topic"]) <= 0.20, f"{shown}/{len(LONG['off_topic'])}"
+
+def test_long_on_topic_messages_keep_their_skill(long_learning):
+    """A floor against going backwards, not the goal: the goal is 80%, measured 71% (2026-11-21)."""
+    hits = sum(any(m["title"] == c["expect"] for m in long_learning.match(c["message"])) for c in LONG["on_topic"])
+    assert hits / len(LONG["on_topic"]) >= 0.65, f"{hits}/{len(LONG['on_topic'])}"
+
+@pytest.mark.xfail(reason="words tell the subject, not what is asked: measured 8/14 (2026-11-21)", strict=False)
+def test_long_messages_on_a_skills_subject_but_asking_something_else_get_no_skill(long_learning):
+    shown = sum(bool(long_learning.match(m)) for m in LONG["off_topic_neighbour"])
+    assert shown / len(LONG["off_topic_neighbour"]) <= 0.20, f"{shown}/{len(LONG['off_topic_neighbour'])}"
+
+def _one_skill(tmp_path, **fields):
+    L = Learning(Store(tmp_path / "data"))
+    L.write_skill(**fields)
+    return L
+
+def test_forms_of_one_word_count_as_one_word(tmp_path):
+    """Two different words must be in the title or When line; "sistemi, sistemimiz, sistemlerin" is one."""
+    L = _one_skill(tmp_path, name="Sistemi yedekten geri yükleme", when="Sunucu bozulduğunda yedekten dönülürken",
+                   steps="1. Yedeği bul\n2. Geri yükle", learned_from="Disk dolunca veritabanı bozuldu.")
+    assert L.match("sistemi sistemimiz sistemlerin") == []
+    assert [m["title"] for m in L.match("sistemi yedekten nasıl geri alırım")] == ["Sistemi yedekten geri yükleme"]
+
+def test_words_found_only_in_the_body_do_not_bring_a_skill_up(tmp_path):
+    L = _one_skill(tmp_path, name="Raporu PDF olarak dışa aktarma", when="Aylık rapor paylaşılmadan önce",
+                   steps="1. Yazıcı sürücüsünü seç\n2. Kenar boşluğunu ayarla\n3. Filigranı kaldır",
+                   learned_from="Filigran çıktıda kalmıştı.")
+    assert L.match("yazıcı sürücüsü filigran kenar boşluğu") == []
+    assert len(L.match("aylık raporu pdf olarak dışa aktar")) == 1

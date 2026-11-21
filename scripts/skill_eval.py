@@ -30,8 +30,12 @@ def main(path: str) -> int:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:  # open files block deletion on Windows
         hits, on, shown, off = evaluate(data, Path(tmp) / "data")
+        near = data.get("off_topic_neighbour", [])
+        near_shown = evaluate({**data, "on_topic": [], "off_topic": near}, Path(tmp) / "near")[2] if near else 0
     print(f"on-topic {hits}/{on} ({100 * hits / on:.0f}%)")
     print(f"off-topic {shown}/{off} ({100 * shown / off:.0f}%)")
+    if near:
+        print(f"same subject, other request {near_shown}/{len(near)} ({100 * near_shown / len(near):.0f}%)  (reported, not a bar)")
     return 0 if hits / on >= ON_TOPIC_BAR and shown / off <= OFF_TOPIC_BAR else 1
 
 

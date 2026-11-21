@@ -1,0 +1,248 @@
+{
+ "skills": [
+  {
+   "name": "Docker port çakışmasını çözme",
+   "when": "Konteyner ayağa kalkmıyor ve port zaten kullanımda hatası çıkıyor; ana makinede o portu başka bir süreç tutuyor.",
+   "steps": "1. Hata mesajındaki portu not et.\n2. lsof -i :PORT ile portu tutan süreci bul.\n3. Süreç eski bir konteynerse docker ps -a ile bulup docker rm -f ile kaldır.\n4. Süreç başka bir uygulamaysa kullanıcıya sor, sonra durdur ya da compose dosyasında dış portu değiştir.\n5. docker compose up -d ile yeniden başlat ve docker ps ile doğrula.",
+   "pitfalls": "- Önce hangi sürecin portu tuttuğuna bak, kullanıcının çalışan başka bir uygulamasını körlemesine öldürme.\n- Compose dosyasında portu değiştirirsen README ve .env içindeki adresleri de güncelle.",
+   "learned_from": "Kullanıcının veritabanı konteyneri 5432'de açılmıyordu; portu aslında yerel Postgres tutuyordu. Körlemesine docker rm yapmak işe yaramamıştı."
+  },
+  {
+   "name": "Bozulan Python sanal ortamını onarma",
+   "when": "Proje klasöründeki venv çalışmıyor: python bulunamıyor ya da bad interpreter hatası var, genelde sistem Python'u güncellendikten sonra.",
+   "steps": "1. which python ve venv içindeki bin/python bağlantısını kontrol et.\n2. pip freeze > gereksinimler-yedek.txt ile paket listesini yedekle.\n3. venv klasörünü sil ve python3 -m venv venv ile yeniden oluştur.\n4. Ortamı etkinleştirip pip install -r ile paketleri geri yükle.\n5. Projenin testini ya da ana betiğini bir kez çalıştırıp doğrula.",
+   "pitfalls": "- Silmeden önce paket listesini yedeklemeyi unutma.\n- Eski venv'i etkinleştirilmiş terminalde silme; önce deactivate yap.",
+   "learned_from": "Homebrew Python'u güncelleyince kullanıcının venv'i bad interpreter vermeye başladı. Paket listesini yedeklemek sayesinde ortam beş dakikada geri geldi."
+  },
+  {
+   "name": "Excel'de metin gelen tarihleri düzeltme",
+   "when": "Excel tablosunda tarih sütunu sola yaslı metin olarak duruyor; sıralama ve filtre çalışmıyor, formüller tarihi tanımıyor.",
+   "steps": "1. Sütundan birkaç hücreye bakıp biçimi anla (GG.AA.YYYY mi, AA/GG/YYYY mi).\n2. Yardımcı sütuna TARIHSAYISI ya da PARÇAAL ile gün, ay, yıl ayıran formül yaz.\n3. Sonuçları değer olarak yapıştırıp tarih biçimi ver.\n4. Eski sütunu silmeden önce birkaç satırı elle karşılaştır.\n5. Sıralamayı deneyerek düzeldiğini doğrula.",
+   "pitfalls": "- Gün ile ay yer değiştirmiş olabilir; 12'den büyük günleri kontrol et.\n- Orijinal dosyayı kopyalayıp kopya üzerinde çalış.",
+   "learned_from": "Kullanıcının dışa aktarılmış satış raporunda tarihler metin gelmişti. Gün ve ay karışınca üç satır yanlış aya düştü, kopya üzerinde çalıştığımız için sorun olmadı."
+  },
+  {
+   "name": "Birden çok PDF'i birleştirip küçültme",
+   "when": "Birkaç ayrı PDF tek dosya olmalı ve e-postaya ya da bir başvuru formuna sığması için boyutu küçültülmeli.",
+   "steps": "1. Dosyaların sırasını kullanıcıyla netleştir.\n2. pdfunite ya da qpdf ile sırayla tek PDF'te birleştir.\n3. Boyutu ls -lh ile ölç.\n4. Büyükse ghostscript ile /ebook ayarında sıkıştır.\n5. Sayfa sayısını ve okunabilirliği kontrol edip kullanıcıya yeni dosyanın yolunu ver.",
+   "pitfalls": "- Taranmış belgelerde /screen ayarı yazıları okunmaz yapar; /ebook ile başla.\n- Orijinalleri silme, çıktıyı yeni adla kaydet.",
+   "learned_from": "Kullanıcı kurum başvurusu için dört belgeyi 2 MB sınırına sığdırmak istiyordu. /screen metni bulanıklaştırdı, /ebook hem küçüldü hem okunur kaldı."
+  },
+  {
+   "name": "Toplantı notlarından görev listesi çıkarma",
+   "when": "Kullanıcı dağınık toplantı notları veriyor ve bunlardan kimin ne yapacağını gösteren kısa bir görev listesi bekliyor.",
+   "steps": "1. Notları baştan sona oku, karar ve yapılacak ifadelerini ayır.\n2. Her görev için sorumlu kişi ve varsa tarih yaz.\n3. Sorumlusu belli olmayanları ayrı bir başlıkta topla.\n4. Listeyi en fazla yarım sayfa, madde madde sun.\n5. Belirsiz maddeler için kullanıcıya tek soruda sor.",
+   "pitfalls": "- Notta geçmeyen tarih ya da sorumlu uydurma, boş bırak.",
+   "learned_from": "Kullanıcı hafta sonu yaptığı idari toplantının notlarını yapıştırdı. Tahmin ettiğim iki tarih yanlış çıktı; sonra belirsizleri ayrı listelemeye başladım."
+  },
+  {
+   "name": "Haftalık market listesi hazırlama",
+   "when": "Kullanıcı yemek planına göre haftalık alışveriş listesi istiyor; evde neler var, bütçe ne kadar bilinmesi gerekiyor.",
+   "steps": "1. Hafta için yemek planını ve kişi sayısını sor.\n2. Evde olan temel malzemeleri ve bütçeyi öğren.\n3. Malzemeleri reyonlara göre grupla (sebze, süt, kuru gıda, temizlik).\n4. Miktarları kişi sayısına göre yaz.\n5. Listeyi kısa tutup kullanıcının notlar uygulamasına yapıştırılacak biçimde ver.",
+   "pitfalls": "- Evde olanları sormazsan aynı şeyi ikinci kez aldırırsın.\n- Kullanıcı vejetaryen günlerini ayrıca belirtmişse atlama.",
+   "learned_from": "Kullanıcı iki kişilik bir hafta için liste istedi. Evdeki pirinç ve yağı sormadığım için liste şişti, sonra önce stoğu sormaya başladım."
+  },
+  {
+   "name": "Fatura son ödeme hatırlatıcısı kurma",
+   "when": "Kullanıcı elektrik, su, internet gibi faturaların son ödeme tarihlerini kaçırmamak için düzenli hatırlatıcı kurmak istiyor.",
+   "steps": "1. Hangi faturalar ve her birinin son ödeme günü olduğunu sor.\n2. Tarihleri aylık tekrarlayan hatırlatıcı olarak yaz.\n3. Her hatırlatıcıyı son günden üç gün önceye kur.\n4. Hatırlatıcı metnine fatura adı ve yaklaşık tutarı ekle.\n5. Kurulanları kullanıcıya kısa bir tabloyla göster.",
+   "pitfalls": "- Ayın 31'ine kurulan tekrar, kısa aylarda atlayabilir; 28'ini seç.\n- Otomatik ödeme talimatı olan faturaları ayrı işaretle.",
+   "learned_from": "Kullanıcı internet faturasını iki kez geciktirmişti. Son güne kurduğum hatırlatıcı fazla geç kalıyordu, üç gün öncesine çektik."
+  },
+  {
+   "name": "Fix git push rejected after rebase",
+   "when": "A git push is rejected as non-fast-forward right after the user rebased or amended commits on a branch that is already on the remote.",
+   "steps": "1. Run git status and git log --oneline -5 to confirm the branch and the rewritten commits.\n2. Check whether anyone else pushed to this branch with git fetch and git log origin/branch.\n3. If the branch is only the user's, push with --force-with-lease.\n4. If others pushed, rebase onto the remote branch first and resolve conflicts.\n5. Verify with git status that local and remote match.",
+   "pitfalls": "- Never use plain --force; --force-with-lease refuses when the remote moved.\n- Never force-push main or a shared branch without asking.",
+   "learned_from": "The user rebased a feature branch to tidy commits and the push failed. A colleague had pushed a fix an hour earlier, and --force-with-lease caught it before it was overwritten."
+  },
+  {
+   "name": "Debug a cron script that fails silently",
+   "when": "A scheduled script works when run by hand but never does its job from cron or launchd, and nothing shows up in any log.",
+   "steps": "1. Ask for the exact schedule line and the script path.\n2. Redirect stdout and stderr to a log file in the job line.\n3. Use absolute paths and set PATH at the top of the script.\n4. Trigger the job once a minute from now and read the log.\n5. Fix what the log shows, then restore the real schedule.",
+   "pitfalls": "- Cron has a minimal environment; tools in /opt/homebrew/bin are missing.\n- Remember to restore the real schedule after testing.",
+   "learned_from": "A nightly backup script ran fine in the terminal but never ran from cron. The log showed it could not find rsync because PATH was empty."
+  },
+  {
+   "name": "Clean up a Word report before exporting to PDF",
+   "when": "The user has a Word report with messy styles, odd page breaks or missing page numbers and wants a neat PDF to send out.",
+   "steps": "1. Open the document and check headings use real heading styles.\n2. Remove manual blank lines used as spacing and fix page breaks.\n3. Insert page numbers in the footer and update the table of contents.\n4. Export to PDF with fonts embedded.\n5. Scan the PDF page by page and report anything off.",
+   "pitfalls": "- Update the table of contents after edits or page numbers stay stale.\n- Check the first page: cover pages should not show a number.",
+   "learned_from": "A user's thesis chapter had tables splitting across pages and a stale contents page. After fixing styles the exported PDF looked right on the first try."
+  },
+  {
+   "name": "Merge duplicate contacts in a CSV export",
+   "when": "A contacts or customer CSV has the same person several times with slightly different spelling, and the user wants one clean row per person.",
+   "steps": "1. Load the file and count rows and columns.\n2. Normalize email to lowercase and strip spaces and phone punctuation.\n3. Group by normalized email, then by name plus phone for rows without email.\n4. Keep the most complete row in each group and fill gaps from the others.\n5. Save a new file and give the user the before and after counts.",
+   "pitfalls": "- Do not overwrite the original export; write a new file.\n- Two people can share a family email, so show ambiguous groups instead of merging silently.",
+   "learned_from": "A user's newsletter list had 1,900 rows, 300 of them duplicates. Merging by name alone joined two relatives sharing an address, so I now list doubtful groups first."
+  },
+  {
+   "name": "Plan a multi-city trip itinerary",
+   "when": "The user is planning a trip across several cities and wants a day-by-day plan with travel times and a realistic pace.",
+   "steps": "1. Ask for dates, cities, budget and what the user enjoys.\n2. Order the cities to avoid backtracking and note travel time between them.\n3. Give each city a short day plan with one main sight and one free block.\n4. Mark fixed bookings and things still to reserve.\n5. Present the plan as a compact day list and ask what to adjust.",
+   "pitfalls": "- Count transfer days as half days; people forget they are tired.\n- Do not state opening hours or prices as facts without checking.",
+   "learned_from": "The user wanted five cities in eight days. After adding transfer times the plan only worked with three, and they were glad to drop two."
+  },
+  {
+   "name": "Draft a polite reschedule email",
+   "when": "The user needs to move a meeting, appointment or deadline and wants a short, courteous message that proposes new times.",
+   "steps": "1. Ask who the recipient is and how formal the tone should be.\n2. Get the original time, the reason if the user wants to give one, and two or three new options.\n3. Write a short email: apology, new options, thanks.\n4. Show the draft to the user and wait for approval.\n5. Send or save it as a draft only after the user says yes.",
+   "pitfalls": "- Never send without approval, even for small messages.\n- Keep the reason vague unless the user supplies one.",
+   "learned_from": "The user had to move a dentist visit and a client call in one morning. I drafted both, and they changed the tone of the client email to be warmer before sending."
+  },
+  {
+   "name": "Compare two mobile phone plans",
+   "when": "The user is choosing between two mobile or internet plans and wants a plain comparison based on their real usage, not the marketing page.",
+   "steps": "1. Ask for monthly data, call and text use and the current bill.\n2. Collect each plan's price, data cap, contract length and extra fees.\n3. Compute the real yearly cost including setup fees and promo expiry.\n4. Show a small table and name the cheaper option for this user.\n5. Mention the one clause most likely to cause trouble.",
+   "pitfalls": "- Promo prices often expire after a few months; always compute the full-price cost.\n- Do not trust the user's remembered usage; ask them to check last month's bill.",
+   "learned_from": "A user compared two plans that looked 5 euros apart. With the promo ending after six months, the cheaper-looking plan cost more over the year."
+  }
+ ],
+ "on_topic": [
+  {
+   "message": "Dün akşamdan beri uğraşıyorum, artık sinirim bozuldu. Yeni bir işe başladım, arkadaşın gönderdiği repoyu çektim, içinde hazır bir compose dosyası var. docker compose up -d diyorum, redis ve api kalkıyor ama veritabanı kalkmıyor, 5432 için 'bind: address already in use' gibi bir şey yazıyor. Bilgisayarı yeniden başlattım yine aynı. Geçen ay başka bir iş için postgres kurmuştum galiba ama hala çalışıyor mu emin değilim. Bi bakıp şunu ayağa kaldırır mısın, akşama demo var.",
+   "expect": "Docker port çakışmasını çözme"
+  },
+  {
+   "message": "selam, evdeki mini sunucuda fotoğraf arşivi için bir konteyner çalışıyordu, dün imajı güncelleyip yeniden başlatayım dedim, başlamıyor. 'port is already allocated' diyor 3000 için. eskisini durdurmuştum sanıyordum, belki tam silinmedi. bi bakar mısın neymiş bunu tutan, eşim fotoğraflara giremiyorum diye soruyor",
+   "expect": "Docker port çakışmasını çözme"
+  },
+  {
+   "message": "Bir tuhaflık var. Geçen hafta sonu bilgisayarda toplu güncelleme yaptım (brew upgrade, hepsini birden, hata bende). Bugün tez için yazdığım veri analizi projesini açtım, source venv/bin/activate diyorum sorun yok gibi ama python analiz.py deyince 'bad interpreter: no such file or directory' çıkıyor. pip de aynı şekilde çalışmıyor. İçinde pandas, matplotlib falan bir sürü paket kuruluydu, hangi sürümlerdi onu da hatırlamıyorum. Hocaya cuma günü grafik göndermem lazım, şunu eski haline getirebilir miyiz?",
+   "expect": "Bozulan Python sanal ortamını onarma"
+  },
+  {
+   "message": "ya şu telegram botu vardı ya, aylardır dokunmuyordum. bugün ortamı aktif edip çalıştırınca python bulunamadı diyor, venv içindeki python kırık link gibi. sanırım arada sistemdeki sürüm değişmiş. toparlar mısın, paketleri tek tek kurmak istemiyorum",
+   "expect": "Bozulan Python sanal ortamını onarma"
+  },
+  {
+   "message": "Muhasebe programından aylık tahsilat raporunu excele aktardım, 4 bin küsur satır. Müdür yarın sabah ay bazında özet istiyor, pivot yapacaktım ama pivot tarihleri gruplamıyor, her günü ayrı ayrı yazı gibi görüyor. Baktım tarih sütunundaki hücreler sola dayalı, 03.07.2026 şeklinde yazıyor ama hücre biçimini tarih yapınca hiçbir şey değişmiyor. Çift tıklayıp enter'a basınca tek tek düzeliyor gibi ama 4 bin satıra bunu yapamam. Küçükten büyüğe sırala deyince de saçma sıralıyordu, şimdi anladım nedenini. Bunu toplu halde gerçek tarihe çevirir misin?",
+   "expect": "Excel'de metin gelen tarihleri düzeltme"
+  },
+  {
+   "message": "Kütüphanenin ödünç kayıtlarını eski sistemden alıp excelde açtım, her şey düzgün de iade günü kolonu sorunlu. BUGÜN() ile fark alayım dedim hepsinde #DEĞER! veriyor, filtrede de metin filtresi çıkıyor. Bazı satırlar 5/12/2025 bazıları 12/5/2025 gibi, hangisi gün hangisi ay emin değilim.. Aslını bozmadan düzeltebilir miyiz",
+   "expect": "Excel'de metin gelen tarihleri düzeltme"
+  },
+  {
+   "message": "Bir kuruma iş başvurusu yapıyorum, sistem tek bir dosya istiyor ve en fazla 5 MB kabul ediyor. Bende diploma, transkript, kimlik fotokopisi, askerlik belgesi ve iki tane sertifika ayrı ayrı duruyor, çoğunu telefonla taradım o yüzden her biri 3-4 mega. Sıra da önemli galiba, ilanda önce kimlik sonra diploma diyordu. İnternetteki sitelere yüklemek istemiyorum, kimlik bilgim var içinde. Masaüstünde basvuru diye bir klasörde hepsi; tek dosya yapıp sınırın altına indirir misin, son gün yarın.",
+   "expect": "Birden çok PDF'i birleştirip küçültme"
+  },
+  {
+   "message": "abi kiracı çıkıyor, emlakçıya sayaç fotoğrafları, taranmış kira sözleşmesi ve teslim tutanağını göndermem lazım. mail ek çok büyük dedi, adam link de açamıyor. hepsini tek ek olarak gidecek hale getirir misin, imzalar okunsun yeter",
+   "expect": "Birden çok PDF'i birleştirip küçültme"
+  },
+  {
+   "message": "Dün site yönetim kurulu toplantısındaydık, sekreter gelmedi diye notları ben tuttum telefonda, bayağı karışık oldu. Asansör bakımı, otopark çizgileri, aidat zammı, bir de çatı izolasyonu konuşuldu. Kimisi 'ben hallederim' dedi kimisi sadece konuştu, tam ayıramadım. Yarın gruba 'şu kişi şunu yapacak' diye kısa bir şey atmam lazım, uzun yazarsam kimse okumuyor. Notlar şöyle: asansör - Cevdet bey firmayı arayacak teklif alacak / otopark boya, nisan? kim? / aidat 1200 oldu oy birliği / çatı için Nurhan hn. üç teklif toplayacak, ay sonuna kadar",
+   "expect": "Toplantı notlarından görev listesi çıkarma"
+  },
+  {
+   "message": "pazartesi ekip toplantısından notlarım var, yarısı defterden yarısı telefondan, cümleler yarım yamalak. şef 'herkese aksiyonları gönder' dedi ama ben bile bazı yerlerde kimin neyi üstlendiğinden emin değilim. sana atsam düzgün bir kim-ne-ne zaman dökümü çıkarır mısın? emin olmadığın yerleri uydurma ama, geçen sefer yanlış kişiye iş yazıp rezil oldum",
+   "expect": "Toplantı notlarından görev listesi çıkarma"
+  },
+  {
+   "message": "Bu ay kredi kartı ekstresi beni korkuttu, markete gelişigüzel gidip her seferinde 800-900 lira bırakıyoruz. Bundan sonra pazar günü oturup haftayı planlayalım dedik eşimle. Bu hafta için düşündüklerimiz: pazartesi mercimek çorbası ve pilav, salı fırında tavuk, çarşamba etsiz gün (nohut olabilir), perşembe makarna, cuma balık, hafta sonu muhtemelen dışarıdayız. İki yetişkin bir de 6 yaşında çocuk var, kahvaltılıkları da unutma. Bunlar için ne alacağımı tek tek çıkar, telefonuma atıp markette bakacağım.",
+   "expect": "Haftalık market listesi hazırlama"
+  },
+  {
+   "message": "3 kişi öğrenci evindeyiz, alışveriş hep kavga konusu. bu hafta menü belli: iki gün kuru fasulye pilav, bir gün menemen, bir gün tavuk sote, kalanı makarna yumurta. 2000 tl'yi geçmeyelim. dolapta soğan, yarım paket makarna ve yağ var. reyon reyon gezebileceğim bir alınacaklar listesi yapsana, deterjanı da ekle",
+   "expect": "Haftalık market listesi hazırlama"
+  },
+  {
+   "message": "Geçen ay doğalgaz faturasını unutmuşum, gecikme zammı bir yana kesme ihbarı geldi, çok utandım. Elektrik, su, doğalgaz, internet, bir de telefon var; hepsinin son günü farklı ve ben hiçbirini aklımda tutamıyorum. Elektrik ayın 18'i gibi, internet 25'i, suyu bilmiyorum bakmam lazım. Telefon otomatik ödemede zaten. Bunlar için takvime ya da nereye uygunsa her ay tekrar eden uyarılar koyar mısın? Son günde değil ama, birkaç gün önceden haber versin ki hesaba para aktarabileyim.",
+   "expect": "Fatura son ödeme hatırlatıcısı kurma"
+  },
+  {
+   "message": "annemin ödemelerini artık ben takip ediyorum, 74 yaşında, internetten ödeyemiyor. ben kendiminkileri bile zor hatırlıyorum, geçen hafta suyu kesilecekti az kalsın. onun elektrik, su, aidatı var, benim elektrik ve internet. her ay 'şunun günü yaklaştı' diye bana önceden bildirim gelsin, hangisi kimin belli olsun. ayarlayabilir miyiz",
+   "expect": "Fatura son ödeme hatırlatıcısı kurma"
+  },
+  {
+   "message": "ok so I think I messed something up. I had a feature branch (feature/invoice-export) that I'd already pushed and opened a PR for. Reviewer said the history was noisy so last night I did an interactive rebase to squash like 9 'wip' commits into 2 clean ones. Looked great locally. Now when I push it says '! [rejected] ... (non-fast-forward)' and tells me to pull first. But if I pull won't that bring all the old commits back?? I don't want to make it worse. I'm pretty sure nobody else touches this branch but honestly not 100%, Dana sometimes pushes small fixes. Can you sort this out for me",
+   "expect": "Fix git push rejected after rebase"
+  },
+  {
+   "message": "Quick one, hopefully. Fixed a typo in my last commit message with amend about ten minutes after pushing, and now the push gets refused, something about the tip of my branch being behind its remote counterpart?? Mine is the newer one! People say just use -f but our team lead once wiped half a day of someone's work that way so I'm scared to. What's the safe way?",
+   "expect": "Fix git push rejected after rebase"
+  },
+  {
+   "message": "I've got a little Python script that takes the bank statements out of my downloads folder and files them into dated folders. Run it by hand, works perfectly every time. I put it in crontab about two weeks ago to run at 7am daily and it has literally never done anything, the folders are untouched. No error mail, nothing in the system log that I can find, it's like cron doesn't even know it exists. I did check `crontab -l` and the line is there. I'm on a Mac if that matters, python is from homebrew. Starting to feel a bit dumb. Can you help me figure out why it's not running?",
+   "expect": "Debug a cron script that fails silently"
+  },
+  {
+   "message": "hey, weird one. set up a launchd job last month to sync my photos to the NAS every night at 2am, basically a shell script with rsync. running it myself works fine. but the newest file on the NAS is from the day I ran it manually, so the nightly thing has done nothing for weeks and I had no clue. no output anywhere. that's my only backup of the kids' photos... where do we start",
+   "expect": "Debug a cron script that fails silently"
+  },
+  {
+   "message": "My quarterly report is due to the board on Friday and it's a bit of a Frankenstein, three people pasted their sections in from different documents. So the headings are all different fonts and sizes, some sections start halfway down a page because someone hit Enter twenty times, one table splits across two pages, and the page numbers disappear after page 6. The contents page still shows the old section names. It has to go out as a PDF and I'd like it not to look like a ransom note. It's Q3_report_FINAL_v4.docx in my Documents folder. Could you clean it up and export it?",
+   "expect": "Clean up a Word report before exporting to PDF"
+  },
+  {
+   "message": "finished my dissertation chapter (finally!!) and my supervisor wants a pdf by tomorrow morning. content is done but the formatting is a mess: I just bolded things instead of using proper headings so I cant make a contents page, the cover has a '1' at the bottom, and figure 3 sits alone on a page with a huge gap before it. can you fix that up and export it",
+   "expect": "Clean up a Word report before exporting to PDF"
+  },
+  {
+   "message": "We run a small yoga studio and over the years collected sign-ups from the website form, a typed-up paper sheet from the front desk and an old mailing tool. I exported everything into one CSV, about 3,400 rows, and the same people are clearly in there several times: 'Katie Osei', 'Kate Osei', 'katie osei ' with a trailing space, same email but one in capitals, phone with and without dashes. Before we import into the new booking system I want each person in there once, with whatever info is most complete. Some couples share an email though, so careful there. Can you take a crack at it? File's all_members_export.csv",
+   "expect": "Merge duplicate contacts in a CSV export"
+  },
+  {
+   "message": "ugh. back from the trade fair, threw my badge scans, my colleague's list and my phone address book into one csv and now half the leads are in there two or three times ('J. Marchetti', 'Giulia Marchetti', 'giulia marchetti (Fabbri srl)'...). sales starts calling monday and we can't ring the same person twice. gave up doing it by hand after 40 rows. can you sort it out?",
+   "expect": "Merge duplicate contacts in a CSV export"
+  },
+  {
+   "message": "My sister and I finally booked flights to Japan for our mum's 60th, landing in Tokyo on 4 April, flying home from Osaka on the 15th. Beyond that we have nothing. We definitely want Tokyo and Kyoto, mum is keen on Kanazawa because of some garden she read about, and I'd love to squeeze in Hiroshima and maybe Nara, but I've no feel for whether that's too much. Mum is fit but she's not going to do 25k steps a day. We like food, gardens, a bit of history, not really shopping. Budget is mid-range. Could you put together a sensible plan of what to do each day and how to get between places?",
+   "expect": "Plan a multi-city trip itinerary"
+  },
+  {
+   "message": "ok so interrail pass is bought, 2 weeks in late june, me and my boyfriend. rough idea is start in Vienna (cheap flight there), then Budapest, Ljubljana, maybe Bled for the lake, then Zagreb and Split and fly home from Split. or should Zagreb come before Ljubljana?? I keep reordering it and getting confused about how long the trains take. we dont want to spend the whole holiday on trains. we like swimming, cheap bars, wandering old towns, not big on museums. can you turn this into an actual day by day thing, with how many nights where",
+   "expect": "Plan a multi-city trip itinerary"
+  },
+  {
+   "message": "I'm supposed to present our pilot results to the client's steering committee on Thursday at 10, and I've just found out the data team won't have the final numbers until Friday afternoon. I really don't want to present half-baked figures, but I also don't want to sound disorganised; this client (Mrs Halvorsen, quite formal, we've only met twice) is already a bit nervous about the project. I could do the following Tuesday or Wednesday morning, or Thursday the week after at the same time. Could you write something I can send her asking to move it? Don't send anything, I want to read it first.",
+   "expect": "Draft a polite reschedule email"
+  },
+  {
+   "message": "physio is tomorrow at 4:30 and I totally forgot my daughter's school play is at 5, NOT missing that. clinic wants changes in writing. he's called Marek, known him for months so no need to be stiff. any day next week after 3 works. can you write it for me, maybe grovel a tiny bit",
+   "expect": "Draft a polite reschedule email"
+  },
+  {
+   "message": "My contract with my mobile provider ended last month and they keep texting me offers. Right now I pay 28 a month for 20 GB which I never finish, I think. I've narrowed it to two options: stay and take their 'loyalty' deal, 19 a month for 30 GB but a new 24-month lock-in, or jump to a SIM-only one from a smaller carrier at 12 a month for 15 GB, no contract, but there's a 10 activation fee and the 12 is 'for the first 6 months' and the small print is vague about what comes after. I'm mostly on wifi at home and work, a few calls. Which one actually makes more sense for me over a year or two?",
+   "expect": "Compare two mobile phone plans"
+  },
+  {
+   "message": "we moved into the new flat and need home internet, two providers serve the building. one is fibre 500 mbit at 39.90/mo with a free router but a 60 install fee and 18 month contract; the other is 250 mbit cable at 29.90 for the first 12 months then 44.90, router rental 4/mo, 12 month contract. I work from home 3 days with lots of video calls, partner streams a lot, no gaming. the cable one LOOKS cheaper and the sales guy was very pushy about it which makes me suspicious lol. which is really the better deal for us, I get lost in the fine print",
+   "expect": "Compare two mobile phone plans"
+  }
+ ],
+ "off_topic": [
+  "32 yaşındayım, yedi yıldır aynı sigorta şirketinde hasar uzmanıyım. Maaş fena değil ama son iki yıldır hiçbir şey öğrenmediğimi hissediyorum, pazartesileri mide ağrısıyla uyanıyorum. Bir yanım yüksek lisansa başlayıp veri analizine geçmek istiyor, öbür yanım 'kredi borcun var, macera arama' diyor. Eşim destekliyor ama onun da işi garanti değil. Kimseyle rahat konuşamıyorum çünkü herkes kendi korkusunu bana söylüyor. Bana karar verdirme, sadece bu kararı nasıl düşünmem gerektiğine dair bir çerçeve çizer misin? Hangi soruları kendime sormalıyım?",
+  "En yakın arkadaşım Tolga eylülde evleniyor ve sağdıç olarak konuşma yapmamı istedi. Topluluk önünde konuşmaktan nefret ederim, üstüne bir de komik olmam bekleniyor. Lise birinci sınıftan beri tanışıyoruz; bir kere otobüsü kaçırıp 14 kilometre yürümüştük, üniversitede aynı evde kaldık, yemek yapmayı benden öğrendi (hala kötü yapar). Gelin Defne'yi de çok severim, onu utandıracak bir şey olmasın. Üç dakikayı geçmeyen, samimi, sonunda biraz duygulandıran bir konuşma taslağı yazar mısın? 'Evlilik bir yolculuktur' gibi klişeler olmasın lütfen.",
+  "Küçük bir stok takip uygulamam var, arkasında PostgreSQL çalışıyor. Ürün sayısı 200 bini geçince rapor ekranı çok yavaşladı, bir sorgu 14 saniye sürüyor. Sorgu siparişler tablosunu ürünler ve depolar tablosuyla birleştirip son 90 günün satışını ürün bazında topluyor. EXPLAIN çıktısına baktım, siparişler tablosunda sıralı tarama yapıyor gibi; tarih sütununda indeks var ama kullanmıyor. Sorguyu ve tablo yapısını aşağıya koyacağım. Nereden başlamalıyım: indeks mi eksik, sorguyu mu yanlış yazdım, yoksa ayrı bir özet tablo mu tutmalıyım?",
+  "Nisan'daki YDS'ye girmeyi düşünüyorum, hedefim en az 70. Şu an deneme çözünce 48-52 arası geliyor. Kelime bilgim zayıf, okuma parçalarında süre yetmiyor, gramer fena değil. Hafta içi işten 18:30'da çıkıyorum, akşam en fazla bir buçuk saat ayırabilirim; cumartesi yarım gün boş, pazar aileye ayrılmış durumda. Önümde aşağı yukarı 20 hafta var. Daha önce iki kere program yapıp üçüncü haftada bıraktım, o yüzden gerçekçi bir şey olsun. Bana haftalık bir çalışma düzeni önerir misin, hangi gün neye çalışacağım belli olsun?",
+  "Haftaya cumartesi iki arkadaşla ilk kez çadır kampına gidiyoruz, göl kenarında tek gece. Çadır ve tulumları kiraladık. Gece 4-5 dereceye düşüyormuş, ne kadar kalın giyinmek lazım, mat şart mı? Yağmur ihtimali de var. Hiç deneyimimiz yok, unutursak pişman olacağımız şeyleri kısa bir kontrol listesi gibi söyler misin?",
+  "Kız kardeşim mahallede küçük bir kahve dükkanı açıyor, tabela ve menü tasarımını bana bıraktı. Mekan dar ve uzun, duvarlar tuğla, ahşap raflar var. Ben koyu yeşil ve krem düşünüyordum ama o 'herkes yeşil yapıyor' diyor, bordo istiyor. İsim 'Kıyı Kahve', deniz yok ama dere kenarında. Yazı tipi konusunda da kararsızım, el yazısı gibi bir şey samimi duruyor ama uzaktan okunmuyor. Henüz bir şey çizmeni istemiyorum; önce renk ve yazı tipi yönünü tartışalım. Sen olsan bu mekana nasıl bir kimlik düşünürdün ve neden?",
+  "Dün akşam gönderdiğin blog taslaklarının üçünü de okudum, biraz üstüne yattım. İlk başta ikinci başlığı seçmiştim ya, vazgeçtim; sabah tekrar okuyunca fazla iddialı geldi, okuyucuya söz verip tutamayacağım gibi. Birinci taslakla devam edelim, giriş paragrafı olduğu gibi kalsın, onaylıyorum. Yalnız ortadaki arıcılık maliyetleri bölümü çok uzun, yarıya insin ve dedemin kovanlarıyla ilgili anekdot sona taşınsın. Fotoğrafları ben hafta sonu çekeceğim. Yani özetle: bir numara, kısaltılmış orta bölüm, anekdot sonda. Buna göre son halini yazabilirsin.",
+  "Kırk yaşına girdim ve doktor tansiyonuma bakıp 'hareket etmeniz lazım' dedi. Gençken futbol oynardım ama 15 yıldır masa başındayım, iki kat merdiven çıkınca nefesim kesiliyor. Mayıs'ta şehirde 10 kilometrelik bir halk koşusu var, onu hedef koysam gerçekçi olur mu? Dizimde eski bir menisküs hikayesi var, ameliyat olmadım. Sabah erken kalkabilirim, haftada üç gün ayırırım. Koşu bandım yok, sahil yolu yakın. Sıfırdan başlayan biri için yavaş ilerleyen bir program yazar mısın, bir de hangi durumda durup doktora gitmem gerektiğini söyle.",
+  "Üst kattaki komşu altı aydır gece 12'den sonra gürültü yapıyor; iki kez kibarca söyledim, bir hafta düzeldi sonra yine başladı. Kavga istemiyorum, çocuklarımız aynı okulda. Bir sonraki konuşmada ne desem de hem ciddiye alsınlar hem düşman olmayalım?",
+  "Banyoyu yenilemeye karar verdik; 1994 yapımı bir dairede 4 metrekarelik eski bir banyo. Fayanslar dökülüyor, tesisat demir boru, küveti duşa çevirmek istiyoruz. Üç ustadan fiyat aldım, biri 180 bin dedi, biri 260, biri 'malzemeyi sen al, işçilik 90' dedi. Hangisinin mantıklı olduğunu kestiremiyorum. Ayrıca işlerin sırası nasıl olmalı, önce tesisat mı, su yalıtımı ne zaman yapılır, kaç gün banyosuz kalırız? Ustayla konuşurken bilgisiz görünmek istemiyorum; sormam gereken soruların ve dikkat edilecek noktaların bir özetini çıkarır mısın?",
+  "I'm applying for a project coordinator role at a housing charity and my cover letter reads like a list of duties. I've been an office manager at a dental practice for six years: I ran the rota for eleven staff, moved us to a new booking system, and handled the refurbishment when the ceiling came down in 2023. I have no charity experience, which worries me, though I volunteered at a food bank for two winters. The advert stresses 'calm under pressure' and 'working with vulnerable people'. I'll paste my current draft below. Could you rewrite the middle two paragraphs so they show what I actually achieved rather than what my job description said?",
+  "I'm building a little weather station with a Raspberry Pi Pico and a BME280 sensor, first electronics project. Temperature and pressure read fine but humidity is stuck at exactly 0.0, even when I breathe on it. A forum post says some cheap boards are really BMP280s with no humidity sensor at all. How can I tell which chip I actually have, is there an ID register I can read from MicroPython?",
+  "Stats exam on Thursday and I still don't properly get p-values, which is embarrassing in a second-year psych course. I can do the calculations, I just can't explain what the number means without my lecturer wincing. I wrote 'the probability that the null hypothesis is true' in the mock and lost marks. I also mix up type I and type II errors every single time, and confidence intervals feel like the same idea in different clothes but I'm told they aren't. Could you explain these three things in plain words, with one example that runs through all of them, then quiz me with a few questions to check I've got it?",
+  "About the garden shed plans we went through on Tuesday: I've slept on it and changed my mind on a couple of things. The lean-to roof is fine, keep that. But I don't want the door on the long side any more; my neighbour pointed out it would open straight onto the compost bins. Move it to the gable end facing the house. And scrap the window on the north wall, it only looks at the fence, put a bigger one on the south side instead. Everything else is approved as it was, including the 2.4 by 1.8 footprint and the timber sizes. Can you redo the cutting list and the materials estimate with those changes?"
+ ],
+ "off_topic_neighbour": [
+  "Bir süredir kafamı kurcalayan bir şey var, fikrini almak istiyorum. Evdeki eski laptopta altı yedi servis Docker ile çalışıyor, şu an hepsi sorunsuz, hiçbir hata yok. Ama her servis için ayrı compose dosyası, ayrı port, ayrı güncelleme derken bakımı yorucu olmaya başladı. Bir arkadaş 'hepsini küçük bir kiralık sunucuya taşı ya da doğrudan sistem servisi olarak kur, konteynere gerek yok' dedi. Öte yandan konteynerlerin birbirinden yalıtılmış olması hoşuma gidiyor. Sence bu ölçekte bir ev kurulumu için Docker'da kalmak mı mantıklı, yoksa sadeleştirmek mi? Artıları eksileri konuşalım, henüz hiçbir şeyi değiştirmeyeceğim.",
+  "Python'a yeni başladım, kurstaki eğitmen her proje için sanal ortam kurun diyor ama nedenini tam anlamadım; şimdiye kadar her şeyi doğrudan sisteme kurdum, bir sorun da çıkmadı. Forumlarda kimisi venv diyor, kimisi conda, kimisi uv. Bozuk bir şey yok, sadece baştan doğru alışkanlık edinmek istiyorum. Farklarını sade anlatıp birini önerir misin?",
+  "Excel'de izin takip tablosu yapıyorum, tarih sütunları düzgün, sıralama filtre çalışıyor. İzin başlangıcı ile bitişi arasındaki iş günlerini, resmi tatilleri ve hafta sonlarını saymadan hesaplatmak istiyorum. TAMİŞGÜNÜ varmış ama tatil listesini nereye yazacağımı çözemedim, nasıl kurarım?",
+  "İş yerinde sürekli PDF'lerle boğuşuyoruz; sözleşme tarıyoruz, ekleri tek dosyada topluyoruz, bazen imza alanı ekliyoruz. Şimdiye kadar ücretsiz sitelerle idare ettik ama müdür gizlilik yüzünden 'belgeleri internete yüklemeyin' dedi. Acrobat Pro'nun yıllık aboneliği kişi başı epey tutuyor, beş kişiyiz. Alternatif olarak tek seferlik lisanslı bir iki program ve açık kaynak araçlar önerildi. Şu an elimde işlenecek bir dosya yok, sadece satın alma talebi yazacağım ve gerekçe lazım. Sence abonelik bu kullanım için parasını hak eder mi, yoksa ücretsiz araçlar yeterli olur mu?",
+  "Perşembe günü birim toplantısını ilk kez ben yöneteceğim, müdür izinde. 12 kişi katılacak, normalde bir buçuk saat sürüyor ve yarısı boş konuşmayla geçiyor. Benim derdim bunu 45 dakikaya indirmek. Konuşulacak konular: yeni vardiya düzeni, yıl sonu sayımı, bir de servis güzergahı şikayetleri. Not tutma işini stajyere verdim, o kısım tamam. Senden istediğim dakika dakika bir gündem, bir de tartışma uzarsa kimseyi kırmadan kesmek için kullanabileceğim birkaç cümle. Vardiya konusu gergin, onu başa mı sona mı koymalıyım sence?",
+  "Bugün markete gittim, moralim bozuldu açıkçası. Geçen ay 1.400 liraya dolan sepet bu sefer 1.900 tuttu, üstelik et almadım. Peynirin kilosu olmuş 480, yumurta kolisi 210. Kasadaki kadın da 'her hafta etiket değiştiriyoruz' dedi. Listeye sadık kaldım, fazladan tek şey almadım, yine de böyle. Senden bir şey hazırlamanı istemiyorum, biraz içimi döktüm. Yalnız şunu merak ediyorum: açıklanan gıda enflasyonu ile benim kasada gördüğüm arasında neden bu kadar fark oluyor, o sepet nasıl hesaplanıyor?",
+  "Doğalgaz faturam bu ay 4.300 lira geldi, geçen yıl aynı ay 1.900'dü. Tüketim alışkanlığımız aynı, evde kimse değişmedi, kombi de yeni bakımdan çıktı. Sayaç okuma tarihlerine baktım, bu sefer 38 günlük dönem faturalanmış, normalde 30 gün olur; kademe aşımı yüzünden pahalıya gelmiş olabilir mi? Son ödeme tarihi ayın 22'si, onu zaten ödeyeceğim, mesele o değil. Asıl derdim itiraz hakkım var mı, varsa dağıtım şirketine nasıl bir dilekçe yazmalıyım. Bir taslak hazırlar mısın, abone numarası yerine boşluk bırak.",
+  "We're a team of five and we've been arguing all week about branch policy. Half of us like rebasing feature branches so main's history stays linear; the other half say rewriting history is asking for trouble and we should just merge and live with the merge commits. Nobody's push is broken right now, this is purely about what goes in the contributing guide. One person even wants squash-merge only, via the PR button, so nobody ever force-pushes anything. I have to propose something at Monday's retro. What would you recommend for a team our size, and how would you argue it to the sceptics?",
+  "Small update, no emergency: the nightly backup job has been running from cron for three weeks now without a miss, the log shows a clean run every night at 2:15, so that's sorted and I'm leaving it alone. What I'd like next is different. The backups pile up and the external disk is at 71 percent. I'd like to keep the last 14 daily copies plus one per month beyond that, and have older ones removed automatically. I've never written a retention rule and I'm nervous about a script that deletes things. How would you design it so a mistake can't wipe everything?",
+  "I've got a 14-page Word report going to the regional director next week. Formatting is fine, our comms person already ran it through the house template and the PDF looks good. What I'm unsure about is the content: the executive summary is nearly a full page and I suspect it buries the main point, which is that we need two more staff or the helpdesk backlog keeps growing. I'm also not sure whether the recommendations should come before or after the cost section. I'll paste the summary below. Can you tell me honestly whether it lands, and suggest a tighter version? Don't touch layout, only wording.",
+  "Our little bike shop keeps its customer list in one CSV that we open in a spreadsheet, about 2,800 people. I cleaned it up over the winter so it's in decent shape, one row per customer. The trouble is more that three of us edit it and keep emailing copies around, and there's nowhere to note who called whom. I've been looking at a few CRM tools, the free tiers of the big ones and one built for small retail, prices from nothing to about 30 a month per user. Is a CRM overkill for a shop our size, or would a shared online sheet do? What would you look at when choosing?",
+  "We got back from our Spain trip on Sunday (Seville, Granada, Valencia, the plan worked out really well btw). One sour note: on the Granada to Valencia leg the airline lost my suitcase for four days and I had to buy clothes and toiletries, roughly 210 euros, I kept the receipts. They've offered a 50 euro voucher, which feels insulting. I have the baggage report number and the boarding pass. Do I have a right to proper reimbursement, and could you help me write a firm but civil claim letter? I've never done this before and don't know what to cite.",
+  "I have a performance review with my manager on Wednesday and I'm torn. I've had a rough two weeks, my dad was in hospital, and I haven't prepared the self-assessment properly. Part of me wants to ask to push it to next week; the other part thinks postponing looks like I'm dodging, especially since promotion decisions are made at the end of the month and she's travelling after Friday anyway. I'm not asking you to write anything yet. I just want to think it through: what are the risks each way, and is there a middle option, like going ahead but being upfront that the written part will follow?",
+  "I'm happy with my mobile plan and not looking to switch, but this month's bill has an 86 charge for 'roaming data, zone 3' from four days in Montenegro. I had roaming off, or thought I did, and the plan terms say a daily cap applies, which they didn't apply. Support said the charge is valid and more or less hung up. How do I escalate this, and what should a written complaint say?"
+ ]
+}
