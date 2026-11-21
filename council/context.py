@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 
-from .learn import SKILL_BUDGET, Learning, is_retired, is_skill
+from .learn import SKILL_BUDGET, Learning, is_retired
 from .local import update_notice
 from .store import CORE, RULES, SESSIONS, THREADS, Store, StoreError
 
@@ -70,6 +70,15 @@ class SessionSeen:
         self._sent.pop(session_id, None)
 
 
+def _ordinary(store: Store):
+    """Path filter for injected notes: no note that counts as a skill, nothing in a retired skills folder.
+
+    Anything else in a skills folder is an ordinary note and is served like one.
+    """
+    skills = Learning(store).skills()
+    return lambda p: p not in skills and not is_retired(p)
+
+
 def relevant(store: Store, query: str, budget: int = 3500, limit: int = 5, seen: set | None = None,
              trace: dict | None = None) -> str:
     """Notes matching ``query``, excluding the fixed files already loaded at session start.
@@ -78,7 +87,7 @@ def relevant(store: Store, query: str, budget: int = 3500, limit: int = 5, seen:
     ``trace``, when given, receives the best match score (``top``) and the sections sent (``shown``).
     """
     hits = store.index.search(query, limit=limit, exclude=FIXED, content_only=True,
-                              where=lambda p: not (is_skill(p) or is_retired(p))) if query.strip() else []
+                              where=_ordinary(store)) if query.strip() else []
     if trace is not None:
         trace.update(top=hits[0]["score"] if hits else None, shown=[])
     if seen is not None:

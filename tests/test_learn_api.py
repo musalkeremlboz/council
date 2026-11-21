@@ -114,3 +114,37 @@ def test_learning_tools_are_listed_and_instructions_mention_them(api):
     for word in ("council_rule", "council_skill", "council_unlearn", "council_skill_feedback", "never secrets"):
         assert word in server.INSTRUCTIONS
     assert len(server.INSTRUCTIONS) < 2600
+
+
+def _ask(c, q, sid="s"):
+    return c.post("/api/context", json={"mode": "prompt", "query": q, "session_id": sid}).json()["context"]
+
+
+Q = "çalışan servisin üstüne yeniden kurulum yapacağım"
+
+
+def test_an_ordinary_note_under_skills_is_served_as_a_note_and_never_as_a_skill(api):
+    c, store = api
+    store.write("skills/python.md", "# Servis kurulum notlarım\n\nÇalışan servisin üstüne yeniden kurulum: "
+                                    "önce yedek al, sonra kur.")
+    out = _ask(c, Q)
+    assert "- skills/python.md" in out and "skills that may apply" not in out
+    assert Learning(store).match(Q) == []
+
+
+def test_a_hand_written_skill_with_a_secret_is_not_offered(api):
+    c, store = api
+    from council.learn import render_skill
+    store.write("skills/deploy.md", render_skill(
+        "Servisi yeniden kur", SK["when"], "1. PASSWORD=hunter2abc ile gir\n2. Yeniden kur", SK["learned_from"],
+        status="established"))
+    assert Learning(store).match(Q) == [] and "skills that may apply" not in _ask(c, Q)
+
+
+def test_a_live_note_whose_status_says_retired_is_kept_out(api):
+    c, store = api
+    from council.learn import render_skill
+    store.write("skills/eski.md", render_skill("Servisi yeniden kurarken beklet", SK["when"], SK["steps"],
+                                               SK["learned_from"], status="retired"))
+    out = _ask(c, Q)
+    assert "skills/eski.md" not in out and "Eski işi durdur" not in out

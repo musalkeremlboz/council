@@ -158,6 +158,27 @@ def _with_status(text: str, status: str) -> str | None:
     return "\n".join(rows)
 
 
+LIVE = ("candidate", "established")  # statuses a skill is offered with
+
+
+def as_skill(path: str, text: str) -> dict | None:
+    """Fields of a note that counts as a skill, else None: the note is then an ordinary one.
+
+    It must sit in a live skills folder, be complete (title, When, Steps, Learned from), say
+    candidate, established or retired in its Status line, and hold nothing find_secret objects
+    to: a note put there by other means never reaches the skills block without a skill's checks.
+    A retired one still counts, so a half-finished retirement stays out of every context.
+    """
+    if not is_skill(path):
+        return None
+    fields = parse_skill(text)
+    if not all(fields[k] for k in ("title", "when", "steps", "learned_from")):
+        return None
+    if fields["status"] not in (*LIVE, "retired") or find_secret(text):
+        return None
+    return fields
+
+
 def _stamp(session: str) -> str:
     day = now_local().date().isoformat()
     return f"{day}, session {session[:SESSION_SHORT]}" if session else day
@@ -457,7 +478,8 @@ class Learning:
         if outcome not in OUTCOMES:
             raise StoreError(f"outcome must be one of {', '.join(OUTCOMES)}")
         path = skill_path(name, project)
-        if not self.store.exists(path):
+        live = self.skills().get(path)
+        if live is None or live[1]["status"] not in LIVE:
             raise StoreError(f"no live skill named {name!r} at {path}")
         key = session[:SESSION_KEY]
         with self.store._locked():
@@ -477,7 +499,8 @@ class Learning:
         return self._settle(path, verdict)
 
     def skills(self) -> dict[str, tuple[str, dict]]:
-        """Every live skill note, by path: its text and fields. A note that cannot be read is left out."""
+        """Every note in a live skills folder that counts as a skill (see ``as_skill``), by path: its
+        text and fields. A note that cannot be read is left out."""
         out = {}
         for path in self.store.list():
             if not is_skill(path):
@@ -486,7 +509,8 @@ class Learning:
                 text = self.store.read(path).text
             except (StoreError, OSError, ValueError):  # gone since listing, unreadable, or not UTF-8
                 continue
-            out[path] = (text, parse_skill(text))
+            if (fields := as_skill(path, text)) is not None:
+                out[path] = (text, fields)
         return out
 
     def match(self, query: str, limit: int = SKILL_LIMIT) -> list[dict]:
@@ -500,7 +524,7 @@ class Learning:
         mine = _stems(query)
         if not mine:
             return []
-        live = self.skills()
+        live = {p: v for p, v in self.skills().items() if v[1]["status"] in LIVE}
         if not live:
             return []
         head = {p: _stems(f"{f['title']} {f['when']}") for p, (_, f) in live.items()}
