@@ -140,6 +140,24 @@ def parse_skill(text: str) -> dict:
     return out
 
 
+_STATUS_LINE = re.compile(r"^- \*\*Status:\*\*")
+
+
+def _with_status(text: str, status: str) -> str | None:
+    """``text`` with the Status line of its header (the lines before the first ``## ``) set to ``status``.
+
+    Changed by position, never by a text match over the whole note: the steps may quote a Status
+    line. None when the header has no Status line or more than one.
+    """
+    rows = text.split("\n")
+    end = next((i for i, row in enumerate(rows) if row.startswith("## ")), len(rows))
+    found = [i for i in range(end) if _STATUS_LINE.match(rows[i])]
+    if len(found) != 1:
+        return None
+    rows[found[0]] = f"- **Status:** {status}"
+    return "\n".join(rows)
+
+
 def _stamp(session: str) -> str:
     day = now_local().date().isoformat()
     return f"{day}, session {session[:SESSION_SHORT]}" if session else day
@@ -376,22 +394,30 @@ class Learning:
         """Carry out a verdict on the note itself; returns the skill's resulting path and status.
 
         Called after the counters are saved and the lock released: the store takes the same
-        lock for each note change, and the lock is not re-entrant.
+        lock for each note change, and the lock is not re-entrant. A note the verdict cannot be
+        carried out on (unreadable, no single Status line in its header, a retired twin in the
+        way) is left as it is: one bad note must not break feedback or the skills block.
         """
-        text = self.store.read(path).text
-        status = parse_skill(text)["status"] or "candidate"
-        if verdict == "keep" or (verdict == "promote" and status != "candidate"):
+        status = ""
+        try:
+            note = self.store.read(path)
+            status = parse_skill(note.text)["status"] or "candidate"
+            if verdict == "keep" or (verdict == "promote" and status != "candidate"):
+                return {"path": path, "status": status}
+            new = "retired" if verdict == "retire" else "established"
+            if status != new:
+                text = _with_status(note.text, new)
+                if text is None:
+                    return {"path": path, "status": status}
+                self.store.write(path, text, note.sha, f"skill {new}: {path}")
+            if verdict == "promote":
+                return {"path": path, "status": new}
+            parts = list(_parts(path))
+            parts.insert(-1, "retired")
+            retired = "/".join(parts)
+            self.store.move(path, retired, f"skill retired: {path}")
+        except (StoreError, OSError, ValueError):  # ValueError: a note that is not UTF-8
             return {"path": path, "status": status}
-        new = "retired" if verdict == "retire" else "established"
-        if status != new:
-            self.store.edit(path, [{"old": f"- **Status:** {status}", "new": f"- **Status:** {new}"}],
-                            reason=f"skill {new}: {path}")
-        if verdict == "promote":
-            return {"path": path, "status": new}
-        parts = list(_parts(path))
-        parts.insert(-1, "retired")
-        retired = "/".join(parts)
-        self.store.move(path, retired, f"skill retired: {path}")
         with self.store._locked():  # a comeback under the same name must start with fresh counters
             state = self._load()
             if isinstance(state.get("skills"), dict) and state["skills"].pop(path, None) is not None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 
 from .learn import SKILL_BUDGET, Learning, is_retired, is_skill
@@ -125,6 +126,7 @@ def skills_block(learning: Learning, query: str, seen: set | None, session: str 
         for m in shown:
             learning.record_shown(m["path"], session)
     except Exception:  # nothing in the skills path may stop the notes from being served
+        logging.getLogger("council").exception("skills block left out")
         return "", []
     if seen is not None:  # only now that the block is certain: a failure must not hide a skill for the session
         seen.update(("skill", m["path"]) for m in shown)

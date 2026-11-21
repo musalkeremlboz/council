@@ -382,3 +382,36 @@ def test_undoing_a_new_skill_drops_its_counters(store):
     L.write_skill("beklet", session="s2", **SK)
     L.feedback("beklet", "wrong", session="s2")                      # inherited counters would make this the second: retired
     assert store.exists("skills/beklet.md") and not store.exists("skills/retired/beklet.md")
+
+def test_a_status_looking_line_in_the_steps_does_not_stop_promotion_or_retirement(store):
+    L = Learning(store)
+    steps = "1. Başlığın altına şunu yaz:\n- **Status:** candidate\n2. Kaydet"
+    p = L.write_skill("meta", **{**SK, "steps": steps})["path"]
+    for s in "abc":
+        L.feedback("meta", "helped", session=s)
+    fields = learn.parse_skill(store.read(p).text)
+    assert fields["status"] == "established" and fields["steps"] == steps   # only the header line changed
+    L.write_skill("meta iki", **{**SK, "steps": steps})
+    L.feedback("meta iki", "wrong", session="a")
+    assert L.feedback("meta iki", "wrong", session="b")["status"] == "retired"
+    fields = learn.parse_skill(store.read("skills/retired/meta-iki.md").text)
+    assert fields["status"] == "retired" and fields["steps"] == steps
+
+def _damaged(store):
+    """A skill note whose header carries two Status lines: no verdict can be carried out on it."""
+    text = learn.render_skill("Servis kurulumu bozuk not", SK["when"], SK["steps"], SK["learned_from"])
+    store.write("skills/bozuk.md", text.replace("- **Status:** candidate", "- **Status:** candidate\n- **Status:** candidate"))
+
+def test_a_damaged_skill_beside_a_good_one_does_not_stop_the_good_one(store):
+    from council.context import skills_block
+    L = Learning(store)
+    good = L.write_skill("Servisi yeniden kurarken beklet", **SK)["path"]
+    L.feedback("Servisi yeniden kurarken beklet", "helped", session="h")   # it has helped: it must stay
+    _damaged(store)
+    q = "çalışan servisin üstüne yeniden kurulum yapacağım"
+    for i in range(6):                                     # once retirement by showing would have been tried
+        block, _ = skills_block(L, q, None, f"s{i}")
+        assert good in block, i
+    L.feedback("bozuk", "wrong", session="a")
+    assert L.feedback("bozuk", "wrong", session="b") == {"path": "skills/bozuk.md", "status": "candidate"}
+    assert store.exists("skills/bozuk.md") and good in skills_block(L, q, None, "s9")[0]

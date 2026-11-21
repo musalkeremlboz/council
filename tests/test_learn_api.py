@@ -64,7 +64,7 @@ def test_a_broken_learning_file_does_not_stop_the_notes(api):
 
 
 @pytest.mark.parametrize("broken", ["match", "record_shown"])
-def test_nothing_in_the_skills_path_stops_the_notes(api, monkeypatch, broken):
+def test_nothing_in_the_skills_path_stops_the_notes(api, monkeypatch, caplog, broken):
     c, store = api
     store.write("projects/x/project.md", "# X\n\nservis notları: yeniden kurulum planı")
     Learning(store).write_skill("Servisi yeniden kurarken beklet", **SK)
@@ -76,6 +76,7 @@ def test_nothing_in_the_skills_path_stops_the_notes(api, monkeypatch, broken):
                                      "session_id": "s"})
     assert r.status_code == 200 and "projects/x/project.md" in r.json()["context"]
     assert "skills that may apply" not in r.json()["context"]
+    assert [rec.exc_info[0] for rec in caplog.records if rec.name == "council"] == [sqlite3.OperationalError]
 
 
 def test_a_failed_block_does_not_hide_the_skill_for_the_session(api, monkeypatch):
