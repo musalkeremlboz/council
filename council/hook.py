@@ -175,6 +175,7 @@ def stop_check(event: dict, session_info=server_session) -> None:
     every = review_interval()
     review_due = every > 0 and sum(1 for i, _, _ in uses if i > reviewed) >= every
     info = session_info(sid, review=review_due) or {}
+    review_due = review_due and bool(info)  # no answer from the server: ask (and count) at the next stop
     last_time = max([ts for _, ts in local_logs if ts] + [info.get("last_log") or 0.0])
 
     def pending(i: int, ts: float | None) -> bool:

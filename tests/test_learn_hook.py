@@ -56,3 +56,22 @@ def test_review_can_be_turned_off_and_is_told_to_the_server(tmp_path, monkeypatc
     info = lambda sid, review=False: asked.append(review) or {"last_log": None, "skills": []}
     run(tmp_path, monkeypatch, capsys, ["Read"] * 15, info, sid="s9")
     assert asked[-1] is True
+
+def test_no_review_when_the_server_does_not_answer_and_it_is_asked_later(tmp_path, monkeypatch, capsys):
+    down = lambda sid, review=False: {}
+    assert run(tmp_path, monkeypatch, capsys, ["Read"] * 15, down) == ""
+    assert "council_skill" in run(tmp_path, monkeypatch, capsys, ["Read"] * 15)    # not consumed
+
+def test_log_reminder_still_fires_alone_when_the_server_is_down(tmp_path, monkeypatch, capsys):
+    asked = []
+    down = lambda sid, review=False: asked.append(review) or {}
+    reason = run(tmp_path, monkeypatch, capsys, ["Edit"] + ["Read"] * 5, down)
+    assert "council_log" in reason and "council_skill" not in reason
+    assert asked == [False]
+
+def test_server_session_is_empty_not_an_error_when_unreachable(tmp_path, monkeypatch):
+    assert hook.server_session("s1") == {}                                          # no config file
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"url": "http://127.0.0.1:9", "token": "t"}))        # nothing listens
+    monkeypatch.setattr(hook, "CONFIG", cfg)
+    assert hook.server_session("s1", review=True) == {}
