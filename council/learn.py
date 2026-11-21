@@ -35,6 +35,7 @@ HEAD_WEIGHT = 2.0  # a query stem in a skill's title or When line counts this ma
 MIN_STEMS = 2  # a skill needs this many distinct query stems to be offered...
 MIN_SCORE = 9.0  # ...and at least this score: no skill is better than a wrong one
 SKILL_LIMIT = 2  # skills offered for one message
+SKILL_BUDGET = 1500  # characters of context the offered skills may take together, apart from the notes' budget
 SKILL_CANDIDATES = 20  # sections the index proposes before they are scored note by note
 RARITY_LIBRARY = 10  # rarity counts the library as at least this big, so scores do not depend on how many skills exist
 STEM_PREFIX_MIN = 4  # a stem matches a longer one it prefixes only when it has this many characters

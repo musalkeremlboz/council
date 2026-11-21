@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from .learn import SKILL_BUDGET, Learning, is_retired, is_skill
 from .local import update_notice
 from .store import CORE, RULES, SESSIONS, THREADS, Store, StoreError
 
@@ -75,7 +76,8 @@ def relevant(store: Store, query: str, budget: int = 3500, limit: int = 5, seen:
     ``seen`` is the session's memory of what it was sent: those sections are skipped, new ones are added.
     ``trace``, when given, receives the best match score (``top``) and the sections sent (``shown``).
     """
-    hits = store.index.search(query, limit=limit, exclude=FIXED, content_only=True) if query.strip() else []
+    hits = store.index.search(query, limit=limit, exclude=FIXED, content_only=True,
+                              where=lambda p: not (is_skill(p) or is_retired(p))) if query.strip() else []
     if trace is not None:
         trace.update(top=hits[0]["score"] if hits else None, shown=[])
     if seen is not None:
@@ -96,6 +98,37 @@ def relevant(store: Store, query: str, budget: int = 3500, limit: int = 5, seen:
         if trace is not None:
             trace["shown"].append(h)
     return "\n".join(parts) + "\n"
+
+
+def skills_block(learning: Learning, query: str, seen: set | None, session: str = "",
+                 budget: int = SKILL_BUDGET) -> tuple[str, list[dict]]:
+    """Skills matching ``query`` under their own budget, and the skills shown.
+
+    Skills the session's ``seen`` set already holds are skipped; each one shown is added to it and
+    recorded with the learning ledger. A learning file that cannot be read never stops the notes.
+    """
+    heading = "[COUNCIL · skills that may apply]"
+    try:
+        found = learning.match(query) if query.strip() else []
+        if seen is not None:
+            found = [m for m in found if ("skill", m["path"]) not in seen]
+        parts, shown, used = [heading], [], len(heading)
+        for m in found:
+            head = f"- {m['path']} ({m['status']})"
+            room = budget - used - len(head) - 2
+            if room < 200:
+                break
+            block = head + "\n" + _clip(m["text"], room)
+            parts.append(block)
+            used += len(block) + 1
+            shown.append(m)
+        for m in shown:
+            if seen is not None:
+                seen.add(("skill", m["path"]))
+            learning.record_shown(m["path"], session)
+    except (StoreError, OSError, ValueError):
+        return "", []
+    return ("\n".join(parts) + "\n", shown) if shown else ("", [])
 
 
 # Share of the start budget each fixed note is meant to stay within. A note over its target is still

@@ -20,7 +20,8 @@ from mcp.types import Icon
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse
 
 from . import __version__
-from .context import SessionSeen, bootstrap, relevant
+from .context import SessionSeen, bootstrap, relevant, skills_block
+from .learn import Learning
 from .oauth import OwnerOAuthProvider
 from .store import Store, StoreError
 from .usage import Usage
@@ -116,6 +117,7 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
         mcp.custom_route("/login", methods=["GET", "POST"])(provider.login_page)
 
     seen = SessionSeen()
+    learning = Learning(store)
     usage = Usage(store.data / "usage.sqlite3")
 
     def run(fn):
@@ -130,6 +132,10 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
         Call once at the start of a conversation."""
         text = bootstrap(store, query)
         usage.record("context", query=query, chars=len(text))
+        skills, shown = skills_block(learning, query, None)  # for agents without hooks
+        if skills:
+            usage.record("skill", query=query, chars=len(skills), top=shown[0]["score"], hits=shown)
+            text += "\n" + skills
         return text
 
     @mcp.tool()
@@ -192,8 +198,13 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
         sid = str(body.get("session_id", ""))[:64]
         if body.get("mode") == "prompt":
             trace: dict = {}
-            text = relevant(store, query, seen=seen.get(sid), trace=trace)
+            sent = seen.get(sid)
+            text = relevant(store, query, seen=sent, trace=trace)
             usage.record("inject", sid, query, len(text), trace["top"], trace["shown"])
+            skills, shown = skills_block(learning, query, sent, sid)
+            if skills:
+                usage.record("skill", sid, query, len(skills), shown[0]["score"], shown)
+                text += ("\n" if text else "") + skills
         else:
             seen.reset(sid)  # a session start (new, resumed or compacted) has nothing in its context yet
             text = INSTRUCTIONS + "\n\n" + bootstrap(store, query, budget=int(body.get("budget", 9000)))
