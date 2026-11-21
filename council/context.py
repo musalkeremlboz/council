@@ -204,7 +204,7 @@ def bootstrap(store: Store, query: str = "", budget: int = 9000, cards: int = 2)
         used += len(block)
         shown.add(path)
     if query.strip():
-        hits = store.index.search(query, limit=6, exclude=shown, content_only=True)
+        hits = store.index.search(query, limit=6, exclude=shown, content_only=True, where=_ordinary(store))
         if hits:
             parts.append("[Relevant notes]")
             for h in hits:

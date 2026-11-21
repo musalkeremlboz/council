@@ -148,3 +148,16 @@ def test_a_live_note_whose_status_says_retired_is_kept_out(api):
                                                SK["learned_from"], status="retired"))
     out = _ask(c, Q)
     assert "skills/eski.md" not in out and "Eski işi durdur" not in out
+
+
+def test_council_context_never_injects_a_retired_skill_and_shows_a_live_one_once(tmp_path):
+    from council.server import context_for_tool
+    from council.usage import Usage
+    store = Store(tmp_path / "data")
+    L = Learning(store)
+    L.write_skill("beklet", **{**SK, "steps": "1. Emekli adım: eski işi bekle"})
+    L.feedback("beklet", "wrong", session="a"); L.feedback("beklet", "wrong", session="b")
+    L.write_skill("Servisi yeniden kurarken beklet", **SK)
+    text = context_for_tool(store, L, Usage(tmp_path / "u.sqlite3"), Q)
+    assert "skills/retired" not in text and "Emekli adım" not in text
+    assert text.count("Eski işi durdur") == 1 and "[COUNCIL · skills that may apply]" in text
