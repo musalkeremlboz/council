@@ -45,8 +45,8 @@ def test_review_is_asked_after_fifteen_tool_calls_and_only_once(tmp_path, monkey
 def test_review_names_the_skills_opened_and_joins_the_log_reminder(tmp_path, monkeypatch, capsys):
     reason = run(tmp_path, monkeypatch, capsys, ["Edit"] + ["Read"] * 15, INFO(["skills/beklet.md"]))
     assert "council_log" in reason and "council_skill_feedback" in reason and "skills/beklet.md" in reason
-    assert "You opened these skills since the last review: skills/beklet.md. For each, report with " \
-           "council_skill_feedback (name = its path) whether it helped." in reason
+    assert "You opened these skills since the last review: skills/beklet.md. For each you have not reported on yet, " \
+           "report with council_skill_feedback (name = its path) whether it helped." in reason
 
 
 def test_review_without_a_skill_list_when_the_server_answer_has_none(tmp_path, monkeypatch, capsys):
@@ -77,6 +77,15 @@ def test_opened_skills_are_counted_from_the_previous_review_not_from_a_learning_
         + ["mcp__council__council_skill_feedback"] + ["Read"] * 15
     run(tmp_path, monkeypatch, capsys, names, info)
     assert sent[-1] == ["skills/a.md"]       # the feedback call raised `reviewed`, but the read still counts
+
+
+def test_a_log_reminder_between_does_not_drop_an_opened_skill_from_the_next_review(tmp_path, monkeypatch, capsys):
+    sent = []
+    info = lambda sid, review=False, read=None: sent.append(read) or {"last_log": None, "skills": list(read or [])}
+    names = [("mcp__council__council_read", {"path": "skills/a.md"}), "mcp__council__council_rule", "Edit"]
+    assert "council_log" in run(tmp_path, monkeypatch, capsys, names, info)          # log reminder only
+    reason = run(tmp_path, monkeypatch, capsys, names + ["Read"] * 15, info)
+    assert sent[-1] == ["skills/a.md"] and "skills/a.md" in reason
 
 
 def test_read_paths_collects_council_read_inputs_under_any_server_prefix_and_skips_malformed(tmp_path):

@@ -51,16 +51,20 @@ def test_no_skills_means_no_heading_and_retired_skills_stay_out(api):
 
 def test_a_long_or_multi_line_when_is_one_clipped_line(api):
     c, store = api
-    when = "Çalışan servisin üstüne yeniden kurulum yapılırken\n" + "ayrıntı satırı " * 40
-    note = render_skill("Kurulum", **{**SK, "when": when})
+    when = "Çalışan servisin üstüne yeniden kurulum yapılırken " + "ayrıntı satırı " * 40   # one line, 500+ characters
+    assert len(when) > 500 and when[199] != " "
     (store.vault / "skills").mkdir(exist_ok=True)
-    (store.vault / "skills" / "kurulum.md").write_text(note, encoding="utf-8")
+    (store.vault / "skills" / "kurulum.md").write_text(render_skill("Kurulum", **{**SK, "when": when}), encoding="utf-8")
     out = _ask(c, "çalışan servisin üstüne yeniden kurulum")
     lines = [ln for ln in out[out.index(POINTER):].splitlines() if ln.startswith("- skills/kurulum.md")]
     assert len(lines) == 1
     clipped = lines[0].removeprefix("- skills/kurulum.md — ")
-    assert 0 < len(clipped) <= 200 and "\n" not in clipped
-    assert clipped == " ".join(when.split())[:len(clipped)] and len(" ".join(when.split())) > 200
+    assert len(clipped) == 200 and clipped == when[:200]
+    # a line break inside the When never makes a second pointer line
+    (store.vault / "skills" / "kurulum.md").write_text(
+        render_skill("Kurulum", **{**SK, "when": "Çalışan servisin üstüne yeniden kurulum\nikinci satır"}), encoding="utf-8")
+    out = _ask(c, "çalışan servisin üstüne yeniden kurulum", "s2")   # a new session: the pointer is shown again
+    assert len([ln for ln in out[out.index(POINTER):].splitlines() if ln.startswith("- skills/kurulum.md")]) == 1
 
 
 def test_a_broken_learning_file_does_not_stop_the_notes(api):
@@ -167,6 +171,56 @@ def test_reading_a_live_skill_is_logged_as_opened(tmp_path, monkeypatch):
     assert events()[-1][1] == [{"path": p}]
 
 
+def test_a_failing_open_check_does_not_fail_the_read(tmp_path, monkeypatch, caplog):
+    import asyncio
+    import logging
+    from council import server
+    made = []
+    real = server.MCPServer
+    monkeypatch.setattr(server, "MCPServer", lambda *a, **k: made.append(real(*a, **k)) or made[-1])
+    monkeypatch.setenv("COUNCIL_TOKEN", "t0k")
+    _, store = server.build(str(tmp_path / "data"))
+    p = Learning(store).write_skill("beklet", **SK)["path"]
+
+    def boom(self, path):
+        raise RuntimeError("check broke")
+
+    monkeypatch.setattr(Learning, "is_live_skill", boom)
+    with caplog.at_level(logging.ERROR, logger="council"):
+        out = asyncio.run(made[0].call_tool("council_read", {"path": p}))
+    assert "Eski işi durdur" in str(out) and "skill open not recorded" in caplog.text
+
+
+def test_hook_and_server_together_ask_about_the_live_skill_that_was_opened(api, tmp_path, monkeypatch, capsys):
+    import json
+    from council import hook
+    c, store = api
+    L = Learning(store)
+    live = L.write_skill("beklet", **SK)["path"]
+    L.write_skill("eski", **SK); L.feedback("eski", "wrong", session="a"); L.feedback("eski", "wrong", session="b")
+    store.write("skills/notum.md", "# Not a skill\n\njust a note")
+    reads = [("mcp__council__council_read", {"path": p})
+             for p in (live, "skills/retired/eski.md", "skills/notum.md", "core.md")]
+    lines = [json.dumps({"type": "user", "message": {"content": "hi"}})]
+    for name, args in reads + [("Read", {})] * 15:
+        lines.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "name": name, "input": args}]}}))
+    t = tmp_path / "t.jsonl"
+    t.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    def session_info(sid, review=False, read=None):       # what hook.server_session sends, through the real route
+        body = {"session_id": sid, "review": review, **({"read": read} if read is not None else {})}
+        return c.post("/api/session", json=body).json()
+
+    monkeypatch.setattr(hook, "STATE", tmp_path / "state")
+    monkeypatch.setattr(hook, "CONFIG", tmp_path / "no-config.json")
+    hook.stop_check({"session_id": "sess-1", "transcript_path": str(t)}, session_info)
+    reason = json.loads(capsys.readouterr().out)["reason"]
+    assert f"You opened these skills since the last review: {live}. " in reason
+    assert "eski.md" not in reason and "notum.md" not in reason and "core.md" not in reason
+    assert L.feedback(live, "helped", session="sess-1")["path"] == live
+
+
 def test_learning_tools_are_listed_and_instructions_mention_them(api):
     from council import server
     for word in ("council_rule", "council_skill", "council_unlearn", "council_skill_feedback", "never secrets"):
@@ -178,9 +232,9 @@ def test_instructions_say_to_open_a_listed_skill_and_report_on_it(api):
     from council import server
     text = " ".join(server.INSTRUCTIONS.split())
     assert "shown skill" not in text
-    assert "The start context lists skills by path." in text
+    assert "The start context lists saved skills by path." in text
     assert ("When the work asked for is the work one names, open it with council_read and follow it, "
-            "and afterwards report with council_skill_feedback whether it helped.") in text
+            "and afterwards report with council_skill_feedback (name = its path) whether it helped.") in text
 
 
 def test_tool_docstrings_speak_of_opened_skills_and_naming_the_work(tmp_path, monkeypatch):

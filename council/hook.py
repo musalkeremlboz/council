@@ -175,8 +175,8 @@ def review_question(sid: str, skills: list[str]) -> str:
     )
     if skills:
         text += (
-            "You opened these skills since the last review: " + ", ".join(skills) + ". For each, report with "
-            "council_skill_feedback (name = its path) whether it helped. "
+            "You opened these skills since the last review: " + ", ".join(skills) + ". For each you have not "
+            "reported on yet, report with council_skill_feedback (name = its path) whether it helped. "
         )
     return text + (
         "If you saved anything, end your reply with one line telling the user what was learned and that "
@@ -233,7 +233,7 @@ def stop_check(event: dict, session_info=server_session) -> None:
         return
     try:
         STATE.mkdir(parents=True, exist_ok=True)
-        state_file.write_text(json.dumps({"line": reminded, "review_line": reviewed}))
+        state_file.write_text(json.dumps({"line": reminded, "review_line": reviewed if review_due else review_line}))
     except OSError:
         pass
     print(json.dumps({"decision": "block", "reason": "\n\n".join(parts)}))

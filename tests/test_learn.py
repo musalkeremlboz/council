@@ -406,7 +406,7 @@ def test_a_damaged_skill_beside_a_good_one_does_not_stop_the_good_one(store):
     L.feedback("Servisi yeniden kurarken beklet", "helped", session="h")   # it has helped: it must stay
     _damaged(store)
     q = "çalışan servisin üstüne yeniden kurulum yapacağım"
-    for i in range(6):                                     # once retirement by showing would have been tried
+    for i in range(6):                                     # showing never retires: only feedback does
         block, _ = skills_block(L, q, None)
         assert good in block, i
     L.feedback("bozuk", "wrong", session="a")
@@ -499,3 +499,14 @@ def test_live_among_keeps_live_skills_in_order_without_repeats_and_drops_the_res
                         "../etc/passwd", a])
     assert got == [b, a]
     assert L.live_among([]) == []
+
+
+def test_live_among_reports_paths_as_the_store_keys_them(store):
+    L = Learning(store)
+    a = L.write_skill("ilk", **SK)["path"]
+    assert a == "skills/ilk.md"
+    got = L.live_among(["./skills/ilk.md", "skills//ilk.md", "/skills/ilk.md", "  skills/ilk.md", "skills/ILK.md", a])
+    assert got == [a]                                        # one entry, in the stored spelling, none refused later
+    assert all(L.is_live_skill(p) for p in ["./skills/ilk.md", "/skills/ilk.md", " skills/ilk.md", a])
+    assert not L.is_live_skill("skills/ILK.md")              # never listed under that name, whatever the file system says
+    assert L.live_among(["skills/ILK.md", "skills/../skills/ilk.md", 7]) == []

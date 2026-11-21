@@ -2,7 +2,7 @@
 
 Tarih: 2026-11-21 · Durum: onaylandı (2026-11-21 04:39) · Hedef sürüm: 0.3.0
 
-Ek tasarım `2026-11-21-skill-dizini.md` (onay bekliyor) "Bağlama gelmesi", "İnceleme sorusu" ve "Ölçüm" bölümlerini değiştirir; değişen satırlar aşağıda işaretlidir.
+Ek tasarım `2026-11-21-skill-dizini.md` (onaylandı 2026-11-21 19:01, yapıldı) "Bağlama gelmesi", "İnceleme sorusu" ve "Ölçüm" bölümlerini değiştirir; değişen satırlar aşağıda işaretlidir.
 
 Halkanın ikinci parçası. Birincisi hafızaydı.
 

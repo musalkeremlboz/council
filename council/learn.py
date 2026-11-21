@@ -490,10 +490,20 @@ class Learning:
         """Key a session's evidence is counted under; without a session id the day stands in for it."""
         return session[:SESSION_KEY] or f"day:{now_local().date().isoformat()}"
 
+    def _canonical(self, path: str) -> str | None:
+        """``path`` the way the store keys it (what ``council_read`` served), or None if the store refuses it
+        or no file of exactly that name is there (a case-insensitive file system serves ``skills/X.md`` for
+        ``skills/x.md``, but the note is only ever listed under the name it has)."""
+        try:
+            canonical, full = self.store.resolve(path)
+            return canonical if full.name in {p.name for p in full.parent.iterdir()} else None
+        except (StoreError, OSError, ValueError):
+            return None
+
     def is_live_skill(self, path: str) -> bool:
         """Whether ``path`` is a skill that is live now; a retired one, an ordinary note, a missing path or one
-        the store refuses is not."""
-        if not is_skill(path):
+        the store refuses is not. Spellings of the same path the store resolves alike count alike."""
+        if not isinstance(path, str) or (path := self._canonical(path)) is None or not is_skill(path):
             return False
         try:
             fields = as_skill(path, self.store.read(path).text)
@@ -502,11 +512,13 @@ class Learning:
         return fields is not None and fields["status"] in LIVE
 
     def live_among(self, paths: list[str]) -> list[str]:
-        """The given paths that are live skills, in the given order, without repeats; the rest are dropped."""
+        """The given paths that are live skills, as the store keys them, in the given order, without repeats;
+        the rest are dropped."""
         out: list[str] = []
         for path in paths:
-            if path not in out and self.is_live_skill(path):
-                out.append(path)
+            canonical = self._canonical(path) if isinstance(path, str) else None
+            if canonical is not None and canonical not in out and self.is_live_skill(canonical):
+                out.append(canonical)
         return out
 
     def feedback(self, name: str, outcome: str, session: str = "", project: str = "") -> dict:

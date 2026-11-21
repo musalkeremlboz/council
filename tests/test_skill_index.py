@@ -131,7 +131,7 @@ def test_bootstrap_text_is_the_same_with_and_without_skills(api):
     c, store = api
     ask = lambda: c.post("/api/context", json={"query": "", "session_id": "s1"}).json()["context"]
     before = ask()
-    assert "saved skills" not in before
+    assert "[COUNCIL · saved skills" not in before
     Learning(store).write_skill("Servisi beklet", **SK)
     after = ask()
     assert after.startswith(before.rstrip("\n") + "\n")
@@ -148,5 +148,5 @@ def test_a_failing_index_does_not_stop_the_start_context(api, monkeypatch, caplo
     monkeypatch.setattr(Learning, "index", boom)
     with caplog.at_level(logging.ERROR, logger="council"):
         out = c.post("/api/context", json={"query": "", "session_id": "s1"}).json()["context"]
-    assert "COUNCIL memory" in out and "saved skills" not in out
+    assert "COUNCIL memory" in out and "[COUNCIL · saved skills" not in out
     assert "skill index left out" in caplog.text
