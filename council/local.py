@@ -431,8 +431,10 @@ def latest_release(repo: str = REPO) -> str | None:
     if os.environ.get("GITHUB_TOKEN"):
         headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
     req = urllib.request.Request(f"https://api.github.com/repos/{repo}/releases/latest", headers=headers)
+    from .hook import ssl_context  # some Python builds ship without a certificate store; the hook knows the way round
+
     try:
-        with urllib.request.urlopen(req, timeout=20) as r:
+        with urllib.request.urlopen(req, timeout=20, context=ssl_context()) as r:
             return json.loads(r.read().decode()).get("tag_name") or None
     except (OSError, ValueError, urllib.error.URLError):
         return None
@@ -446,6 +448,10 @@ def _update_state(data: Path) -> dict:
 
 
 def _save_update_state(data: Path, state: dict) -> None:
+    if state.get("error"):
+        state.setdefault("error_since", time.time())
+    else:
+        state.pop("error_since", None)
     Path(data).mkdir(parents=True, exist_ok=True)
     tmp = Path(data) / ".update.json.tmp"
     tmp.write_text(json.dumps(state))
@@ -488,14 +494,15 @@ def update(s: Setup, force: bool = False, latest=latest_release) -> int:
 
 
 def update_notice(data: Path) -> str | None:
-    """One sentence for the agent after an automatic update or while updates keep failing; told once."""
+    """One sentence for the agent after an automatic update, or once updates have failed for three days."""
     state = _update_state(data)
     done = state.get("installed")
     if done and not done.get("announced"):
         done["announced"] = True
         _save_update_state(data, state)
         return f"COUNCIL updated itself from {done['from']} to {done['to']}. Tell the user once."
-    if state.get("error") and time.time() - state.get("error_told", 0) > 7 * 86400:
+    failing_for = time.time() - state.get("error_since", time.time())
+    if state.get("error") and failing_for > 3 * 86400 and time.time() - state.get("error_told", 0) > 7 * 86400:
         state["error_told"] = time.time()
         _save_update_state(data, state)
         return f"COUNCIL's automatic update is failing ({state['error']}). Tell the user once."

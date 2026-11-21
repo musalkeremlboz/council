@@ -196,7 +196,12 @@ def test_update_failures_are_recorded(home):
     assert local.update(s, latest=lambda: "v9.0.0") == 1
     state = json.loads((s.data / "update.json").read_text())
     assert "v9.0.0" in state["error"] and "installed" not in state
-    assert "automatic update is failing" in bootstrap(Store(s.data))
+    store = Store(s.data)
+    assert "automatic update" not in bootstrap(store)  # one failed check (a laptop offline) is not news
+    state["error_since"] = time.time() - 4 * 86400
+    (s.data / "update.json").write_text(json.dumps(state))
+    assert "automatic update is failing" in bootstrap(store)
+    assert "automatic update" not in bootstrap(store)  # told once, then again only after a week
 
 
 # ---------------------------------------------------------------- existing memory
