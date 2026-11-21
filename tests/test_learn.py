@@ -81,7 +81,7 @@ def test_revising_needs_the_sha_and_keeps_status_and_source(store):
     out = L.write_skill("beklet", expected_sha=first["sha"], session="s-two", **{**SK, "pitfalls": "- Yarış durumu"})
     text = store.read(out["path"]).text
     assert "session s-one" in text and "- **Revised:** " in text and "session s-two" in text and "## Pitfalls\n- Yarış" in text
-    ledger = json.loads((store.data / "learning.json").read_text())["ledger"]
+    ledger = json.loads((store.data / "learning.json").read_text(encoding="utf-8"))["ledger"]
     assert [e["kind"] for e in ledger] == ["skill_new", "skill_edit"] and "Yarış" not in ledger[1]["before"]
 
 def test_rewriting_a_retired_skill_brings_it_back(store):
@@ -92,11 +92,11 @@ def test_rewriting_a_retired_skill_brings_it_back(store):
     assert out["status"] == "candidate" and store.list("skills/") == ["skills/beklet.md"]
 
 def test_state_file_is_read_fresh_and_a_broken_one_counts_as_empty(store):
-    (store.data / "learning.json").write_text("{not json")
+    (store.data / "learning.json").write_text("{not json", encoding="utf-8")
     a, b = Learning(store), Learning(store)               # two instances share one folder
     a.write_skill("bir", **SK)
     b.write_skill("iki", **SK)
-    ledger = json.loads((store.data / "learning.json").read_text())["ledger"]
+    ledger = json.loads((store.data / "learning.json").read_text(encoding="utf-8"))["ledger"]
     assert [e["path"] for e in ledger] == ["skills/bir.md", "skills/iki.md"]
 
 def test_comeback_ledger_keeps_the_retired_note_for_undo(store):
@@ -104,7 +104,7 @@ def test_comeback_ledger_keeps_the_retired_note_for_undo(store):
     L.write_skill("beklet", **SK)
     retired = store.move("skills/beklet.md", "skills/retired/beklet.md").text
     L.write_skill("beklet", **SK)
-    ledger = json.loads((store.data / "learning.json").read_text())["ledger"]
+    ledger = json.loads((store.data / "learning.json").read_text(encoding="utf-8"))["ledger"]
     assert ledger[0]["before"] is None and ledger[0]["retired_path"] is None
     assert ledger[1]["kind"] == "skill_new"
     assert ledger[1]["before"] == retired and ledger[1]["retired_path"] == "skills/retired/beklet.md"
@@ -219,7 +219,7 @@ def test_shown_in_lists_this_sessions_skills_and_unknown_feedback_is_refused(sto
         L.feedback("beklet", "great")
 
 def test_broken_state_file_does_not_break_learning(store):
-    (store.data / "learning.json").write_text("{not json")
+    (store.data / "learning.json").write_text("{not json", encoding="utf-8")
     L = Learning(store)
     assert L.shown_in("s") == [] and L.write_skill("beklet", **SK)["status"] == "candidate"
     (store.data / "learning.json").unlink()
@@ -227,13 +227,13 @@ def test_broken_state_file_does_not_break_learning(store):
 
 def test_a_broken_state_file_is_kept_as_bad_copy_before_it_is_replaced(store):
     state = store.data / "learning.json"
-    state.write_text("{not json")
+    state.write_text("{not json", encoding="utf-8")
     Learning(store).write_skill("beklet", **SK)
-    assert (store.data / "learning.json.bad").read_text() == "{not json"
-    json.loads(state.read_text())                          # the live file is valid again
-    state.write_text("[1, 2")
+    assert (store.data / "learning.json.bad").read_text(encoding="utf-8") == "{not json"
+    json.loads(state.read_text(encoding="utf-8"))          # the live file is valid again
+    state.write_text("[1, 2", encoding="utf-8")
     Learning(store).write_skill("ikinci", **SK)
-    assert (store.data / "learning.json.bad").read_text() == "[1, 2"      # overwritten each time
+    assert (store.data / "learning.json.bad").read_text(encoding="utf-8") == "[1, 2"  # overwritten each time
 
 def test_established_skill_can_retire_and_feedback_is_logged(store):
     L = Learning(store); L.write_skill("beklet", **SK)
@@ -241,7 +241,7 @@ def test_established_skill_can_retire_and_feedback_is_logged(store):
         L.feedback("beklet", "helped", session=s)
     L.feedback("beklet", "wrong", session="x"); L.feedback("beklet", "not_helped", session="y")
     assert L.feedback("beklet", "wrong", session="z")["status"] == "retired"
-    events = json.loads((store.data / "learning.json").read_text())["feedback"]
+    events = json.loads((store.data / "learning.json").read_text(encoding="utf-8"))["feedback"]
     assert [e["outcome"] for e in events][-3:] == ["wrong", "not_helped", "wrong"]
     assert set(events[0]) == {"ts", "path", "outcome", "session"}
 
@@ -443,3 +443,37 @@ def test_help_in_the_fifth_session_keeps_a_skill_after_four_unhelpful_ones(store
     L.record_shown(p, "e")
     assert L.feedback("beklet", "helped", session="e") == {"path": p, "status": "candidate"}
     assert L.feedback("beklet", "not_helped", session="f")["status"] == "candidate"
+
+def test_secret_check_spares_prose_and_catches_jwt_google_keys_and_url_passwords():
+    for prose in ("token: Refreshing the page", "Şifre: kullanıcıdan istenir", "token süresi: 3600 saniye",
+                  "https://example.com/docs", "ssh://user@host"):
+        assert learn.find_secret(prose) is None, prose
+    for secret in ("şifre: Hunter2hunter2", "token: abcdef123",
+                   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdefghijk",
+                   "AIzaSyA1234567890abcdefghijklmnopqrstuv", "postgres://admin:S3cretPass@db.example.com/x"):
+        assert learn.find_secret(secret), secret
+
+def test_windows_reserved_names_are_refused(store):
+    for bad in ("con", "PRN", "Aux", "nul", "com1", "COM9", "lpt1", "lpt9"):
+        with pytest.raises(StoreError, match="reserved"):
+            learn.slug(bad)
+    assert learn.slug("console") == "console" and learn.slug("com10") == "com10"
+    with pytest.raises(StoreError, match="reserved"):
+        Learning(store).write_skill("aux", **SK)
+    with pytest.raises(StoreError, match="reserved"):
+        Learning(store).add_rule("Kısa yaz.", project="con")
+
+def test_long_titles_and_rules_are_refused_naming_the_limit(store):
+    L = Learning(store)
+    with pytest.raises(StoreError, match="80"):
+        L.write_skill("a" * 81, **SK)
+    assert L.write_skill("a" * 80, **SK)["status"] == "candidate"
+    with pytest.raises(StoreError, match="300"):
+        L.add_rule("k" * 301)
+    assert L.add_rule("k" * 300)["path"] == "rules.md"
+
+def test_summary_survives_a_skill_that_vanished_while_counting(store, monkeypatch):
+    L = Learning(store); L.write_skill("beklet", **SK)
+    listed = store.list()
+    monkeypatch.setattr(store, "list", lambda prefix="": listed + ["skills/gitti.md"])
+    assert L.summary()["skills_new"] == 1

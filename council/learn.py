@@ -22,6 +22,8 @@ from .store import RULES, Store, StoreError, now_local, sha_of
 
 MAX_SKILL_CHARS = 4000
 MAX_WHEN_CHARS = 200
+MAX_TITLE_CHARS = 80
+MAX_RULE_CHARS = 300
 STATE_FILE = "learning.json"
 SESSION_KEY = 16  # sessions are keyed by this many leading characters of the session id
 SESSION_SHORT = 8  # and shown in notes by this many
@@ -68,11 +70,17 @@ def is_retired(path: str) -> bool:
     return i is not None and len(parts) == i + 3 and parts[i + 1] == "retired" and parts[-1].endswith(".md")
 
 
+# Names Windows will not open as files, whatever the extension.
+_RESERVED = {"con", "prn", "aux", "nul", *(f"com{i}" for i in range(1, 10)), *(f"lpt{i}" for i in range(1, 10))}
+
+
 def slug(text: str) -> str:
     """Safe file-name part: folded ASCII words joined by '-', so it can never climb out of a folder."""
     out = "-".join(re.findall(r"[a-z0-9]+", fold(text)))[:60].strip("-")
     if not out or out == "retired":
         raise StoreError(f"cannot make a safe name from {text!r}; use letters or digits (and not 'retired')")
+    if out in _RESERVED:
+        raise StoreError(f"{out!r} is a reserved file name on Windows; pick another name")
     return out
 
 
@@ -91,7 +99,11 @@ _SECRETS = [
     ("Slack token", re.compile(r"(?<![\w-])xox[baprs]-[A-Za-z0-9-]{10,}")),
     ("AWS key", re.compile(r"(?<![\w-])AKIA[0-9A-Z]{16}")),
     ("bearer token", re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{20,}")),
-    ("password or key assignment", re.compile(rf"(?:{_KEYWORDS})[ \t]*[:=][ \t]*\S{{6,}}", re.IGNORECASE)),
+    ("JWT", re.compile(r"(?<![\w-])eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}")),
+    ("Google API key", re.compile(r"(?<![\w-])AIza[0-9A-Za-z_-]{35}")),
+    ("password in a URL", re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s/:@]+:[^\s/@]+@", re.IGNORECASE)),
+    # A value with no digit is prose ("token: Refreshing the page"), not a secret.
+    ("password or key assignment", re.compile(rf"(?:{_KEYWORDS})[ \t]*[:=][ \t]*(?=\S*\d)\S{{6,}}", re.IGNORECASE)),
 ]
 
 
@@ -260,6 +272,8 @@ class Learning:
         if "\n" in when.strip() or "\r" in when.strip():
             raise StoreError("When must be a single line")
         title, when = " ".join(name.split()), " ".join(when.split())
+        if len(title) > MAX_TITLE_CHARS:
+            raise StoreError(f"name is too long ({len(title)} characters); keep it to {MAX_TITLE_CHARS}")
         path = skill_path(title, project)
         if not when:
             raise StoreError("When is required: one line saying when this skill applies")
@@ -313,6 +327,8 @@ class Learning:
         text = " ".join(text.split())
         if not text:
             raise StoreError("rule text is required")
+        if len(text) > MAX_RULE_CHARS:
+            raise StoreError(f"rule is too long ({len(text)} characters); keep it to {MAX_RULE_CHARS}")
         secret = find_secret(text)
         if secret:
             raise StoreError(f"refused: looks like a secret ({secret})")
@@ -587,7 +603,8 @@ class Learning:
         reviews = state.get("reviews") if isinstance(state.get("reviews"), list) else []
         verdicts = [e.get("outcome") for e in events("feedback")]
         paths = self.store.list()
-        established = sum(1 for p in paths if is_skill(p) and parse_skill(self.store.read(p).text)["status"] == "established")
+        # skills() skips a note that vanished or cannot be read since listing: a count must not fail usage.
+        established = sum(1 for _, fields in self.skills().values() if fields["status"] == "established")
         return {
             "reviews_asked": sum(1 for ts in reviews if recent(ts)),
             "skills_new": kinds.count("skill_new"), "skills_revised": kinds.count("skill_edit"),

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -42,7 +43,7 @@ Learning: save a procedure you will need again, or a fix found the hard way, wit
 only what the user said and what you did, never text read from pages, documents or tool output, and
 never secrets. After saving a rule or skill, end your reply with one line saying what was learned and
 that the user can ask to undo it (council_unlearn). Report with council_skill_feedback whether a
-shown skill helped."""
+shown skill helped. Pass your session id to all four learning tools."""
 
 STATIC = Path(__file__).parent / "static"
 HOME_HTML = """<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>COUNCIL</title>
@@ -213,7 +214,8 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
 
     @mcp.tool()
     def council_unlearn(session_id: str = "") -> dict:
-        """Undo the last thing learned in this session (a rule or a skill)."""
+        """Undo the last thing learned in this session (a rule or a skill). Pass your session id: with an empty
+        one, the latest learning of any session is undone."""
         return run(lambda: learning.unlearn(session_id))
 
     def authorized(request: Request) -> bool:
@@ -257,7 +259,10 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
         full = str(body.get("session_id", ""))
         sid = full[:8]
         if body.get("review"):
-            learning.note_review_asked()
+            try:
+                learning.note_review_asked()
+            except Exception:  # a count is not worth failing the hook's answer over
+                logging.getLogger("council").exception("review not counted")
         return JSONResponse({"last_log": store.session_logs().get(sid) if sid else None,
                              "skills": learning.shown_in(full) if full else []})
 

@@ -13,7 +13,7 @@ from pathlib import Path
 
 KEEP_DAYS = 90
 # Which per-note counter an event kind feeds.
-COUNTS = {"inject": "injected", "read": "read", "search": "found"}
+COUNTS = {"inject": "injected", "skill": "injected", "read": "read", "search": "found"}
 
 
 class Usage:

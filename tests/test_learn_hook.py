@@ -19,7 +19,7 @@ def transcript(tmp_path, names, start=1000.0):          # same shape as _transcr
         ts = dt.datetime.fromtimestamp(start + k * 10, dt.timezone.utc).isoformat().replace("+00:00", "Z")
         lines.append(json.dumps({"type": "assistant", "timestamp": ts,
                                  "message": {"content": [{"type": "tool_use", "name": n, "input": {}}]}}))
-    f.write_text("\n".join(lines) + "\n")
+    f.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return str(f)
 
 

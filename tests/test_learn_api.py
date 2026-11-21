@@ -57,7 +57,7 @@ def test_a_broken_learning_file_does_not_stop_the_notes(api):
     c, store = api
     store.write("projects/x/project.md", "# X\n\nservis notları: yeniden kurulum planı")
     Learning(store).write_skill("Servisi yeniden kurarken beklet", **SK)
-    (store.data / "learning.json").write_text("{not json")
+    (store.data / "learning.json").write_text("{not json", encoding="utf-8")
     out = c.post("/api/context", json={"mode": "prompt", "query": "çalışan servisin üstüne yeniden kurulum",
                                        "session_id": "s"}).json()["context"]
     assert "projects/x/project.md" in out
@@ -161,3 +161,23 @@ def test_council_context_never_injects_a_retired_skill_and_shows_a_live_one_once
     text = context_for_tool(store, L, Usage(tmp_path / "u.sqlite3"), Q)
     assert "skills/retired" not in text and "Emekli adım" not in text
     assert text.count("Eski işi durdur") == 1 and "[COUNCIL · skills that may apply]" in text
+
+
+def test_session_endpoint_answers_when_the_review_count_fails(api, monkeypatch):
+    c, store = api
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]; L.record_shown(p, "sess-1")
+    monkeypatch.setattr(Learning, "note_review_asked", lambda self: 1 / 0)
+    r = c.post("/api/session", json={"session_id": "sess-1", "review": True})
+    assert r.status_code == 200 and r.json()["skills"] == [p] and "last_log" in r.json()
+
+
+def test_instructions_ask_for_the_session_id(api):
+    from council import server
+    assert "Pass your session id to all four learning tools" in server.INSTRUCTIONS
+
+
+def test_usage_counts_a_shown_skill_as_injected(tmp_path):
+    from council.usage import Usage
+    u = Usage(tmp_path / "u.sqlite3")
+    u.record("skill", session="s1", query="q", chars=10, top=9.5, hits=[{"path": "skills/beklet.md", "score": 9.5}])
+    assert u.summary()["notes"]["skills/beklet.md"] == {"injected": 1, "read": 0, "found": 0}
