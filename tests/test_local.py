@@ -12,14 +12,23 @@ from council.store import Store
 
 
 class Recorder:
-    """Stands in for subprocess: remembers every command and answers with a chosen exit code."""
+    """Stands in for subprocess: remembers every command and answers with a chosen exit code.
+
+    It keeps just enough launchd state for `launchctl print` to tell a loaded job from an unloaded one.
+    """
 
     def __init__(self, fail=()):
-        self.calls, self.fail = [], fail
+        self.calls, self.fail, self.loaded = [], fail, set()
 
     def __call__(self, cmd):
         self.calls.append(cmd)
         bad = any(word in cmd for word in self.fail)
+        if cmd[:2] == ["launchctl", "bootstrap"]:
+            self.loaded.add(cmd[-1].rsplit("/", 1)[-1].removesuffix(".plist"))
+        elif cmd[:2] == ["launchctl", "bootout"]:
+            self.loaded.discard(cmd[-1].rsplit("/", 1)[-1])
+        elif cmd[:2] == ["launchctl", "print"] and cmd[-1].count("/") == 2:
+            bad = cmd[-1].rsplit("/", 1)[-1] not in self.loaded
         return subprocess.CompletedProcess(cmd, 1 if bad else 0, "", "boom" if bad else "")
 
     def ran(self, *words):

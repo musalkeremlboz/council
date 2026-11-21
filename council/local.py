@@ -136,10 +136,14 @@ class Setup:
                 self._remove_job(UPDATER)
             for label, job in jobs.items():
                 plist = self._agents() / f"{label}.plist"
-                self.run(["launchctl", "bootout", f"{self._domain()}/{label}"])
+                self._bootout(label)
                 plist.write_bytes(plistlib.dumps(job))
-                r = self.run(["launchctl", "bootstrap", self._domain(), str(plist)])
-                if r.returncode != 0:
+                for attempt in range(5):  # launchd can still be letting go of the old job
+                    r = self.run(["launchctl", "bootstrap", self._domain(), str(plist)])
+                    if r.returncode == 0:
+                        break
+                    time.sleep(1)
+                else:
                     raise SetupError(f"launchd refused {label}: {(r.stderr or r.stdout).strip()}")
         elif self.system == "Linux":
             self._units().mkdir(parents=True, exist_ok=True)
@@ -214,8 +218,19 @@ class Setup:
                 break
             time.sleep(0.3)
 
+    def _bootout(self, label: str) -> None:
+        """Unload a launchd job and wait until it is really gone; unloading returns before it is."""
+        target = f"{self._domain()}/{label}"
+        if self.run(["launchctl", "print", target]).returncode != 0:
+            return
+        self.run(["launchctl", "bootout", target])
+        for _ in range(40):
+            if self.run(["launchctl", "print", target]).returncode != 0:
+                return
+            time.sleep(0.25)
+
     def _remove_job(self, label: str) -> None:
-        self.run(["launchctl", "bootout", f"{self._domain()}/{label}"])
+        self._bootout(label)
         (self._agents() / f"{label}.plist").unlink(missing_ok=True)
 
     def remove_service(self) -> None:
