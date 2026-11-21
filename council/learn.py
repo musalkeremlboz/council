@@ -474,10 +474,15 @@ class Learning:
         return [p for p, e in skills.items() if isinstance(e, dict) and key in (e.get("shown") or [])]
 
     def feedback(self, name: str, outcome: str, session: str = "", project: str = "") -> dict:
-        """Record whether a skill helped; may promote it to established or retire it."""
+        """Record whether a skill helped; may promote it to established or retire it.
+
+        ``name`` is the skill's path as the context and the review question show it (``project`` is
+        then ignored), or its title, slugged under ``project``.
+        """
         if outcome not in OUTCOMES:
             raise StoreError(f"outcome must be one of {', '.join(OUTCOMES)}")
-        path = skill_path(name, project)
+        given = name.strip().replace("\\", "/")
+        path = given if is_skill(given) else skill_path(name, project)
         live = self.skills().get(path)
         if live is None or live[1]["status"] not in LIVE:
             raise StoreError(f"no live skill named {name!r} at {path}")

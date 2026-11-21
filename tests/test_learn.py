@@ -415,3 +415,16 @@ def test_a_damaged_skill_beside_a_good_one_does_not_stop_the_good_one(store):
     L.feedback("bozuk", "wrong", session="a")
     assert L.feedback("bozuk", "wrong", session="b") == {"path": "skills/bozuk.md", "status": "candidate"}
     assert store.exists("skills/bozuk.md") and good in skills_block(L, q, None, "s9")[0]
+
+def test_feedback_takes_the_skill_path_the_review_question_names(store):
+    L = Learning(store)
+    p = L.write_skill("Servisi yeniden kurarken beklet", **SK)["path"]
+    q = L.write_skill("Kurs açma", project="Havuz İşi", **SK)["path"]
+    for s in "abc":
+        L.feedback(p, "helped", session=s)
+    assert learn.parse_skill(store.read(p).text)["status"] == "established"
+    L.feedback(q, "wrong", session="a")
+    assert L.feedback(q, "wrong", session="b") == {"path": "projects/havuz-isi/skills/retired/kurs-acma.md",
+                                                   "status": "retired"}
+    with pytest.raises(StoreError, match="no live skill"):
+        L.feedback("skills/yok.md", "helped")

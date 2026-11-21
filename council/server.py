@@ -207,7 +207,8 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
 
     @mcp.tool()
     def council_skill_feedback(name: str, outcome: str, project: str = "", session_id: str = "") -> dict:
-        """Say whether a shown skill worked: outcome is `helped`, `not_helped` or `wrong`."""
+        """Say whether a shown skill worked: outcome is `helped`, `not_helped` or `wrong`. `name` is the skill's
+        path as shown (e.g. `skills/x.md`, `projects/p/skills/x.md`; `project` is then not needed) or its title."""
         return run(lambda: learning.feedback(name, outcome, session_id, project))
 
     @mcp.tool()
