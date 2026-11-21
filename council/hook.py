@@ -102,15 +102,45 @@ def tool_uses(transcript: str) -> list[tuple[int, str, float | None]]:
     return out
 
 
-def server_session(session_id: str, review: bool = False) -> dict:
+def read_paths(transcript: str, after_line: int) -> list[str]:
+    """The ``path`` of every council_read call on transcript lines after ``after_line``, in order, without repeats.
+    The tool name carries a server prefix that differs per installation, so only its end is matched."""
+    out: list[str] = []
+    try:
+        with open(transcript, encoding="utf-8") as fh:
+            for i, line in enumerate(fh):
+                if i <= after_line or '"tool_use"' not in line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                content = (entry.get("message") or {}).get("content") if isinstance(entry, dict) else None
+                for part in content if isinstance(content, list) else []:
+                    if not (isinstance(part, dict) and part.get("type") == "tool_use"):
+                        continue
+                    if not str(part.get("name", "")).endswith("council_read"):
+                        continue
+                    args = part.get("input")
+                    path = args.get("path") if isinstance(args, dict) else None
+                    if isinstance(path, str) and path not in out:
+                        out.append(path)
+    except OSError:
+        pass
+    return out
+
+
+def server_session(session_id: str, review: bool = False, read: list[str] | None = None) -> dict:
     """Ask the server about this session: time of its latest council_log (covers logs not made via this
-    transcript) and the skills it was shown. ``review`` tells the server a review question is being asked.
-    Any network or parsing problem gives ``{}``: the hook must never fail a reply over this."""
+    transcript) and, of the notes in ``read``, the ones that are live skills. ``review`` tells the server a
+    review question is being asked. Any network or parsing problem gives ``{}``: the hook must never fail a
+    reply over this."""
     try:
         cfg = load_config()
         req = urllib.request.Request(
             cfg["url"].rstrip("/") + "/api/session",
-            data=json.dumps({"session_id": session_id, "review": review}).encode(),
+            data=json.dumps({"session_id": session_id, "review": review,
+                             **({"read": read} if read is not None else {})}).encode(),
             headers={"Authorization": f"Bearer {cfg['token']}", "Content-Type": "application/json"},
             method="POST",
         )
@@ -145,8 +175,8 @@ def review_question(sid: str, skills: list[str]) -> str:
     )
     if skills:
         text += (
-            "These skills were shown in this session: " + ", ".join(skills) + ". For each, report with "
-            "council_skill_feedback whether it helped. "
+            "You opened these skills since the last review: " + ", ".join(skills) + ". For each, report with "
+            "council_skill_feedback (name = its path) whether it helped. "
         )
     return text + (
         "If you saved anything, end your reply with one line telling the user what was learned and that "
@@ -169,12 +199,14 @@ def stop_check(event: dict, session_info=server_session) -> None:
         reminded, reviewed = state.get("line", -1), state.get("review_line", -1)
     except (OSError, json.JSONDecodeError, AttributeError):
         reminded = reviewed = -1
+    review_line = reviewed  # where the previous review question stood: skills opened after it are asked about
 
     # Saving something on its own initiative is as good as a review.
     reviewed = max([reviewed] + [i for i, n, _ in uses if n.endswith(LEARNING)])
     every = review_interval()
     review_due = every > 0 and sum(1 for i, _, _ in uses if i > reviewed) >= every
-    info = session_info(sid, review=review_due) or {}
+    opened = read_paths(str(event.get("transcript_path", "")), review_line) if review_due else None
+    info = session_info(sid, review=review_due, read=opened) or {}
     review_due = review_due and bool(info)  # no answer from the server: ask (and count) at the next stop
     last_time = max([ts for _, ts in local_logs if ts] + [info.get("last_log") or 0.0])
 

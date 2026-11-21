@@ -425,7 +425,7 @@ class Learning:
         return {"undone": kind, "path": path,
                 "notice": f"Undone ({kind.replace('_', ' ')}) in {path}; tell the user in one line, in their language."}
 
-    # ---------- shown, feedback, promotion and retirement ----------
+    # ---------- feedback, promotion and retirement ----------
 
     @staticmethod
     def _skill_state(state: dict, path: str) -> dict:
@@ -435,8 +435,6 @@ class Learning:
         entry = skills.get(path)
         if not isinstance(entry, dict):
             entry = skills[path] = {}
-        if not isinstance(entry.get("shown"), list):
-            entry["shown"] = []
         if not isinstance(entry.get("helped"), list):
             entry["helped"] = []
         if not isinstance(entry.get("not_helped"), list):
@@ -492,32 +490,24 @@ class Learning:
         """Key a session's evidence is counted under; without a session id the day stands in for it."""
         return session[:SESSION_KEY] or f"day:{now_local().date().isoformat()}"
 
-    def record_shown(self, path: str, session: str) -> None:
-        """Note that a skill was shown to a session (once per session or, with none, per day).
-
-        Only recorded, for the review question: showing never retires a skill, since a session may
-        end, or run without hooks, before anyone could say whether it helped.
-        """
-        key = self._evidence_key(session)
+    def is_live_skill(self, path: str) -> bool:
+        """Whether ``path`` is a skill that is live now; a retired one, an ordinary note, a missing path or one
+        the store refuses is not."""
+        if not is_skill(path):
+            return False
         try:
-            if not is_skill(path) or not self.store.exists(path):
-                return
-        except StoreError:  # a path the store refuses: nothing to record
-            return
-        with self.store._locked():
-            state = self._load()
-            entry = self._skill_state(state, path)
-            if key not in entry["shown"]:
-                entry["shown"].append(key)
-                self._save(state)
+            fields = as_skill(path, self.store.read(path).text)
+        except (StoreError, OSError, ValueError):  # refused, gone, unreadable or not UTF-8
+            return False
+        return fields is not None and fields["status"] in LIVE
 
-    def shown_in(self, session: str) -> list[str]:
-        """Skills already shown to this session, so they are not shown again."""
-        key = session[:SESSION_KEY]
-        skills = self._load().get("skills")
-        if not key or not isinstance(skills, dict):
-            return []
-        return [p for p, e in skills.items() if isinstance(e, dict) and key in (e.get("shown") or [])]
+    def live_among(self, paths: list[str]) -> list[str]:
+        """The given paths that are live skills, in the given order, without repeats; the rest are dropped."""
+        out: list[str] = []
+        for path in paths:
+            if path not in out and self.is_live_skill(path):
+                out.append(path)
+        return out
 
     def feedback(self, name: str, outcome: str, session: str = "", project: str = "") -> dict:
         """Record whether a skill helped; may promote it to established or retire it.

@@ -110,7 +110,7 @@ def relevant(store: Store, query: str, budget: int = 3500, limit: int = 5, seen:
     return "\n".join(parts) + "\n"
 
 
-def skills_block(learning: Learning, query: str, seen: set | None, session: str = "") -> tuple[str, list[dict]]:
+def skills_block(learning: Learning, query: str, seen: set | None) -> tuple[str, list[dict]]:
     """One pointer line per skill matching ``query``, and the skills pointed at.
 
     The line holds the path and the skill's ``When``; the text stays in the note until the agent reads it.

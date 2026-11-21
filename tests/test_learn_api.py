@@ -113,12 +113,58 @@ def test_the_council_context_tool_text_carries_the_skills(tmp_path):
     assert "skill may fit" not in context_for_tool(store, L, usage, "vardiya")
 
 
-def test_session_endpoint_reports_shown_skills_and_counts_reviews(api):
+def test_session_endpoint_reports_the_live_skills_among_the_paths_read_and_counts_reviews(api):
     c, store = api
-    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]; L.record_shown(p, "sess-1")
-    r = c.post("/api/session", json={"session_id": "sess-1", "review": True}).json()
-    assert r["skills"] == [p] and "last_log" in r
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]; q = L.write_skill("ikinci", **SK)["path"]
+    L.write_skill("eski", **SK); L.feedback("eski", "wrong", session="a"); L.feedback("eski", "wrong", session="b")
+    store.write("skills/notum.md", "# Not a skill\n\njust a note")
+    read = [q, "skills/retired/eski.md", "skills/notum.md", 5, None, p, q, "core.md"]
+    r = c.post("/api/session", json={"session_id": "sess-1", "review": True, "read": read}).json()
+    assert r["skills"] == [q, p] and "last_log" in r
     assert Learning(store).summary()["reviews_asked"] == 1
+
+
+def test_session_endpoint_uses_at_most_200_read_entries_and_ignores_a_non_list(api):
+    c, store = api
+    p = Learning(store).write_skill("beklet", **SK)["path"]
+    late = ["x"] * 200 + [p]
+    assert c.post("/api/session", json={"session_id": "s", "read": late}).json()["skills"] == []
+    assert c.post("/api/session", json={"session_id": "s", "read": p}).json()["skills"] == []
+
+
+def test_session_endpoint_without_read_reports_no_skills(api):
+    c, store = api
+    Learning(store).write_skill("beklet", **SK)
+    assert c.post("/api/session", json={"session_id": "sess-1", "review": True}).json()["skills"] == []
+    assert c.post("/api/session", json={"session_id": "sess-1"}).json()["skills"] == []
+
+
+def test_reading_a_live_skill_is_logged_as_opened(tmp_path, monkeypatch):
+    import asyncio
+    import json
+    from council import server
+    from council.usage import Usage
+    made = []
+    real = server.MCPServer
+    monkeypatch.setattr(server, "MCPServer", lambda *a, **k: made.append(real(*a, **k)) or made[-1])
+    monkeypatch.setenv("COUNCIL_TOKEN", "t0k")
+    _, store = server.build(str(tmp_path / "data"))
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
+    L.write_skill("eski", **SK); L.feedback("eski", "wrong", session="a"); L.feedback("eski", "wrong", session="b")
+    store.write("skills/notum.md", "# Not a skill\n\njust a note")
+    store.write("notum.md", "# Normal")
+    u = Usage(store.data / "usage.sqlite3")
+    events = lambda: [(k, json.loads(h)) for k, h in u.db.execute("select kind, hits from events order by ts, rowid")]
+
+    def read(path):
+        asyncio.run(made[0].call_tool("council_read", {"path": path}))
+
+    for other in ("skills/retired/eski.md", "skills/notum.md", "notum.md"):
+        read(other)
+    assert [k for k, _ in events()] == ["read"] * 3                         # nothing opened
+    read(p)
+    assert [k for k, _ in events()][-2:] == ["read", "open"]
+    assert events()[-1][1] == [{"path": p}]
 
 
 def test_learning_tools_are_listed_and_instructions_mention_them(api):
@@ -126,6 +172,29 @@ def test_learning_tools_are_listed_and_instructions_mention_them(api):
     for word in ("council_rule", "council_skill", "council_unlearn", "council_skill_feedback", "never secrets"):
         assert word in server.INSTRUCTIONS
     assert len(server.INSTRUCTIONS) < 2600
+
+
+def test_instructions_say_to_open_a_listed_skill_and_report_on_it(api):
+    from council import server
+    text = " ".join(server.INSTRUCTIONS.split())
+    assert "shown skill" not in text
+    assert "The start context lists skills by path." in text
+    assert ("When the work asked for is the work one names, open it with council_read and follow it, "
+            "and afterwards report with council_skill_feedback whether it helped.") in text
+
+
+def test_tool_docstrings_speak_of_opened_skills_and_naming_the_work(tmp_path, monkeypatch):
+    import asyncio
+    from council import server
+    made = []
+    real = server.MCPServer
+    monkeypatch.setattr(server, "MCPServer", lambda *a, **k: made.append(real(*a, **k)) or made[-1])
+    monkeypatch.setenv("COUNCIL_TOKEN", "t0k")
+    server.build(str(tmp_path / "data"))
+    doc = {t.name: " ".join((t.description or "").split()) for t in asyncio.run(made[0].list_tools())}
+    assert "a skill you opened" in doc["council_skill_feedback"] and "shown" not in doc["council_skill_feedback"]
+    assert ("The name should name the work itself, most important words first (the first 60 characters become "
+            "the path agents choose by)") in doc["council_skill"]
 
 
 def _ask(c, q, sid="s"):
@@ -178,9 +247,9 @@ def test_council_context_never_injects_a_retired_skill_and_shows_a_live_one_once
 
 def test_session_endpoint_answers_when_the_review_count_fails(api, monkeypatch):
     c, store = api
-    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]; L.record_shown(p, "sess-1")
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
     monkeypatch.setattr(Learning, "note_review_asked", lambda self: 1 / 0)
-    r = c.post("/api/session", json={"session_id": "sess-1", "review": True})
+    r = c.post("/api/session", json={"session_id": "sess-1", "review": True, "read": [p]})
     assert r.status_code == 200 and r.json()["skills"] == [p] and "last_log" in r.json()
 
 

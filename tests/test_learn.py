@@ -209,10 +209,8 @@ def test_two_wrongs_or_five_unhelpful_sessions_retire(store):
         L.feedback("yarar", "not_helped", session=s)
     assert store.exists(q)                                 # it helped once: unhelpful sessions do not retire it
 
-def test_shown_in_lists_this_sessions_skills_and_unknown_feedback_is_refused(store):
-    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
-    L.record_shown(p, "sess-1"); L.record_shown(p, "sess-1")
-    assert L.shown_in("sess-1") == [p] and L.shown_in("other") == []
+def test_unknown_feedback_is_refused(store):
+    L = Learning(store); L.write_skill("beklet", **SK)
     with pytest.raises(StoreError):
         L.feedback("yok-boyle-skill", "helped")
     with pytest.raises(StoreError):
@@ -221,7 +219,7 @@ def test_shown_in_lists_this_sessions_skills_and_unknown_feedback_is_refused(sto
 def test_broken_state_file_does_not_break_learning(store):
     (store.data / "learning.json").write_text("{not json", encoding="utf-8")
     L = Learning(store)
-    assert L.shown_in("s") == [] and L.write_skill("beklet", **SK)["status"] == "candidate"
+    assert L.write_skill("beklet", **SK)["status"] == "candidate"
     (store.data / "learning.json").unlink()
     assert Learning(store).summary()["skills_new"] == 0
 
@@ -259,7 +257,7 @@ def test_project_skill_feedback_and_summary_counts(store):
 def _on(monkeypatch, day):
     monkeypatch.setattr(learn, "now_local", lambda: dt.datetime(2026, 11, day, 12).astimezone())
 
-def test_feedback_and_shown_without_a_session_count_once_per_day(store, monkeypatch):
+def test_feedback_without_a_session_counts_once_per_day(store, monkeypatch):
     L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
     _on(monkeypatch, 1)
     assert L.feedback("beklet", "helped")["status"] == "candidate"
@@ -268,7 +266,6 @@ def test_feedback_and_shown_without_a_session_count_once_per_day(store, monkeypa
     assert L.feedback("beklet", "helped")["status"] == "candidate"
     _on(monkeypatch, 3)
     assert L.feedback("beklet", "helped")["status"] == "established"
-    assert L.shown_in("") == []
     q = L.write_skill("yaramaz", **SK)["path"]
     for day in range(10, 14):
         _on(monkeypatch, day); L.feedback("yaramaz", "not_helped"); L.feedback("yaramaz", "not_helped")
@@ -377,7 +374,6 @@ def test_undoing_a_new_skill_drops_its_counters(store):
     L = Learning(store)
     L.write_skill("beklet", session="s1", **SK)
     L.feedback("beklet", "helped", session="s1"); L.feedback("beklet", "wrong", session="s1")
-    L.record_shown("skills/beklet.md", "s1")
     L.unlearn("s1")
     assert "skills/beklet.md" not in json.loads((store.data / "learning.json").read_text(encoding="utf-8")).get("skills", {})
     L.write_skill("beklet", session="s2", **SK)
@@ -411,11 +407,11 @@ def test_a_damaged_skill_beside_a_good_one_does_not_stop_the_good_one(store):
     _damaged(store)
     q = "çalışan servisin üstüne yeniden kurulum yapacağım"
     for i in range(6):                                     # once retirement by showing would have been tried
-        block, _ = skills_block(L, q, None, f"s{i}")
+        block, _ = skills_block(L, q, None)
         assert good in block, i
     L.feedback("bozuk", "wrong", session="a")
     assert L.feedback("bozuk", "wrong", session="b") == {"path": "skills/bozuk.md", "status": "candidate"}
-    assert store.exists("skills/bozuk.md") and good in skills_block(L, q, None, "s9")[0]
+    assert store.exists("skills/bozuk.md") and good in skills_block(L, q, None)[0]
 
 def test_feedback_takes_the_skill_path_the_review_question_names(store):
     L = Learning(store)
@@ -430,17 +426,10 @@ def test_feedback_takes_the_skill_path_the_review_question_names(store):
     with pytest.raises(StoreError, match="no live skill"):
         L.feedback("skills/yok.md", "helped")
 
-def test_showing_a_skill_never_retires_it(store):
-    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
-    for s in "abcdefgh":
-        L.record_shown(p, s)
-    assert store.exists(p) and L.shown_in("h") == [p]
-
 def test_help_in_the_fifth_session_keeps_a_skill_after_four_unhelpful_ones(store):
     L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
     for s in "abcd":
-        L.record_shown(p, s); L.feedback("beklet", "not_helped", session=s)
-    L.record_shown(p, "e")
+        L.feedback("beklet", "not_helped", session=s)
     assert L.feedback("beklet", "helped", session="e") == {"path": p, "status": "candidate"}
     assert L.feedback("beklet", "not_helped", session="f")["status"] == "candidate"
 
@@ -485,3 +474,28 @@ def test_a_retirement_blocked_by_a_retired_twin_leaves_the_note_out_of_context(s
     L.feedback("beklet", "wrong", session="a")
     assert L.feedback("beklet", "wrong", session="b") == {"path": p, "status": "retired"}
     assert store.exists(p) and L.match("çalışan servisin üstüne yeniden kurulum yapacağım") == []
+
+
+def test_an_old_state_file_with_shown_lists_still_loads_and_saves(store):
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
+    state = json.loads((store.data / "learning.json").read_text(encoding="utf-8"))
+    state.setdefault("skills", {}).setdefault(p, {})["shown"] = ["sess-1", "day:2026-11-01"]
+    (store.data / "learning.json").write_text(json.dumps(state), encoding="utf-8")
+    assert L.feedback("beklet", "helped", session="a")["status"] == "candidate"
+    saved = json.loads((store.data / "learning.json").read_text(encoding="utf-8"))["skills"][p]
+    assert saved["helped"] == ["a"] and saved["shown"] == ["sess-1", "day:2026-11-01"]   # carried, never touched
+    fresh = Learning(store); fresh.write_skill("ikinci", **SK); fresh.feedback("ikinci", "helped", session="a")
+    skills = json.loads((store.data / "learning.json").read_text(encoding="utf-8"))["skills"]
+    assert "shown" not in skills["skills/ikinci.md"]
+
+
+def test_live_among_keeps_live_skills_in_order_without_repeats_and_drops_the_rest(store):
+    L = Learning(store)
+    a = L.write_skill("ilk", **SK)["path"]; b = L.write_skill("ikinci", project="Ev", **SK)["path"]
+    L.write_skill("eski", **SK)
+    L.feedback("eski", "wrong", session="a"); L.feedback("eski", "wrong", session="b")
+    store.write("skills/notum.md", "# Not a skill\n\njust a note")
+    got = L.live_among([b, "skills/retired/eski.md", a, b, "skills/notum.md", "core.md", "skills/yok.md",
+                        "../etc/passwd", a])
+    assert got == [b, a]
+    assert L.live_among([]) == []

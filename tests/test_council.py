@@ -136,7 +136,7 @@ def test_stop_hook(tmp_path, monkeypatch, capsys):
     from council import hook
 
     monkeypatch.setattr(hook, "STATE", tmp_path / "state")
-    none = lambda sid, review=False: {"last_log": None}
+    none = lambda sid, review=False, read=None: {"last_log": None}
     ev = lambda names: {"session_id": "s1", "transcript_path": _transcript(tmp_path, names)}
     hook.stop_check(ev(["Read", "Bash"]), none)
     assert capsys.readouterr().out == ""  # nothing changed
@@ -155,9 +155,9 @@ def test_stop_hook_sees_server_logs(tmp_path, monkeypatch, capsys):
 
     monkeypatch.setattr(hook, "STATE", tmp_path / "state")
     ev = {"session_id": "s2", "transcript_path": _transcript(tmp_path, ["Edit", "Bash"], start=1000.0)}
-    hook.stop_check(ev, lambda sid, review=False: {"last_log": 1015.0})  # logged by a script after the edit at t=1000
+    hook.stop_check(ev, lambda sid, review=False, read=None: {"last_log": 1015.0})  # logged by a script after the edit at t=1000
     assert capsys.readouterr().out == ""
-    hook.stop_check(ev, lambda sid, review=False: {"last_log": 990.0})  # server log is older than the edit
+    hook.stop_check(ev, lambda sid, review=False, read=None: {"last_log": 990.0})  # server log is older than the edit
     assert json.loads(capsys.readouterr().out)["decision"] == "block"
 
 
