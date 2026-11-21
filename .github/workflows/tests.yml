@@ -27,11 +27,13 @@ jobs:
           python -m pip install --quiet -e ".[dev]"
           python -m pytest -q
 
+      # The install steps run outside the checkout, so they exercise the installed package, not the source tree.
       - name: Give the home folder an agent memory
         run: python scripts/check_install.py seed
 
       - name: One-line install (Linux)
         if: runner.os == 'Linux'
+        working-directory: ${{ runner.temp }}
         run: |
           sudo loginctl enable-linger "$USER"
           export XDG_RUNTIME_DIR="/run/user/$(id -u)"
@@ -39,18 +41,22 @@ jobs:
           echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> "$GITHUB_ENV"
           for i in 1 2 3 4 5 6 7 8 9 10; do systemctl --user is-system-running >/dev/null 2>&1 && break; sleep 1; done
-          COUNCIL_SOURCE="$GITHUB_WORKSPACE" sh install.sh --port 8799
+          COUNCIL_SOURCE="$GITHUB_WORKSPACE" sh "$GITHUB_WORKSPACE/install.sh" --port 8799
 
       - name: One-line install (macOS)
         if: runner.os == 'macOS'
-        run: COUNCIL_SOURCE="$GITHUB_WORKSPACE" sh install.sh --port 8799
+        working-directory: ${{ runner.temp }}
+        run: COUNCIL_SOURCE="$GITHUB_WORKSPACE" sh "$GITHUB_WORKSPACE/install.sh" --port 8799
 
       - name: One-line install (Windows)
         if: runner.os == 'Windows'
         shell: powershell
+        working-directory: ${{ runner.temp }}
         run: |
           $env:COUNCIL_SOURCE = $env:GITHUB_WORKSPACE
-          ./install.ps1 --port 8799
+          & "$env:GITHUB_WORKSPACE\install.ps1" --port 8799
 
       - name: Check the installation, then uninstall
-        run: python scripts/check_install.py verify
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        run: python "$GITHUB_WORKSPACE/scripts/check_install.py" verify

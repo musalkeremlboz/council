@@ -187,7 +187,8 @@ class Setup:
         """Set (or with None, delete) the login entry. Returns whether an entry exists afterwards."""
         import winreg
 
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, WIN_RUN_KEY, 0, winreg.KEY_SET_VALUE | winreg.KEY_QUERY_VALUE) as key:
+        access = winreg.KEY_SET_VALUE | winreg.KEY_QUERY_VALUE
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, WIN_RUN_KEY, 0, access) as key:  # a new account may lack the key
             if command is None:
                 try:
                     winreg.DeleteValue(key, WIN_RUN_NAME)

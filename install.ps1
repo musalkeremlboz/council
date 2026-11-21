@@ -40,14 +40,15 @@ function Install-Council {
     Write-Host "Installing COUNCIL into $dir ..."
     $exe = $python[0]
     $pre = @($python | Select-Object -Skip 1)
-    & $exe @pre -m venv (Join-Path $dir "venv")
+    # Out-Host shows each program's output and keeps it out of this function's return value.
+    & $exe @pre -m venv (Join-Path $dir "venv") | Out-Host
     $venvPython = Join-Path $dir "venv\Scripts\python.exe"
-    & $venvPython -m pip install --quiet --disable-pip-version-check --upgrade $source
+    & $venvPython -m pip install --quiet --disable-pip-version-check --upgrade $source | Out-Host
     if ($LASTEXITCODE -ne 0) {
         Write-Host "COUNCIL could not be installed: the download failed." -ForegroundColor Red
         return 1
     }
-    & $venvPython -m council.cli --data $dir install @Options
+    & $venvPython -m council.cli --data $dir install @Options | Out-Host
     return $LASTEXITCODE
 }
 
