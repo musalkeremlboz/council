@@ -184,3 +184,74 @@ def test_rule_needs_text_on_one_line(store):
 def test_assignment_whitespace_does_not_span_lines():
     assert learn.find_secret("token:\nRefreshing the page") is None
     assert learn.find_secret("token: abcdef123") == "password or key assignment"
+
+def test_three_sessions_of_help_make_a_candidate_established(store):
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
+    assert L.feedback("beklet", "helped", session="a")["status"] == "candidate"
+    assert L.feedback("beklet", "helped", session="a")["status"] == "candidate"      # same session counts once
+    L.feedback("beklet", "helped", session="b")
+    assert L.feedback("beklet", "helped", session="c")["status"] == "established"
+    assert "- **Status:** established" in store.read(p).text
+
+def test_two_wrongs_or_five_unhelpful_sessions_retire(store):
+    L = Learning(store)
+    L.write_skill("yanlis", **SK); L.feedback("yanlis", "wrong", session="a")
+    assert L.feedback("yanlis", "wrong", session="b") == {"path": "skills/retired/yanlis.md", "status": "retired"}
+    assert "- **Status:** retired" in store.read("skills/retired/yanlis.md").text
+    p = L.write_skill("yaramaz", **SK)["path"]
+    for s in "abcd":
+        L.record_shown(p, s)
+    assert store.exists(p)
+    L.record_shown(p, "e")
+    assert not store.exists(p) and store.exists("skills/retired/yaramaz.md")
+    q = L.write_skill("yarar", **SK)["path"]; L.feedback("yarar", "helped", session="a")
+    for s in "bcdefg":
+        L.record_shown(q, s)
+    assert store.exists(q)                                 # it helped once: showing it more does not retire it
+
+def test_shown_in_lists_this_sessions_skills_and_unknown_feedback_is_refused(store):
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]
+    L.record_shown(p, "sess-1"); L.record_shown(p, "sess-1")
+    assert L.shown_in("sess-1") == [p] and L.shown_in("other") == []
+    with pytest.raises(StoreError):
+        L.feedback("yok-boyle-skill", "helped")
+    with pytest.raises(StoreError):
+        L.feedback("beklet", "great")
+
+def test_broken_state_file_does_not_break_learning(store):
+    (store.data / "learning.json").write_text("{not json")
+    L = Learning(store)
+    assert L.shown_in("s") == [] and L.write_skill("beklet", **SK)["status"] == "candidate"
+    (store.data / "learning.json").unlink()
+    assert Learning(store).summary()["skills_new"] == 0
+
+def test_a_broken_state_file_is_kept_as_bad_copy_before_it_is_replaced(store):
+    state = store.data / "learning.json"
+    state.write_text("{not json")
+    Learning(store).write_skill("beklet", **SK)
+    assert (store.data / "learning.json.bad").read_text() == "{not json"
+    json.loads(state.read_text())                          # the live file is valid again
+    state.write_text("[1, 2")
+    Learning(store).write_skill("ikinci", **SK)
+    assert (store.data / "learning.json.bad").read_text() == "[1, 2"      # overwritten each time
+
+def test_established_skill_can_retire_and_feedback_is_logged(store):
+    L = Learning(store); L.write_skill("beklet", **SK)
+    for s in "abc":
+        L.feedback("beklet", "helped", session=s)
+    L.feedback("beklet", "wrong", session="x"); L.feedback("beklet", "not_helped", session="y")
+    assert L.feedback("beklet", "wrong", session="z")["status"] == "retired"
+    events = json.loads((store.data / "learning.json").read_text())["feedback"]
+    assert [e["outcome"] for e in events][-3:] == ["wrong", "not_helped", "wrong"]
+    assert set(events[0]) == {"ts", "path", "outcome", "session"}
+
+def test_project_skill_feedback_and_summary_counts(store):
+    L = Learning(store); L.write_skill("proje", project="Ev", **SK)
+    out = L.feedback("proje", "wrong", project="Ev", session="a")
+    assert out["path"] == "projects/ev/skills/proje.md"
+    L.note_review_asked(); L.note_review_asked()
+    s = L.summary()
+    assert s["skills_new"] == 1 and s["reviews_asked"] == 2
+    assert s["skills_revised"] == s["rules"] == s["undone"] == s["established"] == s["retired"] == 0
+    assert s["helped_rate"] is None and s["possible_repeats"] == []
+    assert Learning(store).summary(days=0)["skills_new"] == 0

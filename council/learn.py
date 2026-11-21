@@ -8,9 +8,11 @@ operation reads it from disk and every change is saved under the store's write l
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import re
+import shutil
 import uuid
 from pathlib import PurePosixPath
 
@@ -24,6 +26,10 @@ SESSION_KEY = 16  # sessions are keyed by this many leading characters of the se
 SESSION_SHORT = 8  # and shown in notes by this many
 REPEAT_SHARE = 0.6  # a new rule is a possible repeat when it shares this share of its stems with a rule...
 REPEAT_MIN = 3  # ...and at least this many stems
+PROMOTE_AFTER = 3  # a candidate becomes established after 'helped' feedback in this many different sessions
+RETIRE_WRONG = 2  # a skill retires after this many 'wrong' feedbacks...
+RETIRE_SHOWN = 5  # ...or after being shown in this many different sessions with no 'helped' at all
+OUTCOMES = ("helped", "not_helped", "wrong")
 
 # ---------- paths and names ----------
 
@@ -170,9 +176,21 @@ class Learning:
         return state if isinstance(state, dict) else {}
 
     def _save(self, state: dict) -> None:
+        self._keep_bad_copy()
         tmp = self.state_path.with_name(f".{STATE_FILE}.tmp")
         tmp.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
         os.replace(tmp, self.state_path)
+
+    def _keep_bad_copy(self) -> None:
+        """An unreadable state file is about to be replaced: keep it as learning.json.bad so history is not lost."""
+        try:
+            ok = isinstance(json.loads(self.state_path.read_text(encoding="utf-8")), dict)
+        except FileNotFoundError:
+            return
+        except (OSError, ValueError):
+            ok = False
+        if not ok:
+            shutil.copyfile(self.state_path, self.state_path.with_name(f"{STATE_FILE}.bad"))
 
     def _record(self, entry: dict) -> None:
         with self.store._locked():
@@ -269,3 +287,132 @@ class Learning:
         if repeat:
             notice += f" It may repeat an existing rule ({repeat}); mention that and ask whether to keep both."
         return {"path": path, "sha": note.sha, "notice": notice, "possible_repeat": repeat}
+
+    # ---------- shown, feedback, promotion and retirement ----------
+
+    @staticmethod
+    def _skill_state(state: dict, path: str) -> dict:
+        skills = state.get("skills")
+        if not isinstance(skills, dict):
+            skills = state["skills"] = {}
+        entry = skills.get(path)
+        if not isinstance(entry, dict):
+            entry = skills[path] = {}
+        if not isinstance(entry.get("shown"), list):
+            entry["shown"] = []
+        if not isinstance(entry.get("helped"), list):
+            entry["helped"] = []
+        if not isinstance(entry.get("wrong"), int):
+            entry["wrong"] = 0
+        return entry
+
+    @staticmethod
+    def _verdict(entry: dict) -> str:
+        """What the counters say about a skill: 'retire', 'promote' or 'keep'."""
+        if entry["wrong"] >= RETIRE_WRONG or (len(entry["shown"]) >= RETIRE_SHOWN and not entry["helped"]):
+            return "retire"
+        return "promote" if len(entry["helped"]) >= PROMOTE_AFTER else "keep"
+
+    def _settle(self, path: str, verdict: str) -> dict:
+        """Carry out a verdict on the note itself; returns the skill's resulting path and status.
+
+        Called after the counters are saved and the lock released: the store takes the same
+        lock for each note change, and the lock is not re-entrant.
+        """
+        text = self.store.read(path).text
+        status = parse_skill(text)["status"] or "candidate"
+        if verdict == "keep" or (verdict == "promote" and status != "candidate"):
+            return {"path": path, "status": status}
+        new = "retired" if verdict == "retire" else "established"
+        if status != new:
+            self.store.edit(path, [{"old": f"- **Status:** {status}", "new": f"- **Status:** {new}"}],
+                            reason=f"skill {new}: {path}")
+        if verdict == "promote":
+            return {"path": path, "status": new}
+        parts = list(_parts(path))
+        parts.insert(-1, "retired")
+        retired = "/".join(parts)
+        self.store.move(path, retired, f"skill retired: {path}")
+        with self.store._locked():  # a comeback under the same name must start with fresh counters
+            state = self._load()
+            if isinstance(state.get("skills"), dict) and state["skills"].pop(path, None) is not None:
+                self._save(state)
+        return {"path": retired, "status": "retired"}
+
+    def record_shown(self, path: str, session: str) -> None:
+        """Note that a skill was shown to a session (counted once per session); may retire it."""
+        key = session[:SESSION_KEY]
+        if not key or not is_skill(path) or not self.store.exists(path):
+            return
+        with self.store._locked():
+            state = self._load()
+            entry = self._skill_state(state, path)
+            if key not in entry["shown"]:
+                entry["shown"].append(key)
+                self._save(state)
+            verdict = self._verdict(entry)
+        if verdict == "retire":
+            self._settle(path, verdict)
+
+    def shown_in(self, session: str) -> list[str]:
+        """Skills already shown to this session, so they are not shown again."""
+        key = session[:SESSION_KEY]
+        skills = self._load().get("skills")
+        if not key or not isinstance(skills, dict):
+            return []
+        return [p for p, e in skills.items() if isinstance(e, dict) and key in (e.get("shown") or [])]
+
+    def feedback(self, name: str, outcome: str, session: str = "", project: str = "") -> dict:
+        """Record whether a skill helped; may promote it to established or retire it."""
+        if outcome not in OUTCOMES:
+            raise StoreError(f"outcome must be one of {', '.join(OUTCOMES)}")
+        path = skill_path(name, project)
+        if not self.store.exists(path):
+            raise StoreError(f"no live skill named {name!r} at {path}")
+        key = session[:SESSION_KEY]
+        with self.store._locked():
+            state = self._load()
+            entry = self._skill_state(state, path)
+            if outcome == "helped" and key and key not in entry["helped"]:
+                entry["helped"].append(key)
+            elif outcome == "wrong":
+                entry["wrong"] += 1
+            events = state.get("feedback")
+            if not isinstance(events, list):
+                events = state["feedback"] = []
+            events.append({"ts": now_local().isoformat(timespec="seconds"), "path": path,
+                           "outcome": outcome, "session": key})
+            self._save(state)
+            verdict = self._verdict(entry)
+        return self._settle(path, verdict)
+
+    def note_review_asked(self) -> None:
+        """Count one time the agent asked the user to review what it learned."""
+        with self.store._locked():
+            state = self._load()
+            asked = state.get("reviews")
+            if not isinstance(asked, list):
+                asked = state["reviews"] = []
+            asked.append(now_local().isoformat(timespec="seconds"))
+            self._save(state)
+
+    def summary(self, days: int = 7) -> dict:
+        """Counts of what was learned in the last ``days``; the keys a later task completes are empty for now."""
+        state = self._load()
+        cutoff = now_local() - dt.timedelta(days=days)
+
+        def recent(ts) -> bool:
+            try:
+                return dt.datetime.fromisoformat(ts) >= cutoff
+            except (TypeError, ValueError):
+                return False
+
+        ledger = state.get("ledger") if isinstance(state.get("ledger"), list) else []
+        reviews = state.get("reviews") if isinstance(state.get("reviews"), list) else []
+        return {
+            "reviews_asked": sum(1 for ts in reviews if recent(ts)),
+            "skills_new": sum(1 for e in ledger if isinstance(e, dict) and e.get("kind") == "skill_new"
+                              and recent(e.get("ts"))),
+            "skills_revised": 0, "rules": 0, "undone": 0, "established": 0, "retired": 0,
+            "helped_rate": None, "possible_repeats": [],
+        }
