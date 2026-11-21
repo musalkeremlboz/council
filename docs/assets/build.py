@@ -8,6 +8,7 @@ brand/font/CouncilHalka.ttf, because GitHub cannot load a custom font)
 """
 import math
 import pathlib
+import random
 
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.ttLib import TTFont
@@ -62,17 +63,53 @@ def svg(w, h, body, title):
 
 # The outer ring is the road to 1.0.0: six basic features, clockwise from the top. The first is the
 # memory itself. A segment is filled as soon as its feature ships; DONE says how many are filled.
+# A feature without a name yet (None) gets a placeholder where its name will be written.
 DONE = 1
 HERO = {
     "tr": dict(lines=("TEK HAFIZA.", "HER YARDIMCI."),
-               systems=("HAFIZA", "ANLAM", "ÖNEM", "TUTARLILIK", "BAKIM", "EŞİTLEME"),
-               title="COUNCIL: tek hafıza, her yardımcı. Halkada altı temel özellik: hafıza, anlam, önem, "
-                     "tutarlılık, bakım, eşitleme. Bugün ilki, hafıza, tamam."),
+               systems=("HAFIZA", None, None, None, None, None),
+               title="COUNCIL: tek hafıza, her yardımcı. Halkada altı temel özellik var. İlki, hafıza, tamam. "
+                     "Öteki beşi yolda; adları eklendiklerinde yazılacak."),
     "en": dict(lines=("ONE MEMORY.", "EVERY AGENT."),
-               systems=("MEMORY", "MEANING", "PRIORITY", "CONSISTENCY", "UPKEEP", "SYNC"),
-               title="COUNCIL: one memory, every agent. Six basic features on the ring: memory, meaning, priority, "
-                     "consistency, upkeep, sync. The first, memory, is complete today."),
+               systems=("MEMORY", None, None, None, None, None),
+               title="COUNCIL: one memory, every agent. Six basic features on the ring. The first, memory, is "
+                     "complete. The other five are on the way; their names will be written when they are added."),
 }
+
+# A name that is not written yet: a row of short bars, like covered text. It rests, then flickers through
+# other arrangements for a moment and settles on a new one, the way a line being worked on would.
+REST, BLINK = 2.7, 0.09
+PERIOD = 2 * REST + 6 * BLINK
+SHOWN = {  # arrangement -> the stretches of the period during which it is the one on screen
+    "a": [(0, REST), (2 * REST + 3 * BLINK, 2 * REST + 4 * BLINK), (2 * REST + 5 * BLINK, PERIOD)],
+    "b": [(REST + BLINK, REST + 2 * BLINK), (REST + 3 * BLINK, 2 * REST + 3 * BLINK)],
+    "c": [(REST, REST + BLINK), (REST + 2 * BLINK, REST + 3 * BLINK), (2 * REST + 4 * BLINK, 2 * REST + 5 * BLINK)],
+}
+
+
+def placeholder_css():
+    rules = []
+    for key, spans in SHOWN.items():
+        marks = sorted({0.0, PERIOD} | {t for span in spans for t in span})
+        frames = "".join(f"{t / PERIOD * 100:.2f}%{{opacity:{int(any(a <= t < b for a, b in spans))}}}" for t in marks)
+        rules.append(f"@keyframes yer-{key}{{{frames}}}.yer-{key}{{animation:yer-{key} {PERIOD:.2f}s step-end infinite}}")
+    # without animation only the first arrangement shows
+    return (".yer-b,.yer-c{opacity:0}" + "".join(rules)
+            + "@media (prefers-reduced-motion:reduce){.yer-a,.yer-b,.yer-c{animation:none!important}}")
+
+
+def placeholder(x, y, anchor, n, fill):
+    rng, out = random.Random(7 + n), []
+    for key in "abc":
+        widths = [rng.choice((16, 24, 34, 46, 60)) for _ in range(rng.choice((3, 3, 4)))]
+        total = sum(widths) + 9 * (len(widths) - 1)
+        left = x - {"start": 0, "middle": total / 2, "end": total}[anchor]
+        bars = []
+        for width in widths:
+            bars.append(f'<rect x="{left:.1f}" y="{y - 16:.1f}" width="{width}" height="12"/>')
+            left += width + 9
+        out.append(f'<g class="yer-{key}" style="animation-delay:-{n * 1.37:.2f}s" fill="{fill}">{"".join(bars)}</g>')
+    return "".join(out)
 
 
 def band(cx, cy, r, width, a0, a1):
@@ -111,7 +148,10 @@ def hero(lang, theme):
         x, y = cx + r * c, cy + r * s
         anchor = "middle" if abs(c) < 0.3 else ("start" if c > 0 else "end")
         y += 9 if abs(c) >= 0.3 else (28 if s > 0 else -8)
-        out.append(label(x, y, name, ink if n < DONE else quiet, anchor=anchor, weight=700 if n < DONE else 600))
+        if name:
+            out.append(label(x, y, name, ink if n < DONE else quiet, anchor=anchor, weight=700 if n < DONE else 600))
+        else:
+            out.append(placeholder(x, y, anchor, n, quiet))
     out.append(
         f'<defs><mask id="kesik" maskUnits="userSpaceOnUse" x="{cx - 260}" y="{cy - 260}" width="520" height="520">'
         f'<rect x="{cx - 260}" y="{cy - 260}" width="520" height="520" fill="#fff"/>'
@@ -120,7 +160,7 @@ def hero(lang, theme):
         f'<circle cx="{cx}" cy="{cy}" r="{112 * k:.2f}" fill="none" stroke="{KOR}" stroke-width="{stroke:.2f}" mask="url(#kesik)"/>'
         f'<path transform="translate({cx} {cy}) scale({k:.5f})" d="{WAVE}" fill="none" stroke="{ink}" stroke-width="28"/>'
     )
-    return svg(w, h, "".join(out), t["title"])
+    return svg(w, h, f"<style>{placeholder_css()}</style>" + "".join(out), t["title"])
 
 
 # ---------------------------------------------------------------- how it works (animated)

@@ -1,9 +1,9 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/kapak-en-koyu.svg">
-  <img src="docs/assets/kapak-en-acik.svg" width="100%" alt="COUNCIL: one memory, every agent. Six basic features on the ring: memory, meaning, priority, consistency, upkeep, sync. The first, memory, is complete today.">
+  <img src="docs/assets/kapak-en-acik.svg" width="100%" alt="COUNCIL: one memory, every agent. Six basic features on the ring. The first, memory, is complete. The other five are on the way; their names will be written when they are added.">
 </picture>
 
-<sub>The six parts of the outer ring are the six basic features of the system. The first is the memory, and it is complete. Each feature fills its part when it is added. When all six are filled, version 1.0.0 is released: <a href="#roadmap">roadmap</a>.</sub>
+<sub>The six parts of the outer ring are the six basic features of the system. The first is the memory, and it is complete. The other five are on the way: when a feature is added, its name is written and its part is filled. When all six are filled, version 1.0.0 is released: <a href="#roadmap">roadmap</a>.</sub>
 
 **COUNCIL is an open-source system that gives AI agents a lasting memory.** It runs on your computer, and your notes stay with you as plain Markdown files. It is not tied to one agent: every agent you use reads and writes the same memory.
 
@@ -100,16 +100,11 @@ Measured on 2026-11-16 on a Linux server with a set of 44 questions. The sample 
 <a id="roadmap"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-roadmap-koyu.svg"><img src="docs/assets/baslik-roadmap-acik.svg" height="30" alt="Roadmap"></picture></p>
 
-The six parts of the outer ring on the cover are the six basic features of the system. The first is the memory itself, and it is filled today. When a feature is added, its part is filled. When all six are filled, version 1.0.0 is released.
+The six parts of the outer ring on the cover are the six basic features of the system.
 
-| | Feature | What it does | State |
-|---|---|---|---|
-| 1 | **Memory** | Notes live in plain files, every change goes into the history, they are searched by keyword and context arrives by itself | Complete |
-| 2 | **Meaning** | Finds the right note even when you ask in different words | Tried and measured, not included yet |
-| 3 | **Priority** | Weighs notes by importance and recency. What grows old steps back. | Planned |
-| 4 | **Consistency** | Notices notes that contradict each other and asks you | Planned |
-| 5 | **Upkeep** | The memory tidies itself: merges repeats, summarizes what grows long | Planned |
-| 6 | **Sync** | All your devices join the same memory in one step | Today [set up by hand](docs/setup.md#server) |
+- **The first is the memory itself, and it is filled.** Notes live in plain files, every change goes into the history, they are searched by keyword and context arrives by itself.
+- **The other five are on the way.** Flickering bars stand where their names will be: the place is not empty, it is not written yet.
+- **When a feature is added, its name is written and its part is filled.** When all six are filled, version 1.0.0 is released.
 
 **A feature is added only once it has passed its tests and measurements.** An example: meaning-based search was tried. The rate of finding the right note in the top five results rose from 70% to 89%, but it needed 3.5 GB of memory and 369 ms per query. For a small memory that price is too high, so it was not included. It will not be until it meets the bar.
 
