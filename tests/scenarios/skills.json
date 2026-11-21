@@ -1,0 +1,232 @@
+{
+ "skills": [
+  {
+   "name": "Docker port çakışmasını çözme",
+   "when": "Konteyner ayağa kalkmıyor ve port zaten kullanımda hatası çıkıyor; ana makinede o portu başka bir süreç tutuyor.",
+   "steps": "1. Hata mesajındaki portu not et.\n2. lsof -i :PORT ile portu tutan süreci bul.\n3. Süreç eski bir konteynerse docker ps -a ile bulup docker rm -f ile kaldır.\n4. Süreç başka bir uygulamaysa kullanıcıya sor, sonra durdur ya da compose dosyasında dış portu değiştir.\n5. docker compose up -d ile yeniden başlat ve docker ps ile doğrula.",
+   "pitfalls": "- Önce hangi sürecin portu tuttuğuna bak, kullanıcının çalışan başka bir uygulamasını körlemesine öldürme.\n- Compose dosyasında portu değiştirirsen README ve .env içindeki adresleri de güncelle.",
+   "learned_from": "Kullanıcının veritabanı konteyneri 5432'de açılmıyordu; portu aslında yerel Postgres tutuyordu. Körlemesine docker rm yapmak işe yaramamıştı."
+  },
+  {
+   "name": "Bozulan Python sanal ortamını onarma",
+   "when": "Proje klasöründeki venv çalışmıyor: python bulunamıyor ya da bad interpreter hatası var, genelde sistem Python'u güncellendikten sonra.",
+   "steps": "1. which python ve venv içindeki bin/python bağlantısını kontrol et.\n2. pip freeze > gereksinimler-yedek.txt ile paket listesini yedekle.\n3. venv klasörünü sil ve python3 -m venv venv ile yeniden oluştur.\n4. Ortamı etkinleştirip pip install -r ile paketleri geri yükle.\n5. Projenin testini ya da ana betiğini bir kez çalıştırıp doğrula.",
+   "pitfalls": "- Silmeden önce paket listesini yedeklemeyi unutma.\n- Eski venv'i etkinleştirilmiş terminalde silme; önce deactivate yap.",
+   "learned_from": "Homebrew Python'u güncelleyince kullanıcının venv'i bad interpreter vermeye başladı. Paket listesini yedeklemek sayesinde ortam beş dakikada geri geldi."
+  },
+  {
+   "name": "Excel'de metin gelen tarihleri düzeltme",
+   "when": "Excel tablosunda tarih sütunu sola yaslı metin olarak duruyor; sıralama ve filtre çalışmıyor, formüller tarihi tanımıyor.",
+   "steps": "1. Sütundan birkaç hücreye bakıp biçimi anla (GG.AA.YYYY mi, AA/GG/YYYY mi).\n2. Yardımcı sütuna TARIHSAYISI ya da PARÇAAL ile gün, ay, yıl ayıran formül yaz.\n3. Sonuçları değer olarak yapıştırıp tarih biçimi ver.\n4. Eski sütunu silmeden önce birkaç satırı elle karşılaştır.\n5. Sıralamayı deneyerek düzeldiğini doğrula.",
+   "pitfalls": "- Gün ile ay yer değiştirmiş olabilir; 12'den büyük günleri kontrol et.\n- Orijinal dosyayı kopyalayıp kopya üzerinde çalış.",
+   "learned_from": "Kullanıcının dışa aktarılmış satış raporunda tarihler metin gelmişti. Gün ve ay karışınca üç satır yanlış aya düştü, kopya üzerinde çalıştığımız için sorun olmadı."
+  },
+  {
+   "name": "Birden çok PDF'i birleştirip küçültme",
+   "when": "Birkaç ayrı PDF tek dosya olmalı ve e-postaya ya da bir başvuru formuna sığması için boyutu küçültülmeli.",
+   "steps": "1. Dosyaların sırasını kullanıcıyla netleştir.\n2. pdfunite ya da qpdf ile sırayla tek PDF'te birleştir.\n3. Boyutu ls -lh ile ölç.\n4. Büyükse ghostscript ile /ebook ayarında sıkıştır.\n5. Sayfa sayısını ve okunabilirliği kontrol edip kullanıcıya yeni dosyanın yolunu ver.",
+   "pitfalls": "- Taranmış belgelerde /screen ayarı yazıları okunmaz yapar; /ebook ile başla.\n- Orijinalleri silme, çıktıyı yeni adla kaydet.",
+   "learned_from": "Kullanıcı kurum başvurusu için dört belgeyi 2 MB sınırına sığdırmak istiyordu. /screen metni bulanıklaştırdı, /ebook hem küçüldü hem okunur kaldı."
+  },
+  {
+   "name": "Toplantı notlarından görev listesi çıkarma",
+   "when": "Kullanıcı dağınık toplantı notları veriyor ve bunlardan kimin ne yapacağını gösteren kısa bir görev listesi bekliyor.",
+   "steps": "1. Notları baştan sona oku, karar ve yapılacak ifadelerini ayır.\n2. Her görev için sorumlu kişi ve varsa tarih yaz.\n3. Sorumlusu belli olmayanları ayrı bir başlıkta topla.\n4. Listeyi en fazla yarım sayfa, madde madde sun.\n5. Belirsiz maddeler için kullanıcıya tek soruda sor.",
+   "pitfalls": "- Notta geçmeyen tarih ya da sorumlu uydurma, boş bırak.",
+   "learned_from": "Kullanıcı hafta sonu yaptığı idari toplantının notlarını yapıştırdı. Tahmin ettiğim iki tarih yanlış çıktı; sonra belirsizleri ayrı listelemeye başladım."
+  },
+  {
+   "name": "Haftalık market listesi hazırlama",
+   "when": "Kullanıcı yemek planına göre haftalık alışveriş listesi istiyor; evde neler var, bütçe ne kadar bilinmesi gerekiyor.",
+   "steps": "1. Hafta için yemek planını ve kişi sayısını sor.\n2. Evde olan temel malzemeleri ve bütçeyi öğren.\n3. Malzemeleri reyonlara göre grupla (sebze, süt, kuru gıda, temizlik).\n4. Miktarları kişi sayısına göre yaz.\n5. Listeyi kısa tutup kullanıcının notlar uygulamasına yapıştırılacak biçimde ver.",
+   "pitfalls": "- Evde olanları sormazsan aynı şeyi ikinci kez aldırırsın.\n- Kullanıcı vejetaryen günlerini ayrıca belirtmişse atlama.",
+   "learned_from": "Kullanıcı iki kişilik bir hafta için liste istedi. Evdeki pirinç ve yağı sormadığım için liste şişti, sonra önce stoğu sormaya başladım."
+  },
+  {
+   "name": "Fatura son ödeme hatırlatıcısı kurma",
+   "when": "Kullanıcı elektrik, su, internet gibi faturaların son ödeme tarihlerini kaçırmamak için düzenli hatırlatıcı kurmak istiyor.",
+   "steps": "1. Hangi faturalar ve her birinin son ödeme günü olduğunu sor.\n2. Tarihleri aylık tekrarlayan hatırlatıcı olarak yaz.\n3. Her hatırlatıcıyı son günden üç gün önceye kur.\n4. Hatırlatıcı metnine fatura adı ve yaklaşık tutarı ekle.\n5. Kurulanları kullanıcıya kısa bir tabloyla göster.",
+   "pitfalls": "- Ayın 31'ine kurulan tekrar, kısa aylarda atlayabilir; 28'ini seç.\n- Otomatik ödeme talimatı olan faturaları ayrı işaretle.",
+   "learned_from": "Kullanıcı internet faturasını iki kez geciktirmişti. Son güne kurduğum hatırlatıcı fazla geç kalıyordu, üç gün öncesine çektik."
+  },
+  {
+   "name": "Fix git push rejected after rebase",
+   "when": "A git push is rejected as non-fast-forward right after the user rebased or amended commits on a branch that is already on the remote.",
+   "steps": "1. Run git status and git log --oneline -5 to confirm the branch and the rewritten commits.\n2. Check whether anyone else pushed to this branch with git fetch and git log origin/branch.\n3. If the branch is only the user's, push with --force-with-lease.\n4. If others pushed, rebase onto the remote branch first and resolve conflicts.\n5. Verify with git status that local and remote match.",
+   "pitfalls": "- Never use plain --force; --force-with-lease refuses when the remote moved.\n- Never force-push main or a shared branch without asking.",
+   "learned_from": "The user rebased a feature branch to tidy commits and the push failed. A colleague had pushed a fix an hour earlier, and --force-with-lease caught it before it was overwritten."
+  },
+  {
+   "name": "Debug a cron script that fails silently",
+   "when": "A scheduled script works when run by hand but never does its job from cron or launchd, and nothing shows up in any log.",
+   "steps": "1. Ask for the exact schedule line and the script path.\n2. Redirect stdout and stderr to a log file in the job line.\n3. Use absolute paths and set PATH at the top of the script.\n4. Trigger the job once a minute from now and read the log.\n5. Fix what the log shows, then restore the real schedule.",
+   "pitfalls": "- Cron has a minimal environment; tools in /opt/homebrew/bin are missing.\n- Remember to restore the real schedule after testing.",
+   "learned_from": "A nightly backup script ran fine in the terminal but never ran from cron. The log showed it could not find rsync because PATH was empty."
+  },
+  {
+   "name": "Clean up a Word report before exporting to PDF",
+   "when": "The user has a Word report with messy styles, odd page breaks or missing page numbers and wants a neat PDF to send out.",
+   "steps": "1. Open the document and check headings use real heading styles.\n2. Remove manual blank lines used as spacing and fix page breaks.\n3. Insert page numbers in the footer and update the table of contents.\n4. Export to PDF with fonts embedded.\n5. Scan the PDF page by page and report anything off.",
+   "pitfalls": "- Update the table of contents after edits or page numbers stay stale.\n- Check the first page: cover pages should not show a number.",
+   "learned_from": "A user's thesis chapter had tables splitting across pages and a stale contents page. After fixing styles the exported PDF looked right on the first try."
+  },
+  {
+   "name": "Merge duplicate contacts in a CSV export",
+   "when": "A contacts or customer CSV has the same person several times with slightly different spelling, and the user wants one clean row per person.",
+   "steps": "1. Load the file and count rows and columns.\n2. Normalize email to lowercase and strip spaces and phone punctuation.\n3. Group by normalized email, then by name plus phone for rows without email.\n4. Keep the most complete row in each group and fill gaps from the others.\n5. Save a new file and give the user the before and after counts.",
+   "pitfalls": "- Do not overwrite the original export; write a new file.\n- Two people can share a family email, so show ambiguous groups instead of merging silently.",
+   "learned_from": "A user's newsletter list had 1,900 rows, 300 of them duplicates. Merging by name alone joined two relatives sharing an address, so I now list doubtful groups first."
+  },
+  {
+   "name": "Plan a multi-city trip itinerary",
+   "when": "The user is planning a trip across several cities and wants a day-by-day plan with travel times and a realistic pace.",
+   "steps": "1. Ask for dates, cities, budget and what the user enjoys.\n2. Order the cities to avoid backtracking and note travel time between them.\n3. Give each city a short day plan with one main sight and one free block.\n4. Mark fixed bookings and things still to reserve.\n5. Present the plan as a compact day list and ask what to adjust.",
+   "pitfalls": "- Count transfer days as half days; people forget they are tired.\n- Do not state opening hours or prices as facts without checking.",
+   "learned_from": "The user wanted five cities in eight days. After adding transfer times the plan only worked with three, and they were glad to drop two."
+  },
+  {
+   "name": "Draft a polite reschedule email",
+   "when": "The user needs to move a meeting, appointment or deadline and wants a short, courteous message that proposes new times.",
+   "steps": "1. Ask who the recipient is and how formal the tone should be.\n2. Get the original time, the reason if the user wants to give one, and two or three new options.\n3. Write a short email: apology, new options, thanks.\n4. Show the draft to the user and wait for approval.\n5. Send or save it as a draft only after the user says yes.",
+   "pitfalls": "- Never send without approval, even for small messages.\n- Keep the reason vague unless the user supplies one.",
+   "learned_from": "The user had to move a dentist visit and a client call in one morning. I drafted both, and they changed the tone of the client email to be warmer before sending."
+  },
+  {
+   "name": "Compare two mobile phone plans",
+   "when": "The user is choosing between two mobile or internet plans and wants a plain comparison based on their real usage, not the marketing page.",
+   "steps": "1. Ask for monthly data, call and text use and the current bill.\n2. Collect each plan's price, data cap, contract length and extra fees.\n3. Compute the real yearly cost including setup fees and promo expiry.\n4. Show a small table and name the cheaper option for this user.\n5. Mention the one clause most likely to cause trouble.",
+   "pitfalls": "- Promo prices often expire after a few months; always compute the full-price cost.\n- Do not trust the user's remembered usage; ask them to check last month's bill.",
+   "learned_from": "A user compared two plans that looked 5 euros apart. With the promo ending after six months, the cheaper-looking plan cost more over the year."
+  }
+ ],
+ "on_topic": [
+  {
+   "message": "Docker'da konteyner açılmıyor, 8080 portu kullanılıyor diyor, bir bakar mısın?",
+   "expect": "Docker port çakışmasını çözme"
+  },
+  {
+   "message": "compose up deyince port already allocated hatası alıyorum, neyin tuttuğunu bulabilir misin",
+   "expect": "Docker port çakışmasını çözme"
+  },
+  {
+   "message": "Proje klasöründeki venv bir anda çalışmaz oldu, brew python güncelledikten sonra oldu galiba.",
+   "expect": "Bozulan Python sanal ortamını onarma"
+  },
+  {
+   "message": "python komutu venv içinde bad interpreter diyor, ortamı yeniden kurmamız lazım sanırım",
+   "expect": "Bozulan Python sanal ortamını onarma"
+  },
+  {
+   "message": "Excel'de tarihler yazı gibi duruyor, filtreleyemiyorum, düzeltir misin?",
+   "expect": "Excel'de metin gelen tarihleri düzeltme"
+  },
+  {
+   "message": "exceldeki tarih kolonu sıralanmıyor, hepsi sola yaslı geliyor",
+   "expect": "Excel'de metin gelen tarihleri düzeltme"
+  },
+  {
+   "message": "Şu dört pdf'i tek dosya yap ve başvuru sitesi 2 MB diyor, küçült de.",
+   "expect": "Birden çok PDF'i birleştirip küçültme"
+  },
+  {
+   "message": "pdf dosyalarım çok büyük, hepsini birleştirip mail atabileceğim hale getirir misin",
+   "expect": "Birden çok PDF'i birleştirip küçültme"
+  },
+  {
+   "message": "Bugünkü toplantının notları dağınık, kim neyi yapacak çıkarır mısın?",
+   "expect": "Toplantı notlarından görev listesi çıkarma"
+  },
+  {
+   "message": "Dağınık notlarım var, bunlardan yapılacaklar listesi çıkar lütfen",
+   "expect": "Toplantı notlarından görev listesi çıkarma"
+  },
+  {
+   "message": "Bu hafta için alışveriş listesi lazım, iki kişiyiz, 1500 liralık bütçe var.",
+   "expect": "Haftalık market listesi hazırlama"
+  },
+  {
+   "message": "hafta menüsünü yazdım, bunun markete götürülecek listesini yapsana",
+   "expect": "Haftalık market listesi hazırlama"
+  },
+  {
+   "message": "İnternet ve elektrik faturasını hep unutuyorum, bana önceden haber verecek bir şey kur.",
+   "expect": "Fatura son ödeme hatırlatıcısı kurma"
+  },
+  {
+   "message": "faturaların son günlerini kaçırmak istemiyorum, ayarlayabilir misin",
+   "expect": "Fatura son ödeme hatırlatıcısı kurma"
+  },
+  {
+   "message": "My git push got rejected after I squashed some commits.",
+   "expect": "Fix git push rejected after rebase"
+  },
+  {
+   "message": "I amended my last commit and now the remote says non-fast-forward, what do I do?",
+   "expect": "Fix git push rejected after rebase"
+  },
+  {
+   "message": "My backup script runs fine in terminal but the nightly job never does anything.",
+   "expect": "Debug a cron script that fails silently"
+  },
+  {
+   "message": "A scheduled job of mine doesn't seem to run at all and I see no errors anywhere.",
+   "expect": "Debug a cron script that fails silently"
+  },
+  {
+   "message": "Can you tidy up my report in Word and give me a nice pdf for my professor?",
+   "expect": "Clean up a Word report before exporting to PDF"
+  },
+  {
+   "message": "The contents page in my doc is off and the pages have no numbers, can you fix before I export?",
+   "expect": "Clean up a Word report before exporting to PDF"
+  },
+  {
+   "message": "My customer csv has the same people listed multipel times, can you clean it up?",
+   "expect": "Merge duplicate contacts in a CSV export"
+  },
+  {
+   "message": "Got an export of 2000 contacts and lots of them are doubles with slightly different names.",
+   "expect": "Merge duplicate contacts in a CSV export"
+  },
+  {
+   "message": "We're thinking Lisbon, Porto and Madrid in ten days, can you map out something?",
+   "expect": "Plan a multi-city trip itinerary"
+  },
+  {
+   "message": "Planning a trip through a few european cities in march, need a day by day plan.",
+   "expect": "Plan a multi-city trip itinerary"
+  },
+  {
+   "message": "I need to push back my meeting with Sarah to next week, can you write her something nice?",
+   "expect": "Draft a polite reschedule email"
+  },
+  {
+   "message": "help me tell my landlord i cant make thursday's viewing, maybe offer another time",
+   "expect": "Draft a polite reschedule email"
+  },
+  {
+   "message": "Two phone deals, one is cheaper per month but has a contract, which one is better for me?",
+   "expect": "Compare two mobile phone plans"
+  },
+  {
+   "message": "is it worth switching my internet provider, the new offer looks good but idk",
+   "expect": "Compare two mobile phone plans"
+  }
+ ],
+ "off_topic": [
+  "Günaydın! Nasılsın bugün?",
+  "Thanks, that was really helpful.",
+  "Excel'i ilk kim icat etti, hangi yıl çıktı?",
+  "What is Docker, explained in one sentence?",
+  "Toplantı kelimesinin İngilizcesi neydi, meeting mi conference mı?",
+  "Python yılanı en fazla kaç metre olur?",
+  "Does the word git mean something rude in British English?",
+  "PDF açılımı neydi, ne demek bu?",
+  "Why is the sky blue?",
+  "Yalova'da yarın hava nasıl olacak?",
+  "Write me a short poem about autumn.",
+  "Türkiye'nin en uzun nehri hangisi?",
+  "How do I say good morning in Japanese?",
+  "Bu akşam film önerir misin, komedi olsun."
+ ]
+}

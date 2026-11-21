@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import math
 import os
 import re
 import shutil
@@ -30,6 +31,12 @@ PROMOTE_AFTER = 3  # a candidate becomes established after 'helped' feedback in 
 RETIRE_WRONG = 2  # a skill retires after this many 'wrong' feedbacks...
 RETIRE_SHOWN = 5  # ...or after being shown in this many different sessions with no 'helped' at all
 OUTCOMES = ("helped", "not_helped", "wrong")
+HEAD_WEIGHT = 2.0  # a query stem in a skill's title or When line counts this many times its rarity
+MIN_STEMS = 2  # a skill needs this many distinct query stems to be offered...
+MIN_SCORE = 9.0  # ...and at least this score: no skill is better than a wrong one
+SKILL_LIMIT = 2  # skills offered for one message
+SKILL_CANDIDATES = 20  # sections the index proposes before they are scored note by note
+STEM_PREFIX_MIN = 4  # a stem matches a longer one it prefixes only when it has this many characters
 
 # ---------- paths and names ----------
 
@@ -146,6 +153,12 @@ def _stems(text: str) -> set[str]:
     return set(_STEM.findall(build_query(text, content_only=True)))
 
 
+def _stem_hit(stem: str, stems: set[str]) -> bool:
+    """Whether ``stem`` equals a stem in ``stems`` or is a prefix of one (or the other way round)."""
+    return any(stem == o or (min(len(stem), len(o)) >= STEM_PREFIX_MIN and (o.startswith(stem) or stem.startswith(o)))
+               for o in stems)
+
+
 def _closest_rule(text: str, lines: list[str]) -> str | None:
     """The dated rule line most like ``text`` when it is similar enough to be a possible repeat."""
     mine = _stems(text)
@@ -201,12 +214,12 @@ class Learning:
             ledger.append(entry)
             self._save(state)
 
-    def write_skill(self, title: str, when: str, steps: str, learned_from: str, pitfalls: str = "",
+    def write_skill(self, name: str, when: str, steps: str, learned_from: str, pitfalls: str = "",
                     project: str = "", expected_sha: str = "", session: str = "") -> dict:
         """Create a candidate skill, or revise one (status and source stay) when ``expected_sha`` matches."""
         if "\n" in when.strip() or "\r" in when.strip():
             raise StoreError("When must be a single line")
-        title, when = " ".join(title.split()), " ".join(when.split())
+        title, when = " ".join(name.split()), " ".join(when.split())
         path = skill_path(title, project)
         if not when:
             raise StoreError("When is required: one line saying when this skill applies")
@@ -431,6 +444,46 @@ class Learning:
             self._save(state)
             verdict = self._verdict(entry)
         return self._settle(path, verdict)
+
+    def match(self, query: str, limit: int = SKILL_LIMIT) -> list[dict]:
+        """Live skills worth offering for ``query``, best first.
+
+        The index only proposes candidates; bm25 on a handful of notes is too noisy to threshold, so
+        each candidate is scored here: every query stem found in the title or When line counts
+        HEAD_WEIGHT times its rarity, a stem found only in the body counts its rarity once. A skill
+        is offered with at least MIN_STEMS distinct hits and MIN_SCORE.
+        """
+        mine = _stems(query)
+        if not mine:
+            return []
+        paths = list(dict.fromkeys(h["path"] for h in self.store.index.search(
+            query, limit=SKILL_CANDIDATES, content_only=True, where=is_skill)))
+        if not paths:
+            return []
+        live = [p for p in self.store.list() if is_skill(p)]
+        parsed = {p: (self.store.read(p).text) for p in set(live) | set(paths) if self.store.exists(p)}
+        fields = {p: parse_skill(text) for p, text in parsed.items()}
+        head = {p: _stems(f"{f['title']} {f['when']}") for p, f in fields.items()}
+        body = {p: _stems(f"{f['steps']} {f['pitfalls']} {f['learned_from']}") for p, f in fields.items()}
+        n = len(live)
+        out = []
+        for path in paths:
+            if path not in fields:
+                continue
+            score, hits = 0.0, 0
+            for s in mine:
+                in_head, in_body = _stem_hit(s, head[path]), _stem_hit(s, body[path])
+                if not (in_head or in_body):
+                    continue
+                df = sum(1 for p in live if _stem_hit(s, head[p] | body[p]))
+                rarity = math.log(1 + n / max(df, 1))
+                score += rarity * (HEAD_WEIGHT if in_head else 1.0)
+                hits += 1
+            if hits >= MIN_STEMS and score >= MIN_SCORE:
+                out.append({"path": path, "title": fields[path]["title"], "status": fields[path]["status"],
+                            "text": parsed[path], "score": round(score, 3)})
+        out.sort(key=lambda m: -m["score"])
+        return out[:limit]
 
     def note_review_asked(self) -> None:
         """Count one time the agent asked the user to review what it learned."""
