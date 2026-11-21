@@ -1,17 +1,20 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/kapak-en-koyu.svg">
-  <img src="docs/assets/kapak-en-acik.svg" width="100%" alt="COUNCIL: one memory, every agent. Claude Code, claude.ai, phone, server, Hermes and Antigravity around the same memory.">
+  <img src="docs/assets/kapak-en-acik.svg" width="100%" alt="COUNCIL: one memory, every agent. Six systems around the memory: notes, meaning, priority, consistency, upkeep, sync. The first is complete today.">
 </picture>
 
-**COUNCIL is an open-source system that gives AI agents a lasting memory.** Your agent installs it on your computer. Your notes stay with you as plain Markdown files. Move the memory to a server and Claude on your phone and your other devices read and write the same notes.
+<sub>The six parts of the outer ring are the six systems of the memory. The first is complete today. When all six are filled, version 1.0.0 is released: <a href="#roadmap">roadmap</a>.</sub>
+
+**COUNCIL is an open-source system that gives AI agents a lasting memory.** It runs on your computer, and your notes stay with you as plain Markdown files. It is not tied to one agent: every agent you use reads and writes the same memory.
 
 To set it up, paste this sentence to your AI agent. It does the rest:
 
 ```text
-Read these instructions and set up COUNCIL: https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
+Read these instructions and set up COUNCIL:
+https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
 ```
 
-**[Setup](#setup)** · [How it works](#how-it-works) · [Why it is different](#why-different) · [Questions](#questions) · [Türkçe](README.md)
+**[Setup](#setup)** · [How it works](#how-it-works) · [Roadmap](#roadmap) · [Supported agents](#supported-agents) · [Questions](#questions) · [Türkçe](README.md)
 
 macOS · Linux · Windows &nbsp;|&nbsp; Python 3.11+ &nbsp;|&nbsp; version 0.2.1 &nbsp;|&nbsp; [MIT license](LICENSE)
 
@@ -25,7 +28,7 @@ AI agents forget everything when the chat ends. COUNCIL fills that gap:
 | Today | With COUNCIL |
 |---|---|
 | Every new chat starts from zero. You explain again who you are and what you are working on. | As the session opens, your profile, your rules, your open threads and your latest sessions are in front of the agent. |
-| Your phone does not know what you said on your computer. Each tool keeps its own memory. | The memory lives in one place. Every agent that connects sees the same notes. |
+| Each agent keeps its own memory. What you told one, the other does not know. | The memory lives in one place. Every agent that connects sees the same notes. |
 | You have to say "remember this". If you forget to, it is gone. | The agent records your decision, preference or correction the moment you state it. |
 | You correct the same mistake again and again. | Your correction becomes one dated line in the rules and loads in every later session. |
 | When you move to a new system, your old notes stay behind. | Setup finds the memory your agents have kept so far and brings it in. |
@@ -36,16 +39,20 @@ AI agents forget everything when the chat ends. COUNCIL fills that gap:
 <a id="how-it-works"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-how-it-works-koyu.svg"><img src="docs/assets/baslik-how-it-works-acik.svg" height="30" alt="How it works"></picture></p>
 
+COUNCIL runs on your computer as a small service and keeps your notes in a folder. Your agent visits the memory three times in every session:
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/akis-en-koyu.svg">
-  <img src="docs/assets/akis-en-acik.svg" width="100%" alt="Three sessions, three devices, one memory: each session starts by reading it and ends by writing to it.">
+  <img src="docs/assets/akis-en-acik.svg" width="100%" alt="Animation: three sessions, one memory. Each session starts by reading the memory, gets the relevant notes with every message, and ends by writing to it. The next session starts where the last one left off.">
 </picture>
 
-The orange line is the memory. Each arc is a session: it leaves the memory and returns to it. Whatever device the next session opens on, it starts where the last one left off.
+The orange line is the memory: the note files on your computer. Each arc is a session: it leaves the memory and returns to it. The orange dots are notes going from the memory to the session. The dot at the end of an arc is what the session writes back. The next session starts where the last one left off.
 
-1. **It starts by reading.** When a session opens, a hook (a small script the agent runs by itself at set moments) asks the memory service for the starting context: who you are, your corrections, your open threads and the cards of your last two sessions. All of it fits a budget of 9,000 characters. What does not fit is named, never dropped silently.
+1. **It starts by reading.** When a session opens, the starting context is put in front of the agent: who you are, your corrections, your open threads and the cards of your last two sessions. All of it fits a budget of 9,000 characters. What does not fit is named, never dropped silently.
 2. **With every message it gets only the notes that matter.** Your message is searched in the memory and at most the five most relevant sections are added to it (up to 3,500 characters). A section is sent only once per session.
-3. **It ends by writing.** When a meaningful piece of work is done, the agent writes the session card: what was done, why, which decisions were made, what is still open, what comes next. If it tries to finish without recording, the hook reminds it once.
+3. **It ends by writing.** When a meaningful piece of work is done, the agent writes the session card: what was done, why, which decisions were made, what is still open, what comes next. If it tries to finish without recording, it is reminded once.
+
+In agents that can hook into session events, these three moments happen by themselves. The others do the same job by calling the memory's tools. Which agent connects how is under [supported agents](#supported-agents).
 
 ### What is underneath
 
@@ -54,7 +61,7 @@ The orange line is the memory. Each arc is a session: it leaves the memory and r
 | **Notes** | Plain Markdown files in a folder on your computer or your server. This is the single source of truth. |
 | **History** | Every change is a git commit. Any earlier state can be restored. |
 | **Search** | A SQLite FTS5 full-text index. It folds Turkish letters, so "şifre" and "sifre" match. If the index is deleted it is rebuilt from the notes. |
-| **Connection** | Eight tools over MCP (the standard agents use to reach outside tools) and three hooks for Claude Code. |
+| **Connection** | Eight tools over MCP (the standard agents use to reach outside tools). For agents that can hook into session events, also three hooks (small scripts the agent runs by itself at set moments). |
 | **Conflict protection** | Two agents cannot overwrite each other. The writer hands back the fingerprint of the version it read. If the note changed in between, the write is refused. |
 | **Updates** | Once a day it looks at the latest published release. If there is a newer one it installs it and restarts the service. Notes are not touched. |
 | **Backup** | `council backup` pushes the notes with their history to your own private git repository. If the backup fails for two days, your agent tells you. |
@@ -90,6 +97,24 @@ Measured on 2026-11-16 on a Linux server with a set of 44 questions. The sample 
 
 <br>
 
+<a id="roadmap"></a>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-roadmap-koyu.svg"><img src="docs/assets/baslik-roadmap-acik.svg" height="30" alt="Roadmap"></picture></p>
+
+The six parts of the outer ring on the cover are the six systems the memory will have when it is complete. The first is filled today. When all six are filled, version 1.0.0 is released.
+
+| | System | What it does | State |
+|---|---|---|---|
+| 1 | **Notes** | Plain files, change history, keyword search and context that arrives by itself | Complete |
+| 2 | **Meaning** | Finds the right note even when you ask in different words | Tried and measured, not included yet |
+| 3 | **Priority** | Weighs notes by importance and recency. What grows old steps back. | Planned |
+| 4 | **Consistency** | Notices notes that contradict each other and asks you | Planned |
+| 5 | **Upkeep** | The memory tidies itself: merges repeats, summarizes what grows long | Planned |
+| 6 | **Sync** | All your devices join the same memory in one step | Today [set up by hand](docs/setup.md#server) |
+
+**A system is added only once it has passed its tests and measurements.** An example: meaning-based search was tried. The rate of finding the right note in the top five results rose from 70% to 89%, but it needed 3.5 GB of memory and 369 ms per query. For a small memory that price is too high, so it was not included. It will not be until it meets the bar.
+
+<br>
+
 <a id="why-different"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-why-different-koyu.svg"><img src="docs/assets/baslik-why-different-acik.svg" height="30" alt="Why it is different"></picture></p>
 
@@ -97,7 +122,7 @@ Measured on 2026-11-16 on a Linux server with a set of 44 questions. The sample 
 - **It does not leave your old memory behind.** It copies the memory files your agents keep. If there is a system it does not recognise, your agent finds it and moves it in the first session.
 - **It updates itself.** When a new release is published it reaches you within a day.
 - **It is not tied to one agent.** The memory is in your files, not inside the agent. Any agent that speaks MCP can connect.
-- **One memory across devices.** Move it to a server and your computer, your phone and claude.ai share the same notes. There is no folder to sync.
+- **One memory across devices.** Move it to a server and all your devices share the same notes. There is no folder to sync.
 - **It can be inspected.** Everything is plain text, every change stays in the history, and two agents cannot overwrite each other.
 
 ### Two ways to use it
@@ -105,28 +130,38 @@ Measured on 2026-11-16 on a Linux server with a set of 44 questions. The sample 
 | | This computer | Your own server |
 |---|---|---|
 | **Setup** | One sentence to your agent | [The steps in the guide](docs/setup.md#server) |
-| **Who can connect** | The agents on this computer | All your devices, including your phone and claude.ai |
+| **Who can connect** | The agents on this computer | All your devices, including phone and web |
 | **What you need** | Python and git | A small Linux server with a domain name |
 
 You can start on your computer and move to a server later. Copying the `vault/` folder is enough.
 
-### Which agents it works with
+<br>
 
-| Agent | How it connects |
-|---|---|
-| **Claude Code** | Setup connects it. Context arrives by itself; the agent does not have to call anything. |
-| **claude.ai** (web, desktop, phone) | With a server setup, as a custom connector. The agent loads the memory itself at the start of a session. |
-| **Other agents that speak MCP** | MCP tools and the usage instructions the service gives. In use with Hermes and Antigravity. |
+<a id="supported-agents"></a>
+<p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-supported-agents-koyu.svg"><img src="docs/assets/baslik-supported-agents-acik.svg" height="30" alt="Supported agents"></picture></p>
+
+COUNCIL was not written for one particular agent. Any agent that speaks MCP can connect. Where things stand today:
+
+| Agent | How it connects | State |
+|---|---|---|
+| **Claude Code** | Setup connects it. Context arrives by itself through session events. | Full support. Setup is tried on macOS, Linux and Windows with every change. |
+| **claude.ai** (web, desktop, phone) | As a custom connector. It loads the memory with a tool call at the start of a session. | In use. Needs a [server setup](docs/setup.md#server). |
+| **Hermes**, **Antigravity** | Through the MCP tools | In use |
+| **Codex**, **Gemini CLI** | Through the MCP tools. Setup brings in the memory files they keep. | The import works. The connection has not been tried yet. |
+| **Other agents that speak MCP** | The agent connects itself with the step in [the instructions](INSTALL.md) | Not tried |
+
+If your agent is not listed and speaks MCP, you can paste the setup sentence to it as well. If something does not work, [report it](https://github.com/musalkeremlboz/council/issues).
 
 <br>
 
 <a id="setup"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-setup-koyu.svg"><img src="docs/assets/baslik-setup-acik.svg" height="30" alt="Setup"></picture></p>
 
-**Let your agent do it.** Paste this sentence to Claude Code or whichever agent you use:
+**Let your agent do it.** Paste this sentence to your AI agent:
 
 ```text
-Read these instructions and set up COUNCIL: https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
+Read these instructions and set up COUNCIL:
+https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
 ```
 
 Your agent reads [the instructions](INSTALL.md) and, without asking you questions, checks what is needed, runs the installer, verifies the result, brings in any other memory it knows about and tells you in a few lines what it did. When it is done, all you do is open a new session.
@@ -148,7 +183,7 @@ curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/install
 irm https://raw.githubusercontent.com/musalkeremlboz/council/main/install.ps1 | iex
 ```
 
-When the command finishes, open a new Claude Code session. The memory is ready.
+When the command finishes, open a new session with your agent. The memory is ready.
 
 </details>
 
@@ -156,7 +191,7 @@ When the command finishes, open a new Claude Code session. The memory is ready.
 |---|---|
 | **Installs** | Puts COUNCIL in the `~/.council` folder with its own Python environment. No administrator rights needed. |
 | **Runs** | Starts the service. The service starts by itself when you log in. |
-| **Connects** | Adds the hooks and MCP tools to Claude Code. It keeps your existing settings and backs them up before changing them. |
+| **Connects** | Connects your agent to the memory. It keeps your existing settings and backs them up before changing them. |
 | **Imports** | Finds the memory your agents have kept and copies it. The source files are not touched. |
 | **Keeps current** | Turns on the daily update check. |
 
@@ -174,7 +209,7 @@ Four commands for afterwards:
 
 In two steps:
 
-1. **During setup.** The memory and instruction files agents keep in your home folder (those of Claude Code, Codex and Gemini) and the note vaults in folders you opened in Claude Code are copied. The copies go under `imported/`: they can be searched but are not loaded in every session.
+1. **During setup.** The memory and instruction files that common agents keep in your home folder and the note vaults in the folders you work in are copied. The copies go under `imported/`: they can be searched but are not loaded in every session.
 2. **In the first session.** Setup leaves a task in the memory. Your agent checks whether any other memory system is in use on this computer, moves it if there is one, and sorts what was copied together with you: lasting facts into `core.md`, corrections into `rules.md`, project knowledge into the project notes.
 
 No step changes or deletes the source files. If you do not want an import, run setup with `--no-import`.
@@ -255,7 +290,7 @@ The first four files load at the start of every session. The rest arrives only w
 
 On your own computer, in the `~/.council/vault/` folder. If you set up a server, on your server. COUNCIL sends your notes nowhere else. The context handed to your agent does go to the AI provider you use, as part of the chat. The same is true of every message you type to the agent.
 
-The service listens only on an address reachable from your own computer and is protected by a token. With a server setup, only someone who knows the owner password can approve a claude.ai connection. Five wrong password attempts in a row lock the sign-in for 15 minutes.
+The service listens only on an address reachable from your own computer and is protected by a token. With a server setup, only someone who knows the owner password can approve a remote connection. Five wrong password attempts in a row lock the sign-in for 15 minutes.
 
 </details>
 
@@ -313,7 +348,7 @@ Updates are installed only from this repository's published releases, over an en
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-docs-koyu.svg"><img src="docs/assets/baslik-docs-acik.svg" height="30" alt="Docs and contributing"></picture></p>
 
 - **[INSTALL.md](INSTALL.md)**: the setup instructions your agent reads and follows
-- **[Setup guide](docs/setup.md)**: server, Claude Code, claude.ai, backup, updating
+- **[Setup guide](docs/setup.md)**: computer and server setup, import, updates, backup
 - **[Kurulum rehberi](docs/kurulum.md)**: the same guide in Turkish
 - **[deploy/](deploy)**: example service and timer files for a Linux server
 - **[brand/](brand)**: logo files and the Council Halka typeface

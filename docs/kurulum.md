@@ -15,7 +15,8 @@
 **En kolay yol, kurulumu yardımcına yaptırmaktır.** Şu cümleyi yapay zekâ yardımcına yapıştır:
 
 ```text
-Şu yönergeyi oku ve COUNCIL'i kur: https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
+Şu yönergeyi oku ve COUNCIL'i kur:
+https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
 ```
 
 Yardımcın [INSTALL.md](../INSTALL.md) dosyasını okur ve aşağıdaki adımları senin yerine uygular. Kendin kurmak istersen:

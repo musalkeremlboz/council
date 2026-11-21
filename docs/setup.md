@@ -15,7 +15,8 @@ There are two ways to use it. The first is enough for most people.
 **The easiest way is to let your agent do the setup.** Paste this sentence to your AI agent:
 
 ```text
-Read these instructions and set up COUNCIL: https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
+Read these instructions and set up COUNCIL:
+https://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md
 ```
 
 Your agent reads [INSTALL.md](../INSTALL.md) and follows the steps below for you. If you would rather do it yourself:
