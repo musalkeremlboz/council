@@ -171,6 +171,7 @@ def main(argv: list[str] | None = None) -> int:
               f"{ls['skills_revised']} revised, {ls['rules']} rules, {ls['undone']} undone")
         rate = "no feedback yet" if ls["helped_rate"] is None else f"helped {ls['helped_rate']:.0%}"
         print(f"skills now: {ls['established']} established, {ls['retired']} retired, {rate}")
+        print(f"skills: {s['skills']['pointers']} pointers sent, {s['skills']['opened']} opened")
         for r in ls["possible_repeats"]:
             print(f"possible repeat: {r['line']}  ~  {r['repeat_of']}")
     elif a.cmd == "import":

@@ -42,11 +42,16 @@ class Usage:
                                    (time.time() - days * 86400,)).fetchall()
         events: dict[str, int] = {}
         notes: dict[str, dict[str, int]] = {}
+        skills = {"pointers": 0, "opened": 0}
         injected = []
         for kind, chars, hits in rows:
             events[kind] = events.get(kind, 0) + 1
             if kind == "inject":
                 injected.append(chars)
+            if kind == "pointer":
+                skills["pointers"] += len(json.loads(hits))  # one per skill pointed at
+            elif kind == "open":
+                skills["opened"] += 1
             if kind in COUNTS:
                 for path in {h["path"] for h in json.loads(hits)}:
                     notes.setdefault(path, {"injected": 0, "read": 0, "found": 0})[COUNTS[kind]] += 1
@@ -56,4 +61,5 @@ class Usage:
             "inject": {"messages": len(injected), "with_notes": len(with_notes),
                        "chars_mean": round(sum(with_notes) / len(with_notes)) if with_notes else 0},
             "notes": notes,
+            "skills": skills,
         }

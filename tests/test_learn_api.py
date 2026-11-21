@@ -279,3 +279,27 @@ def test_a_skill_whose_file_name_is_not_a_slug_still_comes_as_a_pointer(api):
     assert f"- skills/Yedek alma notu.md — {SK['when']}\n" in out and "Eski işi durdur" not in out
     start = c.post("/api/context", json={"query": "", "session_id": "s2"}).json()["context"]
     assert "Yedek alma notu" not in start
+
+
+def test_usage_summary_counts_pointers_per_skill_and_opens_per_read(tmp_path):
+    from council.usage import Usage
+    u = Usage(tmp_path / "u.sqlite3")
+    assert u.summary()["skills"] == {"pointers": 0, "opened": 0}
+    u.record("pointer", hits=[{"path": "skills/a.md"}, {"path": "skills/b.md"}])
+    u.record("pointer", hits=[{"path": "skills/a.md"}])
+    u.record("open", hits=[{"path": "skills/a.md"}])
+    assert u.summary()["skills"] == {"pointers": 3, "opened": 1}
+
+
+def test_council_usage_prints_the_skills_line(tmp_path, capsys):
+    from council import cli
+    from council.usage import Usage
+    Store(tmp_path / "data")
+    u = Usage(tmp_path / "data" / "usage.sqlite3")
+    u.record("pointer", hits=[{"path": "skills/a.md"}, {"path": "skills/b.md"}])
+    u.record("open", hits=[{"path": "skills/a.md"}])
+    u.db.close()
+    assert cli.main(["--data", str(tmp_path / "data"), "usage"]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    i = next(i for i, l in enumerate(lines) if l.startswith("skills now:"))
+    assert "skills: 2 pointers sent, 1 opened" in lines[i + 1:]
