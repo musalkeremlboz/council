@@ -83,7 +83,7 @@ def _split(body: str, max_len: int = MAX_CHUNK) -> list[str]:
 
 
 # What a request is worded with, not what it is about ("bunu yapabilir misin, istiyorum"). Rare in notes, so
-# each one that does occur would outweigh the subject. Dropped only where STOP is: for what comes unasked.
+# each one that does occur would outweigh the subject. Dropped wherever STOP is.
 FILLER = frozenset("""bunu bunun buna bunlar bunlari sunu sunun onu onun ona sey seyi seyler istiyorum istiyoruz istiyor
 isterim yapabilir yapabiliriz yapabilirim yapabilirsin edebilir edebiliriz olabilir lazim gerek gerekiyor gerekir misin
 misiniz musun musunuz miyim miyiz peki ayrica yani zaten lutfen sana bize size seni bizi diye""".split())
@@ -91,17 +91,19 @@ NOTE_STEM = 6  # longest stem a note search matches on: "bağlanmasını" must f
 
 
 def note_query(q: str, content_only: bool = False) -> str:
-    """FTS5 query for searching notes. ``content_only`` drops filler words, for deciding what to inject unasked.
+    """FTS5 query for searching notes: the words of ``q`` that say what it is about.
 
-    Long words match on a shorter stem than ``build_query`` uses: measured on the owner's questions and on
-    the older 44-question set, it finds more and loses nothing. Skills keep ``build_query``.
+    Stop words and request words are left out. When nothing else is in ``q``, a search asked for uses
+    every word it was given; ``content_only`` (deciding what to send unasked) then searches nothing.
+
+    Long words match on a shorter stem than ``build_query`` uses. Both choices were measured on the owner's
+    saved questions and on the older 44-question set. Skills keep ``build_query``.
     """
-    terms = []
-    for w in _WORD.findall(fold(q)):
-        if len(w) < 2 or (content_only and (w in STOP or w in FILLER)):
-            continue
-        terms.append(f'"{_note_stem(w)}"*')
-    return " OR ".join(dict.fromkeys(terms))
+    words = [w for w in _WORD.findall(fold(q)) if len(w) >= 2]
+    about = [w for w in words if w not in STOP and w not in FILLER]
+    if not about and not content_only:
+        about = words
+    return " OR ".join(dict.fromkeys(f'"{_note_stem(w)}"*' for w in about))
 
 
 def _note_stem(w: str) -> str:

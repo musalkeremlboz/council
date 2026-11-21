@@ -358,13 +358,17 @@ def test_a_long_word_finds_its_other_long_forms(store):
     assert build_query("bağlanmasını kartı turnikeler") == '"baglanmas"* OR "karti"* OR "turnike"*'
 
 
-def test_request_words_do_not_pick_what_comes_with_a_message(store):
+def test_request_words_do_not_pick_notes(store):
     from council.index import build_query, note_query
     store.write("notes/istek.md", "# İstek\n\nBunu yapabiliriz, istiyorum; lütfen bana söyler misin.")
     said = "Turnike için bunu istiyorum, yapabiliriz, lütfen?"
-    by_itself = store.index.search(said, content_only=True)
-    assert [h["path"] for h in by_itself] == ["projects/havuz/turnike.md"]
-    assert "notes/istek.md" in [h["path"] for h in store.index.search(said)]          # a search keeps every word
-    assert note_query(said, content_only=True) == '"turni"*'
+    for content_only in (True, False):                                               # unasked and asked alike
+        assert [h["path"] for h in store.index.search(said, content_only=content_only)] == ["projects/havuz/turnike.md"]
+        assert note_query(said, content_only=content_only) == '"turni"*'
+    only_such = "bunu istiyorum, lütfen"
+    assert store.index.search(only_such, content_only=True) == []                    # nothing to send unasked
+    assert [h["path"] for h in store.index.search(only_such)] == ["notes/istek.md"]  # a search uses what it was given
+    assert note_query(only_such) == '"bunu"* OR "istiyo"* OR "lutfe"*' and note_query(only_such, content_only=True) == ""
+    assert note_query("a ! ?") == "" and store.index.search("a ! ?") == []
     assert "istiyo" in build_query(said, content_only=True)                           # skill matching is untouched
     assert store.index.absent("bunu istiyorum lütfen") == []                          # nothing to report about them
