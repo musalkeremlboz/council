@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 
-from .learn import SKILL_BUDGET, Learning, is_retired
+from .learn import INDEX_BUDGET, SKILL_BUDGET, Learning, is_retired, more_line
 from .local import update_notice
 from .store import CORE, RULES, SESSIONS, THREADS, Store, StoreError
 
@@ -140,6 +140,23 @@ def skills_block(learning: Learning, query: str, seen: set | None, session: str 
     if seen is not None:  # only now that the block is certain: a failure must not hide a skill for the session
         seen.update(("skill", m["path"]) for m in shown)
     return ("\n".join(parts) + "\n", shown) if shown else ("", [])
+
+
+def skills_index(learning: Learning, budget: int = INDEX_BUDGET) -> str:
+    """The saved skills' paths under their own budget, or "" when there are none or anything fails.
+
+    Only paths are listed: the agent opens a note with council_read when its work is the one named.
+    """
+    heading = ("[COUNCIL · saved skills · when the work asked for is the work one of these names, open the note "
+               "with council_read and follow it; a mention of its subject is not a reason]\n")
+    try:
+        paths, left = learning.index(budget, reserve=len(heading))
+        if not paths:
+            return ""
+        return heading + "".join(f"- {p}\n" for p in paths) + (more_line(left) if left else "")
+    except Exception:  # the index must never stop the start context from being served
+        logging.getLogger("council").exception("skill index left out")
+        return ""
 
 
 # Share of the start budget each fixed note is meant to stay within. A note over its target is still

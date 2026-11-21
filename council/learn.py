@@ -39,6 +39,7 @@ MIN_SCORE = 6.0  # ...and its score, divided by the square root of the message's
 SKILL_LIMIT = 2  # skills offered for one message
 SKILL_BUDGET = 1500  # characters of context the offered skills may take together, apart from the notes' budget
 RARITY_LIBRARY = 10  # rarity counts the library as at least this big, so scores do not depend on how many skills exist
+INDEX_BUDGET = 3000  # characters of the skill index served at session start, heading and "more" line included
 STEM_PREFIX_MIN = 4  # a stem matches a longer one it prefixes only when it has this many characters
 
 # ---------- paths and names ----------
@@ -171,6 +172,15 @@ def _with_status(text: str, status: str) -> str | None:
 
 
 LIVE = ("candidate", "established")  # statuses a skill is offered with
+
+
+_INDEXABLE = re.compile(r"(projects/[a-z0-9-]+/)?skills/[a-z0-9-]+\.md")
+_LEAD_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def more_line(n: int) -> str:
+    """The index's closing line, for the ``n`` live skills it leaves out."""
+    return f"[… {n} more not listed]\n"
 
 
 def as_skill(path: str, text: str) -> dict | None:
@@ -553,6 +563,32 @@ class Learning:
             if (fields := as_skill(path, text)) is not None:
                 out[path] = (text, fields)
         return out
+
+    def index(self, budget: int = INDEX_BUDGET, reserve: int = 0) -> tuple[list[str], int]:
+        """Paths of live skills to list, in order, and how many live skills are left out.
+
+        Established before candidate, then the later revision (else source) date, then path. A path is
+        taken only while ``reserve`` plus the lines so far plus the "more" line still fit in ``budget``;
+        a line is never cut. A path that is not a plain slug is not counted at all.
+        """
+        rows = []
+        for path, (_, f) in self.skills().items():
+            if f["status"] not in LIVE or not _INDEXABLE.fullmatch(path):
+                continue
+            day = next((m.group() for v in (f["revised"], f["source"]) if (m := _LEAD_DATE.match(v))), "")
+            rows.append((f["status"] == "established", day, path))
+        rows.sort(key=lambda r: r[2])  # stable sorts, least important key first
+        rows.sort(key=lambda r: r[1], reverse=True)
+        rows.sort(key=lambda r: r[0], reverse=True)
+        paths, used = [], reserve
+        for i, (_, _, path) in enumerate(rows):
+            line = len(f"- {path}\n")
+            left = len(rows) - i - 1
+            if used + line + (len(more_line(left)) if left else 0) > budget:
+                break
+            paths.append(path)
+            used += line
+        return paths, len(rows) - len(paths)
 
     def match(self, query: str, limit: int = SKILL_LIMIT) -> list[dict]:
         """Live skills worth offering for ``query``, best first.

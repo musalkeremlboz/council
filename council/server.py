@@ -21,7 +21,7 @@ from mcp.types import Icon
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse
 
 from . import __version__
-from .context import SessionSeen, bootstrap, relevant, skills_block
+from .context import SessionSeen, bootstrap, relevant, skills_block, skills_index
 from .learn import Learning
 from .oauth import OwnerOAuthProvider
 from .store import Store, StoreError
@@ -63,6 +63,8 @@ def load_token(data_dir: Path) -> str:
 def context_for_tool(store: Store, learning: Learning, usage: Usage, query: str) -> str:
     """Text of council_context: the start context, plus matched skills for agents without hooks."""
     text = bootstrap(store, query)
+    if index := skills_index(learning):
+        text += "\n" + index
     usage.record("context", query=query, chars=len(text))
     skills, shown = skills_block(learning, query, None)
     if skills:
@@ -244,6 +246,8 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
         else:
             seen.reset(sid)  # a session start (new, resumed or compacted) has nothing in its context yet
             text = INSTRUCTIONS + "\n\n" + bootstrap(store, query, budget=int(body.get("budget", 9000)))
+            if index := skills_index(learning):
+                text += "\n" + index
             usage.record("start", sid, chars=len(text))
         return JSONResponse({"context": text})
 
