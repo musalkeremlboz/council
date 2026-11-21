@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 
-from .learn import INDEX_BUDGET, INDEXABLE, POINTER_WHEN_CHARS, Learning, is_retired, more_line, parse_skill
+from .learn import INDEX_BUDGET, POINTER_WHEN_CHARS, Learning, is_retired, more_line, parse_skill
 from .local import update_notice
 from .store import CORE, RULES, SESSIONS, THREADS, Store, StoreError
 
@@ -125,8 +125,6 @@ def skills_block(learning: Learning, query: str, seen: set | None, session: str 
             found = [m for m in found if ("skill", m["path"]) not in seen]
         shown, lines = [], []
         for m in found:
-            if not INDEXABLE.fullmatch(m["path"]):
-                continue
             when = " ".join(parse_skill(m["text"])["when"].split())[:POINTER_WHEN_CHARS].rstrip()
             lines.append(f"- {m['path']} — {when}")
             shown.append(m)

@@ -200,3 +200,13 @@ def test_a_pointer_is_logged_and_does_not_count_as_injected(tmp_path):
     kinds = dict(u.db.execute("select kind, hits from events").fetchall())
     assert "skill" not in kinds and json.loads(kinds["pointer"])[0]["path"] == "skills/servisi-yeniden-kurarken-beklet.md"
     assert "skills/servisi-yeniden-kurarken-beklet.md" not in u.summary()["notes"]
+
+
+def test_a_skill_whose_file_name_is_not_a_slug_still_comes_as_a_pointer(api):
+    c, store = api
+    (store.vault / "skills").mkdir(exist_ok=True)
+    (store.vault / "skills" / "Yedek alma notu.md").write_text(render_skill("Yedek alma notu", **SK), encoding="utf-8")
+    out = _ask(c, "çalışan servisin üstüne yeniden kurulum")
+    assert f"- skills/Yedek alma notu.md — {SK['when']}\n" in out and "Eski işi durdur" not in out
+    start = c.post("/api/context", json={"query": "", "session_id": "s2"}).json()["context"]
+    assert "Yedek alma notu" not in start
