@@ -98,3 +98,18 @@ def test_the_council_context_tool_text_carries_the_skills(tmp_path):
     q = "çalışan servisin üstüne yeniden kurulum"
     assert "[COUNCIL · skills that may apply]" in context_for_tool(store, L, usage, q)
     assert "skills that may apply" not in context_for_tool(store, L, usage, "vardiya")
+
+
+def test_session_endpoint_reports_shown_skills_and_counts_reviews(api):
+    c, store = api
+    L = Learning(store); p = L.write_skill("beklet", **SK)["path"]; L.record_shown(p, "sess-1")
+    r = c.post("/api/session", json={"session_id": "sess-1", "review": True}).json()
+    assert r["skills"] == [p] and "last_log" in r
+    assert Learning(store).summary()["reviews_asked"] == 1
+
+
+def test_learning_tools_are_listed_and_instructions_mention_them(api):
+    from council import server
+    for word in ("council_rule", "council_skill", "council_unlearn", "council_skill_feedback", "never secrets"):
+        assert word in server.INSTRUCTIONS
+    assert len(server.INSTRUCTIONS) < 2600
