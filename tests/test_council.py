@@ -441,7 +441,7 @@ def test_bootstrap_reports_a_backup_that_stopped_working(tmp_path, store, monkey
     assert "backup" not in bootstrap(store)
     remote = _bare_remote(tmp_path, store)
     assert store.backup()["ok"] is True
-    shutil.rmtree(remote)
+    remote.rename(remote.with_name("remote-gone.git"))  # the remote disappears (git's files are read-only on Windows)
     assert store.backup()["ok"] is False
     assert "[COUNCIL maintenance]" not in bootstrap(store)  # a short outage is not worth a warning
     real = time.time()

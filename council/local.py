@@ -111,8 +111,9 @@ class Setup:
     def _domain(self) -> str:
         """The user's launchd domain: the desktop session, or the plain user domain over SSH."""
         if not hasattr(self, "_launchd_domain"):
-            gui = f"gui/{os.getuid()}"
-            self._launchd_domain = gui if self.run(["launchctl", "print", gui]).returncode == 0 else f"user/{os.getuid()}"
+            uid = getattr(os, "getuid", lambda: 0)()
+            gui = f"gui/{uid}"
+            self._launchd_domain = gui if self.run(["launchctl", "print", gui]).returncode == 0 else f"user/{uid}"
         return self._launchd_domain
 
     def install_service(self, auto_update: bool) -> None:
