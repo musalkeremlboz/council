@@ -60,18 +60,18 @@ def svg(w, h, body, title):
 
 # ---------------------------------------------------------------- hero
 
-# The outer ring is the road to 1.0.0: six systems, clockwise from the top. A system's segment is
-# filled once it has shipped; the others stay hollow. DONE says how many are filled.
+# The outer ring is the road to 1.0.0: six basic features, clockwise from the top. The first is the
+# memory itself. A segment is filled as soon as its feature ships; DONE says how many are filled.
 DONE = 1
 HERO = {
-    "tr": dict(lines=("TEK HAFIZA.", "HER YARDIMCI."), memory="HAFIZA",
-               systems=("NOTLAR", "ANLAM", "ÖNEM", "TUTARLILIK", "BAKIM", "EŞİTLEME"),
-               title="COUNCIL: tek hafıza, her yardımcı. Hafızanın çevresinde altı sistem: notlar, anlam, önem, "
-                     "tutarlılık, bakım, eşitleme. Bugün ilki tamam."),
-    "en": dict(lines=("ONE MEMORY.", "EVERY AGENT."), memory="MEMORY",
-               systems=("NOTES", "MEANING", "PRIORITY", "CONSISTENCY", "UPKEEP", "SYNC"),
-               title="COUNCIL: one memory, every agent. Six systems around the memory: notes, meaning, priority, "
-                     "consistency, upkeep, sync. The first is complete today."),
+    "tr": dict(lines=("TEK HAFIZA.", "HER YARDIMCI."),
+               systems=("HAFIZA", "ANLAM", "ÖNEM", "TUTARLILIK", "BAKIM", "EŞİTLEME"),
+               title="COUNCIL: tek hafıza, her yardımcı. Halkada altı temel özellik: hafıza, anlam, önem, "
+                     "tutarlılık, bakım, eşitleme. Bugün ilki, hafıza, tamam."),
+    "en": dict(lines=("ONE MEMORY.", "EVERY AGENT."),
+               systems=("MEMORY", "MEANING", "PRIORITY", "CONSISTENCY", "UPKEEP", "SYNC"),
+               title="COUNCIL: one memory, every agent. Six basic features on the ring: memory, meaning, priority, "
+                     "consistency, upkeep, sync. The first, memory, is complete today."),
 }
 
 
@@ -120,7 +120,6 @@ def hero(lang, theme):
         f'<circle cx="{cx}" cy="{cy}" r="{112 * k:.2f}" fill="none" stroke="{KOR}" stroke-width="{stroke:.2f}" mask="url(#kesik)"/>'
         f'<path transform="translate({cx} {cy}) scale({k:.5f})" d="{WAVE}" fill="none" stroke="{ink}" stroke-width="28"/>'
     )
-    out.append(label(cx - 22, cy + 62, t["memory"], memo, size=23, anchor="middle", weight=700, spacing=3))
     return svg(w, h, "".join(out), t["title"])
 
 

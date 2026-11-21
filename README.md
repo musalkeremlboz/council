@@ -1,9 +1,9 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/kapak-tr-koyu.svg">
-  <img src="docs/assets/kapak-tr-acik.svg" width="100%" alt="COUNCIL: tek hafıza, her yardımcı. Hafızanın çevresinde altı sistem: notlar, anlam, önem, tutarlılık, bakım, eşitleme. Bugün ilki tamam.">
+  <img src="docs/assets/kapak-tr-acik.svg" width="100%" alt="COUNCIL: tek hafıza, her yardımcı. Halkada altı temel özellik: hafıza, anlam, önem, tutarlılık, bakım, eşitleme. Bugün ilki, hafıza, tamam.">
 </picture>
 
-<sub>Dış halkanın altı parçası hafızanın altı sistemidir. Bugün ilki tamam. Altısı da dolduğunda sürüm 1.0.0 çıkar: <a href="#yol-haritasi">yol haritası</a>.</sub>
+<sub>Dış halkanın altı parçası sistemin altı temel özelliğidir. İlki hafızadır ve tamamdır. Her özellik eklendiğinde bir parça daha dolar. Altısı da dolduğunda sürüm 1.0.0 çıkar: <a href="#yol-haritasi">yol haritası</a>.</sub>
 
 **COUNCIL, yapay zekâ yardımcılarına kalıcı hafıza veren açık kaynak bir sistemdir.** Bilgisayarında çalışır ve notların düz Markdown dosyaları olarak sende kalır. Tek bir yardımcıya bağlı değildir: kullandığın bütün yardımcılar aynı hafızayı okur ve yazar.
 
@@ -100,18 +100,18 @@ Oturum olaylarına bağlanabilen yardımcılarda bu üç an kendiliğinden gerç
 <a id="yol-haritasi"></a>
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/baslik-yol-haritasi-koyu.svg"><img src="docs/assets/baslik-yol-haritasi-acik.svg" height="30" alt="Yol haritası"></picture></p>
 
-Kapaktaki dış halkanın altı parçası, hafızanın tamamlandığında sahip olacağı altı sistemdir. Bugün ilki doludur. Altısı da dolduğunda sürüm 1.0.0 çıkar.
+Kapaktaki dış halkanın altı parçası sistemin altı temel özelliğidir. İlki hafızanın kendisidir ve bugün doludur. Bir özellik eklendiğinde onun parçası da dolar. Altısı da dolduğunda sürüm 1.0.0 çıkar.
 
-| | Sistem | Ne yapar | Durum |
+| | Özellik | Ne yapar | Durum |
 |---|---|---|---|
-| 1 | **Notlar** | Düz dosyalar, değişiklik geçmişi, kelime araması ve kendiliğinden gelen bağlam | Tamam |
+| 1 | **Hafıza** | Notlar düz dosyalarda durur, her değişiklik geçmişe işlenir, kelimeyle aranır ve bağlam kendiliğinden gelir | Tamam |
 | 2 | **Anlam** | Aynı şeyi başka kelimelerle sorduğunda da doğru notu bulur | Denendi ve ölçüldü, henüz eklenmedi |
 | 3 | **Önem** | Notları önemine ve yeniliğine göre tartar. Eskiyen geri çekilir. | Planlandı |
 | 4 | **Tutarlılık** | Birbiriyle çelişen notları fark eder ve sana sorar | Planlandı |
 | 5 | **Bakım** | Hafıza kendini derler: tekrarları birleştirir, uzayanı özetler | Planlandı |
 | 6 | **Eşitleme** | Bütün cihazların tek adımda aynı hafızaya bağlanır | Bugün [elle kurulur](docs/kurulum.md#sunucu) |
 
-**Bir sistem ancak testlerini ve ölçümlerini geçtiğinde eklenir.** Örnek: anlam tabanlı arama denendi. Doğru notu ilk beş sonuçta bulma oranı %70'ten %89'a çıktı, ama 3,5 GB bellek ve sorgu başına 369 ms istedi. Küçük bir hafıza için bu bedel fazla olduğundan eklenmedi. Ölçütü tutturana kadar da eklenmeyecek.
+**Bir özellik ancak testlerini ve ölçümlerini geçtiğinde eklenir.** Örnek: anlam tabanlı arama denendi. Doğru notu ilk beş sonuçta bulma oranı %70'ten %89'a çıktı, ama 3,5 GB bellek ve sorgu başına 369 ms istedi. Küçük bir hafıza için bu bedel fazla olduğundan eklenmedi. Ölçütü tutturana kadar da eklenmeyecek.
 
 <br>
 
