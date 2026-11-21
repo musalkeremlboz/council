@@ -158,6 +158,8 @@ Halkadaki parça, üçü de tutunca dolar:
 
 Depodaki kümenin sonucu (2026-11-21, 14 skill, 28 konulu ve 14 konu dışı mesaj): konulu %89 (25/28), konu dışı %0 (0/14). Aynı ölçüm 1, 2, 3, 6 ve 14 skill'lik kütüphanelerde ayrı ayrı yapılır ve hepsinde sınırların içindedir. Küme, eşleştirme kodunu görmeyen ayrı bir yazar tarafından yazıldı; kuralı: her mesaj, ait olduğu skill'le aynı dildedir, çünkü skill kullanıcının dilinde yazılır. Dil karışık kullanımda eşleşme zayıftır; bu bilinen bir sınırdır ve ayrı tutulan kümeyle ölçülecektir.
 
+Ayrı tutulan kümenin sonucu (2026-11-21, bir kez ölçüldü): proje sahibinin 201 gerçek mesajı ve notlarındaki iş tariflerinden yazılan 34 skill. Skill'leri ve etiketleri, eşleştirme kodunu görmeyen iki ayrı yazar hazırladı; kural ölçümden önce yazıldı. **Konulu %80 (20/25), konu dışı %39 (51/132): 1. ölçüt tutmadı.** Oturumun öncesi bilinmeden anlaşılmayan mesajlarda doğru skill 44'te 4 kez geldi (%9; ölçüte girmez). Neden: puan, mesajdaki eşleşen köklerin toplamıdır ve mesaj uzadıkça büyür. Konu dışı mesajlarda yanlış öneri 80 karakterin altında 78'de 6, 160 karakterin üstünde 27'de 26. Depodaki kümenin konu dışı mesajlarının hepsi kısa olduğu için bunu göstermedi. Bu küme artık görülmüş sayılır; düzeltmeden sonraki ölçüt sayısı yeni gerçek mesajlarla alınır.
+
 Bilinen sınır: 10'dan çok skill olduğunda nadirlik puanı kütüphane büyüdükçe artar ve eşik görece kolaylaşır. Onlarca skill'e ulaşıldığında ölçüm yinelenmelidir.
 
 `council usage` çıktısına öğrenme özeti eklenir: sorulan inceleme, yazılan skill ve kural, kalıcı olan, emekli olan, geri alınan, işe yarama oranı, olası tekrarlar.
