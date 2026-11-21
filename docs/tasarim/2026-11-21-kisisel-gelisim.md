@@ -1,6 +1,6 @@
 # Tasarım: kişisel gelişim
 
-Tarih: 2026-11-21 · Durum: onay bekliyor · Hedef sürüm: 0.3.0
+Tarih: 2026-11-21 · Durum: onaylandı (2026-11-21 04:39) · Hedef sürüm: 0.3.0
 
 Halkanın ikinci parçası. Birincisi hafızaydı.
 
