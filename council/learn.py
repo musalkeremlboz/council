@@ -247,7 +247,7 @@ class Learning:
         self._record({"id": uuid.uuid4().hex[:8], "ts": now_local().isoformat(timespec="seconds"),
                       "kind": "skill_edit" if edited else "skill_new", "path": path,
                       "session": session[:SESSION_KEY], "before": before, "retired_path": retired_path_used,
-                      "undone": False})
+                      "after": note.sha, "undone": False})
         verb = "Revised" if edited else "Learned"
         notice = (f"{verb} skill '{title}' ({status}) and saved it as {path}; tell the user in one line, "
                   "in their language, what you learned, and that they can ask you to undo it.")
@@ -287,6 +287,47 @@ class Learning:
         if repeat:
             notice += f" It may repeat an existing rule ({repeat}); mention that and ask whether to keep both."
         return {"path": path, "sha": note.sha, "notice": notice, "possible_repeat": repeat}
+
+    # ---------- undo ----------
+
+    def unlearn(self, session: str = "") -> dict:
+        """Undo the latest learning not yet undone (of ``session`` when given); refuses when its note changed since."""
+        key = session[:SESSION_KEY]
+        ledger = self._load().get("ledger")
+        entry = next((e for e in reversed(ledger if isinstance(ledger, list) else [])
+                      if isinstance(e, dict) and not e.get("undone") and (not key or e.get("session") == key)), None)
+        if entry is None:
+            raise StoreError("nothing to undo" + (" in this session" if key else ""))
+        path, kind = entry["path"], entry["kind"]
+
+        def changed() -> StoreError:
+            return StoreError(f"{path} changed since it was learned; not undoing it. Look at the note and fix it by hand")
+
+        if kind == "rule":
+            note = self.store.read(path) if self.store.exists(path) else None
+            rows = note.text.split("\n") if note else []
+            if rows.count(entry["line"]) != 1:
+                raise changed()
+            rows.remove(entry["line"])
+            self.store.write(path, "\n".join(rows), note.sha, f"undo rule: {path}")
+        else:
+            note = self.store.read(path) if self.store.exists(path) else None
+            if note is None or (entry.get("after") and note.sha != entry["after"]):
+                raise changed()
+            if kind == "skill_edit":
+                self.store.write(path, entry["before"], note.sha, f"undo skill edit: {path}")
+            else:
+                if entry.get("retired_path"):  # a comeback: the retired note returns first, so nothing is ever lost
+                    self.store.write(entry["retired_path"], entry["before"], "", f"undo comeback: {entry['retired_path']}")
+                self.store.remove(path, f"undo skill new: {path}")
+        with self.store._locked():
+            state = self._load()
+            for e in state.get("ledger", []):
+                if isinstance(e, dict) and e.get("id") == entry["id"]:
+                    e["undone"] = True
+            self._save(state)
+        return {"undone": kind, "path": path,
+                "notice": f"Undone ({kind.replace('_', ' ')}) in {path}; tell the user in one line, in their language."}
 
     # ---------- shown, feedback, promotion and retirement ----------
 

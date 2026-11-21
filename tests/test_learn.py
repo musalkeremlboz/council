@@ -1,5 +1,7 @@
 import datetime as dt, json, time
 import pytest
+from council import learn
+from council.learn import Learning
 from council.store import Conflict, Store, StoreError
 
 @pytest.fixture
@@ -28,9 +30,6 @@ def test_search_can_filter_paths(store):
     store.write("skills/k.md", "# K\n\nkiraz toplama")
     hits = store.index.search("kiraz", limit=2, where=lambda p: p.startswith("skills/"))
     assert [h["path"] for h in hits] == ["skills/k.md"]
-
-from council import learn
-from council.learn import Learning
 
 SK = dict(when="Çalışan bir servisin üstüne yeniden kurulum yapılırken",
           steps="1. Eski işi durdur\n2. Bittiğini doğrula\n3. Yenisini yükle",
@@ -275,3 +274,56 @@ def test_feedback_and_shown_without_a_session_count_once_per_day(store, monkeypa
     assert store.exists(q)
     _on(monkeypatch, 14); L.record_shown(q, "")
     assert not store.exists(q) and store.exists("skills/retired/yaramaz.md")
+
+def test_undo_removes_a_new_skill_restores_a_revised_one_and_drops_a_rule(store):
+    L = Learning(store)
+    first = L.write_skill("beklet", session="s1", **SK)
+    L.write_skill("beklet", expected_sha=first["sha"], session="s1", **{**SK, "steps": "1. Yeni adım"})
+    L.add_rule("Önce önizleme göster.", session="s1")
+    assert L.unlearn("s1")["undone"] == "rule" and "önizleme" not in store.read("rules.md").text
+    assert L.unlearn("s1")["undone"] == "skill_edit" and "1. Eski işi durdur" in store.read("skills/beklet.md").text
+    assert L.unlearn("s1")["undone"] == "skill_new" and not store.exists("skills/beklet.md")
+    with pytest.raises(StoreError, match="nothing"):
+        L.unlearn("s1")
+    assert "Yeni adım" in store._git("log", "-p", "--all").stdout       # history keeps everything
+
+def test_undo_refuses_when_the_target_changed_since(store):
+    L = Learning(store)
+    L.add_rule("Önce önizleme göster.", session="s1")
+    text = store.read("rules.md").text
+    store.write("rules.md", text.replace("Önce önizleme göster.", "Önce önizleme göster, sonra sor."),
+                expected_sha=store.read("rules.md").sha)
+    with pytest.raises(StoreError, match="changed"):
+        L.unlearn("s1")
+    assert "sonra sor" in store.read("rules.md").text
+    out = L.write_skill("beklet", session="s2", **SK)
+    store.edit(out["path"], [{"old": "1. Eski işi durdur", "new": "1. Elle değişti"}])
+    with pytest.raises(StoreError, match="changed"):
+        L.unlearn("s2")
+    assert store.exists(out["path"])
+
+def test_undoing_a_comeback_puts_the_retired_note_back_as_it_was(store):
+    L = Learning(store)
+    L.write_skill("beklet", **SK)
+    retired = store.move("skills/beklet.md", "skills/retired/beklet.md").text
+    L.write_skill("beklet", **{**SK, "steps": "1. Başka"})
+    out = L.unlearn()
+    assert out["undone"] == "skill_new" and out["path"] == "skills/beklet.md"
+    assert not store.exists("skills/beklet.md") and store.read("skills/retired/beklet.md").text == retired
+
+def test_undo_picks_the_latest_of_the_session_or_overall_and_skips_undone(store):
+    L = Learning(store)
+    L.add_rule("Birinci kural burada.", session="a" * 20)
+    L.add_rule("İkinci kural şurada.", session="b")
+    assert L.unlearn("a" * 16 + "zzz")["undone"] == "rule"             # sessions match on their first 16 characters
+    assert "Birinci" not in store.read("rules.md").text and "İkinci" in store.read("rules.md").text
+    assert L.unlearn()["undone"] == "rule" and "İkinci" not in store.read("rules.md").text
+    with pytest.raises(StoreError, match="nothing"):
+        L.unlearn()
+
+def test_undo_refuses_when_a_learned_skill_was_retired_since(store):
+    L = Learning(store)
+    out = L.write_skill("beklet", session="s1", **SK)
+    store.move(out["path"], "skills/retired/beklet.md")
+    with pytest.raises(StoreError, match="changed"):
+        L.unlearn("s1")
