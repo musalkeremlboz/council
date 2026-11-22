@@ -249,7 +249,7 @@ sudo COUNCIL_DATA=/var/lib/council /opt/council/.venv/bin/council backup
 sudo systemctl enable --now council-backup.timer
 ```
 
-Zamanlayıcı 15 dakikada bir çalışır. Yedek iki gün başarısız kalırsa yardımcın oturum başında seni uyarır. Yedeğe yalnız notlar girer; erişim anahtarı, sahip şifresi ve giriş kayıtları `vault/` klasörünün dışında durur.
+Zamanlayıcı 15 dakikada bir çalışır. Yedek iki gün başarısız kalırsa yardımcın oturum başında seni uyarır. Yedeğe notlar ve `council check` için kaydettiğin sorular girer (soruların kopyası `vault/.council/` altında tutulur; orası not değildir, aranmaz). Erişim anahtarı, sahip şifresi ve giriş kayıtları `vault/` klasörünün dışında durur ve yedeğe girmez.
 
 Aynı yedek kendi bilgisayarındaki hafıza için de kurulabilir: uzak depoyu `~/.council/vault` içine ekle ve `council backup` komutunu çalıştır.
 

@@ -420,3 +420,59 @@ def test_questions_added_by_several_processes_at_once_are_all_kept(store):
     assert [p.returncode for p in procs] == [0] * writers, errors
     saved = {q["question"] for q in check.questions(store)}
     assert saved == {f"soru {w}-{i}" for w in range(writers) for i in range(each)}
+
+
+# ---------- the questions travel with the backup ----------
+
+def _backed_up(tmp_path, store):
+    """Back the store up to a bare remote and return a fresh copy of what the remote holds."""
+    import subprocess
+
+    remote, copy = tmp_path / "remote.git", tmp_path / "copy"
+    if not remote.exists():
+        subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+        store._git("remote", "add", "backup", str(remote))
+    assert store.backup()["ok"] is True
+    subprocess.run(["git", "clone", "-q", "--branch", "main", str(remote), str(copy)], check=True)
+    return copy
+
+
+def test_the_backup_carries_the_saved_questions(tmp_path, store):
+    check.add_question(store, "kira ne zaman ödenir", ["projects/ev/kira.md"])
+    copy = _backed_up(tmp_path, store)
+    kept = json.loads((copy / ".council/questions.json").read_text(encoding="utf-8"))
+    assert [q["question"] for q in kept] == ["kira ne zaman ödenir"]
+
+
+def test_the_copy_of_the_questions_in_the_vault_is_not_a_note(tmp_path, store):
+    check.add_question(store, "kira ne zaman ödenir", ["projects/ev/kira.md"])
+    _backed_up(tmp_path, store)
+    assert not [p for p in store.list() if "question" in p]
+    assert check.search_report(Store(store.data, readonly=True))["search"] == 1  # it does not answer for the note
+    assert store._git("status", "--short").stdout == ""
+
+
+def test_a_memory_restored_from_its_backup_has_its_questions(tmp_path, store):
+    check.add_question(store, "kira ne zaman ödenir", ["projects/ev/kira.md"])
+    copy = _backed_up(tmp_path, store)
+    restored = tmp_path / "restored"
+    restored.mkdir()
+    copy.rename(restored / "vault")
+    again = Store(restored, readonly=True)
+    assert [q["question"] for q in check.questions(again)] == ["kira ne zaman ödenir"]
+    check.add_question(again, "turnike okumazsa", ["projects/havuz/turnike.md"])   # saved where questions live
+    assert len(json.loads((restored / "questions.json").read_text(encoding="utf-8"))) == 2
+
+
+def test_a_backup_with_no_questions_adds_nothing_to_the_vault(tmp_path, store):
+    copy = _backed_up(tmp_path, store)
+    assert not (copy / ".council").exists() and not (store.vault / ".council").exists()
+
+
+def test_a_later_backup_carries_the_questions_as_they_are_then(tmp_path, store):
+    check.add_question(store, "kira ne zaman ödenir", ["projects/ev/kira.md"])
+    _backed_up(tmp_path, store)
+    check.add_question(store, "turnike okumazsa", ["projects/havuz/turnike.md"])
+    assert store.backup()["ok"] is True
+    kept = store._git("show", "HEAD:.council/questions.json").stdout
+    assert "turnike okumazsa" in kept and store._git("status", "--short").stdout == ""

@@ -34,6 +34,11 @@ LOG_DIR = "log"
 SESSION_ARCHIVE = "sessions"
 BACKUP_REMOTE = "backup"  # git remote of the vault that `backup()` pushes to
 BACKUP_GRACE = 2 * 86400  # a backup that has not succeeded for this long is reported at session start
+# Files of the data folder that are worth keeping but are not notes. The backup pushes only the vault, so a
+# copy of each is kept in this folder of the vault. Its name starts with a dot: nothing in it is listed,
+# indexed or served as a note.
+MIRROR_DIR = ".council"
+MIRRORED = ("questions.json",)
 KEEP_CARDS = 10  # sessions.md holds this many cards; older ones move to sessions/<YYYY-MM>.md
 
 SEED = {
@@ -317,6 +322,10 @@ class Store:
         if BACKUP_REMOTE not in self._git("remote").stdout.split():
             return {"ok": False, "error": f"no `{BACKUP_REMOTE}` git remote in the vault"}
         try:
+            self._mirror()
+        except OSError:  # the notes are still worth pushing
+            pass
+        try:
             r = subprocess.run(["git", "-C", str(self.vault), "push", "-q", BACKUP_REMOTE, "HEAD:refs/heads/main"],
                                capture_output=True, text=True, encoding="utf-8", errors="replace",
                                timeout=120, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
@@ -331,6 +340,19 @@ class Store:
         tmp.write_text(json.dumps(status))
         os.replace(tmp, self.data / "backup.json")
         return {"ok": not error, "error": error}
+
+    def _mirror(self) -> None:
+        """Bring the vault's copy of each mirrored data file in line with the file and commit that copy alone."""
+        with self._locked():
+            for name in MIRRORED:
+                src, rel = self.data / name, f"{MIRROR_DIR}/{name}"
+                dst = self.vault / rel
+                if not src.is_file() or (dst.is_file() and dst.read_bytes() == src.read_bytes()):
+                    continue
+                dst.parent.mkdir(exist_ok=True)
+                dst.write_bytes(src.read_bytes())
+                self._git("add", "--", rel)
+                self._git("commit", "-q", "-m", f"backup copy of {name}", "--", rel)
 
     def _backup_status(self) -> dict | None:
         try:

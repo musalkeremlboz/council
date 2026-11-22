@@ -1,7 +1,8 @@
 """Checks that change nothing: do the owner's questions still find their notes, do links still lead to a note.
 
 Questions live in ``<data>/questions.json``, outside the vault: a note holding them would match itself in
-every search it is meant to measure.
+every search it is meant to measure. The backup keeps a copy in a folder of the vault that holds no notes
+(``Store._mirror``); a memory restored from its backup reads that copy until a question is saved again.
 """
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ import unicodedata
 from urllib.parse import unquote
 
 from .context import FIXED, relevant
-from .store import LOG_DIR, SESSION_ARCHIVE, SESSIONS, Store, StoreError, now_local
+from .store import LOG_DIR, MIRROR_DIR, SESSION_ARCHIVE, SESSIONS, Store, StoreError, now_local
 
 QUESTIONS_FILE = "questions.json"
 SEARCH_LIMIT = 8  # what council_search returns by default
@@ -45,6 +46,8 @@ def questions(store: Store) -> list[dict]:
     """The saved questions: ``{"question", "expect": [paths], "added"}``. A file that is not what this
     module wrote is reported, never replaced."""
     path = store.data / QUESTIONS_FILE
+    if not path.exists():  # a memory restored from its backup has only the copy the backup carried
+        path = store.vault / MIRROR_DIR / QUESTIONS_FILE
     if not path.exists():
         return []
     try:

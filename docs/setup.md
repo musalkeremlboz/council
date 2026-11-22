@@ -249,7 +249,7 @@ It should print `backup ok`. For a regular backup, copy [`deploy/council-backup.
 sudo systemctl enable --now council-backup.timer
 ```
 
-The timer runs every 15 minutes. If the backup fails for two days, your agent tells you at the start of a session. Only the notes go into the backup; the access token, the owner password and the sign-in records are kept outside the `vault/` folder.
+The timer runs every 15 minutes. If the backup fails for two days, your agent tells you at the start of a session. The notes and the questions you saved for `council check` go into the backup (a copy of the questions is kept under `vault/.council/`; nothing there is a note or is searched). The access token, the owner password and the sign-in records are kept outside the `vault/` folder and do not go into the backup.
 
 The same backup works for the memory on your own computer: add the remote inside `~/.council/vault` and run `council backup`.
 
