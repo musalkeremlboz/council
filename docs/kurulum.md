@@ -287,3 +287,4 @@ Veri klasörü varsayılan olarak `~/.council` olur. Başka bir klasör için `-
 | `401` ya da `unauthorized` | Anahtar yanlış. `council token` çıktısıyla `config.json` içindekini karşılaştır. |
 | claude.ai giriş sayfası "Too many wrong attempts" diyor | Beş yanlış şifre denemesi girişi 15 dakika kilitler. Bekle ve yeniden dene. |
 | Arama boş dönüyor | `council reindex` indeksi yeniden kurar. |
+| Komut `no memory at KLASÖR` diyor | O klasörde hafıza yok: `--data` ya da `COUNCIL_DATA` yanlış, ya da bu bilgisayar bir sunucudaki hafızaya bağlı ve notlar orada. Komutu hafızanın durduğu yerde çalıştır. |

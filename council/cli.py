@@ -10,6 +10,12 @@ import sys
 from pathlib import Path
 
 DEFAULT_DATA = os.environ.get("COUNCIL_DATA", "~/.council")
+# Commands that work on a memory that is already there: run against a folder without one (a mistyped --data),
+# they say so instead of starting an empty memory in it.
+NEEDS_MEMORY = {"context", "search", "check", "reindex", "usage", "backup", "watch-release", "watch-size"}
+# Commands that only read the notes: they seed nothing and commit nothing, so an edit made by hand stays
+# an uncommitted edit.
+READS_ONLY = {"context", "search", "check", "reindex", "usage"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -81,6 +87,9 @@ def main(argv: list[str] | None = None) -> int:
 
     a = ap.parse_args(argv)
     data = Path(a.data).expanduser()
+    if a.cmd in NEEDS_MEMORY and not (data / "vault").is_dir():
+        print(f"council: no memory at {data} (no vault folder there); check --data or COUNCIL_DATA", file=sys.stderr)
+        return 2
     data.mkdir(parents=True, exist_ok=True)
 
     if a.cmd == "token":
@@ -138,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from .store import Store
 
-    store = Store(data, readonly=a.cmd == "check")  # a check changes no note and commits nothing
+    store = Store(data, readonly=a.cmd in READS_ONLY)
     if a.cmd == "context":
         from .context import bootstrap
 

@@ -372,3 +372,28 @@ def test_request_words_do_not_pick_notes(store):
     assert note_query("a ! ?") == "" and store.index.search("a ! ?") == []
     assert "istiyo" in build_query(said, content_only=True)                           # skill matching is untouched
     assert store.index.absent("bunu istiyorum lütfen") == []                          # nothing to report about them
+
+
+# ---------- commands that only read ----------
+
+def test_a_command_that_only_reads_commits_nothing_and_seeds_nothing(store, capsys):
+    (store.vault / "projects/ev/kira.md").write_text("# Kira\n\nelle değişti", encoding="utf-8")
+    (store.vault / "threads.md").unlink()
+    commits = store._git("rev-list", "--count", "HEAD").stdout
+    status = store._git("status", "--short").stdout
+    for args in (("context", "kira"), ("search", "kira"), ("usage",), ("reindex",)):
+        assert run(store, *args) == 0
+    assert "projects/ev/kira.md" in capsys.readouterr().out               # the edit on disk is what is read
+    assert store._git("rev-list", "--count", "HEAD").stdout == commits
+    assert store._git("status", "--short").stdout == status and not (store.vault / "threads.md").exists()
+
+
+@pytest.mark.parametrize("args", [("context",), ("search", "kira"), ("check",), ("usage",), ("reindex",),
+                                  ("backup",), ("watch-size", "--notes", "1", "--title", "t")])
+def test_a_folder_with_no_memory_is_refused_and_left_as_it_is(tmp_path, capsys, args):
+    missing, empty = tmp_path / "yok", tmp_path / "bos"
+    empty.mkdir()
+    for data in (missing, empty):
+        assert cli.main(["--data", str(data), *args]) == 2
+        assert f"no memory at {data}" in capsys.readouterr().err
+    assert not missing.exists() and not list(empty.iterdir())

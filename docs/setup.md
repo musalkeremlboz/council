@@ -287,3 +287,4 @@ The data folder is `~/.council` by default. For another folder use `--data FOLDE
 | `401` or `unauthorized` | Wrong token. Compare the output of `council token` with the one in `config.json`. |
 | The claude.ai sign-in page says "Too many wrong attempts" | Five wrong password attempts lock the sign-in for 15 minutes. Wait and try again. |
 | Search returns nothing | `council reindex` rebuilds the index. |
+| A command says `no memory at FOLDER` | There is no memory in that folder: `--data` or `COUNCIL_DATA` is wrong, or this computer is connected to a memory on a server and the notes are there. Run the command where the memory lives. |
