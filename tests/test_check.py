@@ -397,3 +397,26 @@ def test_a_folder_with_no_memory_is_refused_and_left_as_it_is(tmp_path, capsys, 
         assert cli.main(["--data", str(data), *args]) == 2
         assert f"no memory at {data}" in capsys.readouterr().err
     assert not missing.exists() and not list(empty.iterdir())
+
+
+WRITER = """
+import sys
+from council import check
+from council.store import Store
+store = Store(sys.argv[1], readonly=True)
+for i in range(int(sys.argv[3])):
+    check.add_question(store, f"soru {sys.argv[2]}-{i}", ["projects/ev/kira.md"])
+"""
+
+
+def test_questions_added_by_several_processes_at_once_are_all_kept(store):
+    import subprocess
+    import sys
+
+    writers, each = 6, 15
+    procs = [subprocess.Popen([sys.executable, "-c", WRITER, str(store.data), str(w), str(each)],
+                              stderr=subprocess.PIPE, text=True) for w in range(writers)]
+    errors = [p.communicate()[1] for p in procs]
+    assert [p.returncode for p in procs] == [0] * writers, errors
+    saved = {q["question"] for q in check.questions(store)}
+    assert saved == {f"soru {w}-{i}" for w in range(writers) for i in range(each)}
