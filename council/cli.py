@@ -103,6 +103,16 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd in NEEDS_MEMORY and not (data / "vault").is_dir():
         print(f"council: no memory at {data} (no vault folder there); check --data or COUNCIL_DATA", file=sys.stderr)
         return 2
+
+    if a.cmd == "delegation":  # read-only: it creates no data folder
+        from . import delegation
+
+        projects = Path(a.projects).expanduser() if a.projects else delegation.DEFAULT_PROJECTS
+        log = Path(a.log).expanduser() if a.log else delegation.DEFAULT_LOG
+        summary = delegation.summarise(projects, log, a.days)
+        print(json.dumps(summary, indent=2) if a.json else delegation.render(summary), end="\n" if a.json else "")
+        return 0
+
     data.mkdir(parents=True, exist_ok=True)
 
     if a.cmd == "token":
@@ -146,15 +156,6 @@ def main(argv: list[str] | None = None) -> int:
         if a.cmd in ("status", "durum"):
             return local.status(setup)
         return local.update(setup, force=a.force)
-
-    if a.cmd == "delegation":
-        from . import delegation
-
-        projects = Path(a.projects).expanduser() if a.projects else delegation.DEFAULT_PROJECTS
-        log = Path(a.log).expanduser() if a.log else delegation.DEFAULT_LOG
-        summary = delegation.summarise(projects, log, a.days)
-        print(json.dumps(summary, indent=2) if a.json else delegation.render(summary), end="\n" if a.json else "")
-        return 0
 
     if a.cmd == "serve":
         import uvicorn

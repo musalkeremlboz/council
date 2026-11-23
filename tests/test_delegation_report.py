@@ -54,6 +54,46 @@ def test_the_comparison_point_follows_a_model_switch(tmp_path):
     worker(tmp_path, "late", [line(OPUS, "b", 150, output_tokens=1)])      # main is Fable now: Opus is the ceiling
     assert tier4(tmp_path)["violations"] == 1                                # the session is filed under its last model
 
+def test_an_unknown_comparison_model_is_no_violation(tmp_path):
+    session(tmp_path, [line("gpt-9", "m1", 0, output_tokens=1), line(FABLE, "m2", 100, output_tokens=1)])
+    worker(tmp_path, "early", [line(OPUS, "a", 50, output_tokens=1)])      # the hook enforced nothing then
+    t = tier4(tmp_path)
+    assert t["agents"] == 1 and t["violations"] == 0 and t["violations_by_reason"] == {}
+
+def test_violations_are_broken_down_by_what_the_hook_decided(tmp_path):
+    session(tmp_path, [line(FABLE, "m1", 10, output_tokens=1)])
+    worker(tmp_path, "a", [line(FABLE, "a", 20, output_tokens=M)], meta={"agentType": "mine", "toolUseId": "toolu_a"})
+    worker(tmp_path, "b", [line(FABLE, "b", 20, input_tokens=M)], meta={"agentType": "x", "toolUseId": "toolu_b"})
+    worker(tmp_path, "c", [line(FABLE, "c", 20, cache_read_input_tokens=M)], meta={"agentType": "y", "toolUseId": "toolu_c"})
+    worker(tmp_path, "ok", [line(OPUS, "d", 20, output_tokens=M)], meta={"agentType": "z", "toolUseId": "toolu_d"})
+    log = tmp_path / "d.jsonl"
+    log.write_text("\n".join(json.dumps({"session": SID[:16], "tool_use_id": u, "reason": r}) for u, r in
+                             (("toolu_a", "own-model"), ("toolu_b", "unknown-main"), ("toolu_d", "set"))) + "\n",
+                   encoding="utf-8")
+    t = tier4(tmp_path, log)
+    assert t["violations"] == 3
+    assert t["violations_by_reason"] == {"own-model": 1, "unknown-main": 1, "no-decision": 1}
+    assert t["violations_cost"] == pytest.approx(PRICES[4]["output"] + PRICES[4]["input"] + PRICES[4]["cache_read"])
+    text = delegation.render(summarise(tmp_path, log, days=14))
+    assert "above the ceiling: 3 sub-agents, $" in text and "(no-decision 1, own-model 1, unknown-main 1)" in text
+
+def test_cache_writes_are_priced_by_their_lifetime(tmp_path):
+    session(tmp_path, [line(FABLE, "m1", 10, output_tokens=1)])
+    worker(tmp_path, "hour", [line(OPUS, "a", 20, cache_creation_input_tokens=M,
+                                   cache_creation={"ephemeral_1h_input_tokens": M, "ephemeral_5m_input_tokens": 0})])
+    worker(tmp_path, "both", [line(SONNET, "b", 20, cache_creation_input_tokens=3 * M,
+                                   cache_creation={"ephemeral_1h_input_tokens": M, "ephemeral_5m_input_tokens": 2 * M})])
+    t = tier4(tmp_path)
+    assert t["models"][OPUS]["cost"] == pytest.approx(PRICES[3]["cache_write_1h"])
+    assert (t["models"][OPUS]["cache_write"], t["models"][OPUS]["cache_write_1h"]) == (0, M)
+    assert t["models"][SONNET]["cost"] == pytest.approx(PRICES[2]["cache_write_1h"] + 2 * PRICES[2]["cache_write"])
+    assert t["estimated_saving"] == pytest.approx(PRICES[4]["cache_write_1h"] - PRICES[3]["cache_write_1h"]
+                                                  + PRICES[4]["cache_write_1h"] + 2 * PRICES[4]["cache_write"]
+                                                  - PRICES[2]["cache_write_1h"] - 2 * PRICES[2]["cache_write"])
+    assert [PRICES[r]["cache_write_1h"] for r in (4, 3, 2, 1)] == pytest.approx([16, 8, 4, 0.20])
+    assert [PRICES[r]["cache_write"] for r in (4, 3, 2, 1)] == pytest.approx([10, 5, 2.50, 0.125])
+    assert "cache write 1h" in delegation.render(summarise(tmp_path, tmp_path / "none.jsonl", days=14))
+
 def test_small_runs_and_the_estimate(tmp_path):
     session(tmp_path, [line(FABLE, "m1", 10, output_tokens=1)])
     worker(tmp_path, "small", [line(SONNET, "a", 20, tools=2, output_tokens=M)])
@@ -79,8 +119,10 @@ def test_broken_lines_and_unrankable_sessions_do_not_stop_the_report(tmp_path):
     assert list(tiers) == ["4"] and tiers["4"]["models"][FABLE]["output"] == 5
 
 def test_the_command_prints_a_report_and_json(tmp_path, capsys):
-    args = ["delegation", "report", "--projects", str(tmp_path), "--log", str(tmp_path / "none.jsonl")]
+    args = ["--data", str(tmp_path / "data"), "delegation", "report", "--projects", str(tmp_path),
+            "--log", str(tmp_path / "none.jsonl")]
     assert cli.main(args) == 0 and "no sessions in the last 14 days" in capsys.readouterr().out
+    assert not (tmp_path / "data").exists()                                 # read-only: no data folder made
     session(tmp_path, [line(FABLE, "m1", 10, output_tokens=1)])
     worker(tmp_path, "w", [line(OPUS, "a", 20, output_tokens=1)])
     assert cli.main(args) == 0
