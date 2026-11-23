@@ -14,6 +14,8 @@ import os
 import re
 import ssl
 import sys
+import tempfile
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -167,6 +169,7 @@ def review_interval() -> int:
 TIERS = {"fable": 4, "mythos": 4, "opus": 3, "sonnet": 2, "haiku": 1}
 ALIASES = {4: "fable", 3: "opus", 2: "sonnet", 1: "haiku"}
 CHUNK = 1 << 20  # bytes read per step when scanning a session record from its end
+SCAN_LIMIT = 64 << 20  # bytes scanned without a qualifying line before the session's model counts as unknown
 
 
 def tier(model: object) -> int:
@@ -200,8 +203,10 @@ def main_model(transcript: str) -> str | None:
             fh.seek(0, os.SEEK_END)
             pos = fh.tell()
             carry = b""  # the front of the text read so far: a line whose start is not read yet
-            while pos > 0:
+            scanned = 0
+            while pos > 0 and scanned < SCAN_LIMIT:
                 step = min(CHUNK, pos)
+                scanned += step
                 pos -= step
                 fh.seek(pos)
                 lines = (fh.read(step) + carry).split(b"\n")
@@ -215,13 +220,18 @@ def main_model(transcript: str) -> str | None:
     return None
 
 
+def mode_of(config: object) -> str:
+    """"advise" or "off" when the config object says exactly that under "delegation", else "enforce"."""
+    value = config.get("delegation") if isinstance(config, dict) else None
+    return value if value in ("advise", "off") else "enforce"
+
+
 def delegation_mode() -> str:
-    """"enforce" (default), "advise" or "off"; config "delegation" overrides, anything else means "enforce"."""
+    """The mode the user's config sets; "enforce" when there is no readable config."""
     try:
-        value = load_config().get("delegation")
+        return mode_of(load_config())
     except Exception:  # no config file yet: nothing to override
         return "enforce"
-    return value if value in ("advise", "off") else "enforce"
 
 
 INHERITING = frozenset({"", "general-purpose", "claude", "Plan", "Explore"})  # run on the session's model
@@ -231,28 +241,36 @@ DELEGATION_LOG = STATE / "delegation.jsonl"
 LOG_LIMIT = 1 << 20  # bytes; past this the decision log keeps its newer half
 
 
-def agent_inherits(agent_type: str, cwd: str, home: Path | None = None) -> bool:
-    """True when a sub-agent of this type runs on the session's model if no model is asked for: the built-in
-    inheriting types, or an agent file (project first, then the user's) whose front matter names no model or
-    ``inherit``. An unknown type is left alone."""
+def front_matter(lines: list[str]) -> list[str]:
+    """The lines between a leading ``---`` (the first non-empty line) and the next ``---``; [] when there is none."""
+    start = next((i for i, line in enumerate(lines) if line.strip()), None)
+    if start is None or lines[start].strip() != "---":
+        return []
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].strip() == "---"), None)
+    return lines[start + 1:end] if end is not None else []
+
+
+def declared_model(agent_type: str, cwd: str, home: Path | None = None) -> tuple[bool, str | None]:
+    """What is known about the model a sub-agent of this type runs on when the call asks for none: (whether the
+    type is known, the model its agent file names or None for none or ``inherit``). Known are the built-in
+    inheriting types and types with an agent file, the project's first, then the user's."""
     if agent_type in INHERITING:
-        return True
+        return True, None
     if not agent_type or any(c in agent_type for c in "/\\:") or agent_type.startswith("."):
-        return False
+        return False, None
     roots = ([Path(cwd)] if cwd else []) + [home if home is not None else Path.home()]
     for root in roots:
         try:
             lines = (root / ".claude" / "agents" / f"{agent_type}.md").read_text(encoding="utf-8").splitlines()
         except (OSError, ValueError):
             continue
-        marks = [i for i, line in enumerate(lines) if line.strip() == "---"]
-        front = lines[marks[0] + 1:marks[1]] if len(marks) >= 2 else []
-        for line in front:
+        for line in front_matter(lines):
             key, sep, value = line.partition(":")
             if sep and key.strip() == "model":
-                return value.strip().strip("\"'") in ("", "inherit")
-        return True
-    return False
+                value = value.strip().strip("\"'")
+                return True, None if value in ("", "inherit") else value
+        return True, None
+    return False, None
 
 
 def decide(tool_input: dict, main: str | None, cwd: str = "", home: Path | None = None) -> tuple[dict | None, str]:
@@ -272,10 +290,14 @@ def decide(tool_input: dict, main: str | None, cwd: str = "", home: Path | None 
         if asked_rank <= ceiling:
             return None, "kept"
         reason = "lowered"
-    elif agent_inherits(agent_type, cwd, home):
-        reason = "set"
     else:
-        return None, "own-model"
+        known, declared = declared_model(agent_type, cwd, home)
+        if known and declared is None:
+            reason = "set"
+        elif known and tier(declared) > ceiling:
+            reason = "lowered"
+        else:  # a type nothing is known about, or a file asking for a model at or below the ceiling (or unrankable)
+            return None, "own-model"
     new = {**tool_input, "model": ALIASES[ceiling]}
     if isinstance(tool_input.get("prompt"), str):
         new["prompt"] = tool_input["prompt"] + "\n\n" + WORKER_NOTE
@@ -283,19 +305,28 @@ def decide(tool_input: dict, main: str | None, cwd: str = "", home: Path | None 
 
 
 def log_decision(row: dict) -> None:
-    """Append one line to the decision log with a single write; never raises."""
+    """Append one line to the decision log with a single write; never raises. A row that would take the log past
+    its limit first cuts it to its newer half, written to a temporary file and moved over the log in one step."""
     try:
         path = DELEGATION_LOG
         path.parent.mkdir(parents=True, exist_ok=True)
+        line = (json.dumps(row) + "\n").encode("utf-8")
         try:
-            if path.stat().st_size > LOG_LIMIT:
+            if path.stat().st_size + len(line) > LOG_LIMIT:
                 data = path.read_bytes()
                 tail = data[len(data) // 2:]
-                path.write_bytes(tail[tail.find(b"\n") + 1:] if b"\n" in tail else b"")
+                fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
+                try:
+                    with os.fdopen(fd, "wb") as fh:
+                        fh.write(tail[tail.find(b"\n") + 1:] if b"\n" in tail else b"")
+                    os.replace(tmp, path)
+                except OSError:
+                    os.unlink(tmp)
+                    raise
         except OSError:
             pass
         with open(path, "ab", buffering=0) as fh:
-            fh.write((json.dumps(row) + "\n").encode("utf-8"))
+            fh.write(line)
     except Exception:
         pass
 
@@ -310,10 +341,12 @@ def delegation_check(event: dict) -> None:
         return
     transcript = str(event.get("transcript_path", ""))
     asked = tool_input.get("model")
-    row = {"ts": dt.datetime.now().timestamp(), "session": str(event.get("session_id", ""))[:16],
-           "type": str(tool_input.get("subagent_type") or ""), "asked": asked, "model": None, "main": None}
-    if delegation_mode() != "enforce":
-        log_decision({**row, "reason": "off"})
+    row = {"ts": time.time(), "session": str(event.get("session_id", ""))[:16],
+           "tool_use_id": str(event.get("tool_use_id") or ""), "type": str(tool_input.get("subagent_type") or ""),
+           "asked": asked, "model": None, "main": None}
+    mode = delegation_mode()
+    if mode != "enforce":
+        log_decision({**row, "reason": mode})
         return
     if event.get("agent_id"):
         log_decision({**row, "reason": "nested"})
@@ -419,9 +452,9 @@ opus -> sonnet, sonnet -> haiku. A hook enforces the ceiling.
 
 
 def main() -> int:
-    try:
-        event = json.load(sys.stdin)
-    except json.JSONDecodeError:
+    try:  # bytes, decoded as UTF-8: a text stdin uses the locale's code page on some systems
+        event = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+    except (ValueError, OSError):  # bad JSON or bytes that are not UTF-8
         return 0
     if not isinstance(event, dict):
         return 0

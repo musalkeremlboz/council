@@ -297,8 +297,8 @@ def test_hook_tells_the_server_which_session_it_is(event, monkeypatch, capsys):
     sent = []
     monkeypatch.setattr(hook, "load_config", lambda: {"url": "http://x", "token": "t"})
     monkeypatch.setattr(hook, "fetch", lambda cfg, payload, timeout=8.0: sent.append(payload) or "ctx")
-    monkeypatch.setattr(hook.sys, "stdin", io.StringIO(json.dumps(
-        {"hook_event_name": event, "session_id": "s9", "prompt": "merhaba"})))
+    monkeypatch.setattr(hook.sys, "stdin", io.TextIOWrapper(io.BytesIO(json.dumps(
+        {"hook_event_name": event, "session_id": "s9", "prompt": "merhaba"}).encode("utf-8")), encoding="utf-8"))
     hook.main()
     assert sent[0]["session_id"] == "s9"
 
@@ -391,8 +391,8 @@ def test_hook_asks_for_notes_only_on_messages_a_person_wrote(prompt, asked, monk
     sent = []
     monkeypatch.setattr(hook, "load_config", lambda: {"url": "http://x", "token": "t"})
     monkeypatch.setattr(hook, "fetch", lambda cfg, payload, timeout=8.0: sent.append(payload) or "ctx")
-    monkeypatch.setattr(hook.sys, "stdin", io.StringIO(json.dumps(
-        {"hook_event_name": "UserPromptSubmit", "session_id": "s9", "prompt": prompt})))
+    monkeypatch.setattr(hook.sys, "stdin", io.TextIOWrapper(io.BytesIO(json.dumps(
+        {"hook_event_name": "UserPromptSubmit", "session_id": "s9", "prompt": prompt}).encode("utf-8")), encoding="utf-8"))
     hook.main()
     assert len(sent) == asked
     assert "COUNCIL session=s9" in capsys.readouterr().out  # the time stamp is still given

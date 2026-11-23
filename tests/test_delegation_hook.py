@@ -1,4 +1,8 @@
+import io
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 import pytest
 from council import hook
@@ -63,9 +67,24 @@ def test_main_model_reads_a_large_record_from_the_end(tmp_path, monkeypatch):
     ({"delegation": "nonsense"}, "enforce"), ({"delegation": False}, "enforce")])
 def test_delegation_mode(tmp_path, monkeypatch, config, expected):
     if config is not None:
-        (tmp_path / "c.json").write_text(json.dumps(config))
+        (tmp_path / "c.json").write_text(json.dumps(config), encoding="utf-8")
         monkeypatch.setattr(hook, "CONFIG", tmp_path / "c.json")
     assert hook.delegation_mode() == expected
+
+@pytest.mark.parametrize("config, expected", [
+    (None, "enforce"), ([], "enforce"), ("off", "enforce"), ({}, "enforce"), ({"delegation": "advise"}, "advise"),
+    ({"delegation": "off"}, "off"), ({"delegation": "OFF"}, "enforce"), ({"delegation": ["off"]}, "enforce")])
+def test_mode_of_is_one_pure_rule(config, expected):
+    assert hook.mode_of(config) == expected
+
+def test_main_model_gives_up_after_the_scan_limit(tmp_path, monkeypatch):
+    pad = json.dumps({"type": "user", "message": {"content": "x" * 100}})
+    path = record(tmp_path, [assistant("claude-opus-5-5")] + [pad] * 100)    # about 12 kB without a model line
+    monkeypatch.setattr(hook, "CHUNK", 1000)
+    monkeypatch.setattr(hook, "SCAN_LIMIT", 5000)
+    assert hook.main_model(path) is None
+    monkeypatch.setattr(hook, "SCAN_LIMIT", 1 << 20)
+    assert hook.main_model(path) == "claude-opus-5-5"
 
 @pytest.mark.parametrize("chunk", [7, 64, 100, 1000])
 def test_main_model_parses_a_line_that_straddles_chunks_or_is_longer_than_one(tmp_path, monkeypatch, chunk):
@@ -97,8 +116,16 @@ CALL = {"description": "d", "prompt": "do it", "subagent_type": "general-purpose
     ("claude-fable-5-2", {"subagent_type": "claude-code-guide", "model": "fable"}, "opus", "lowered"),
     ("claude-fable-5-2", {"subagent_type": "fork"}, None, "fork"),
     ("claude-fable-5-2", {"subagent_type": "fork", "model": "fable"}, None, "fork"),
+    ("claude-fable-5-2", {"subagent_type": "big"}, "opus", "lowered"),
+    ("claude-opus-5-5", {"subagent_type": "mid"}, "sonnet", "lowered"),
+    ("claude-fable-5-2", {"subagent_type": "cheap"}, None, "own-model"),
+    ("claude-fable-5-2", {"subagent_type": "odd"}, None, "own-model"),
+    ("claude-fable-5-2", {"subagent_type": "big", "model": "haiku"}, None, "kept"),
 ])
 def test_decide(tmp_path, main, extra, model, reason):
+    agents = tmp_path / ".claude" / "agents"; agents.mkdir(parents=True)
+    for name, declared in (("big", "fable"), ("mid", "opus"), ("cheap", "haiku"), ("odd", "weird")):
+        (agents / f"{name}.md").write_text(f"---\nname: {name}\nmodel: {declared}\n---\nbody\n", encoding="utf-8")
     new, why = hook.decide({**CALL, **extra}, main, home=tmp_path)
     assert why == reason
     assert (new or {}).get("model") == model
@@ -109,21 +136,36 @@ def test_a_changed_call_keeps_every_other_field_and_tells_the_worker_about_memor
     assert {k: new[k] for k in ("description", "subagent_type", "run_in_background", "extra")} == \
            {"description": "d", "subagent_type": "general-purpose", "run_in_background": True, "extra": {"a": 1}}
 
-def test_an_agent_file_decides_whether_a_custom_type_inherits(tmp_path):
+def test_an_agent_file_says_which_model_a_custom_type_runs_on(tmp_path):
     agents = tmp_path / ".claude" / "agents"; agents.mkdir(parents=True)
     (agents / "cheap.md").write_text("---\nname: cheap\nmodel: haiku\n---\nbody\n", encoding="utf-8")
+    (agents / "quoted.md").write_text("\n---\nname: quoted\nmodel: \"opus\"\n---\n", encoding="utf-8")
     (agents / "plain.md").write_text("---\nname: plain\n---\nbody\n", encoding="utf-8")
     (agents / "same.md").write_text("---\nname: same\nmodel: inherit\n---\nbody\n", encoding="utf-8")
     project = tmp_path / "proj"; (project / ".claude" / "agents").mkdir(parents=True)
     (project / ".claude" / "agents" / "local.md").write_text("---\nname: local\n---\n", encoding="utf-8")
-    assert not hook.agent_inherits("cheap", "", home=tmp_path)
-    assert hook.agent_inherits("plain", "", home=tmp_path) and hook.agent_inherits("same", "", home=tmp_path)
-    assert hook.agent_inherits("local", str(project), home=tmp_path)
-    assert not hook.agent_inherits("someone-elses:agent", "", home=tmp_path)   # unknown type: hands off
+    (project / ".claude" / "agents" / "cheap.md").write_text("---\nmodel: sonnet\n---\n", encoding="utf-8")
+    assert hook.declared_model("cheap", "", home=tmp_path) == (True, "haiku")
+    assert hook.declared_model("cheap", str(project), home=tmp_path) == (True, "sonnet")   # the project's file first
+    assert hook.declared_model("quoted", "", home=tmp_path) == (True, "opus")
+    assert hook.declared_model("plain", "", home=tmp_path) == (True, None)
+    assert hook.declared_model("same", "", home=tmp_path) == (True, None)
+    assert hook.declared_model("local", str(project), home=tmp_path) == (True, None)
+    assert hook.declared_model("general-purpose", "", home=tmp_path) == (True, None)        # built-in, inherits
+    assert hook.declared_model("missing", "", home=tmp_path) == (False, None)
+    assert hook.declared_model("someone-elses:agent", "", home=tmp_path) == (False, None)   # unknown type: hands off
+
+def test_front_matter_is_only_at_the_top_of_the_file(tmp_path):
+    agents = tmp_path / ".claude" / "agents"; agents.mkdir(parents=True)
+    (agents / "ruled.md").write_text("# Ruled\n\nSome text.\n\n---\nmodel: haiku\n---\n\nMore.\n", encoding="utf-8")
+    assert hook.declared_model("ruled", "", home=tmp_path) == (True, None)
+    new, why = hook.decide({**CALL, "subagent_type": "ruled"}, "claude-fable-5-2", home=tmp_path)
+    assert (new["model"], why) == ("opus", "set")
 
 def event(tmp_path, main="claude-fable-5-2", **tool_input):
     return {"hook_event_name": "PreToolUse", "tool_name": "Agent", "session_id": "s" * 40, "cwd": str(tmp_path),
-            "transcript_path": record(tmp_path, [assistant(main)]), "tool_input": {**CALL, **tool_input}}
+            "tool_use_id": "toolu_1", "transcript_path": record(tmp_path, [assistant(main)]),
+            "tool_input": {**CALL, **tool_input}}
 
 def run_check(tmp_path, monkeypatch, capsys, ev):
     monkeypatch.setattr(hook, "STATE", tmp_path / "state")
@@ -139,8 +181,9 @@ def test_the_handler_rewrites_the_model_and_never_decides_permission(tmp_path, m
     spec = out["hookSpecificOutput"]
     assert spec["hookEventName"] == "PreToolUse" and spec["updatedInput"]["model"] == "opus"
     assert "permissionDecision" not in spec and set(out) == {"hookSpecificOutput"}
-    assert lines == [{"ts": lines[0]["ts"], "session": "s" * 16, "type": "general-purpose", "asked": None,
-                      "model": "opus", "main": "claude-fable-5-2", "reason": "set"}]
+    assert lines == [{"ts": lines[0]["ts"], "session": "s" * 16, "tool_use_id": "toolu_1", "type": "general-purpose",
+                      "asked": None, "model": "opus", "main": "claude-fable-5-2", "reason": "set"}]
+    assert isinstance(lines[0]["ts"], float)
 
 def test_the_handler_is_silent_when_nothing_changes_but_still_logs(tmp_path, monkeypatch, capsys):
     out, lines = run_check(tmp_path, monkeypatch, capsys, event(tmp_path, model="sonnet"))
@@ -148,27 +191,51 @@ def test_the_handler_is_silent_when_nothing_changes_but_still_logs(tmp_path, mon
 
 @pytest.mark.parametrize("mode", ["advise", "off"])
 def test_the_handler_does_nothing_unless_enforcing(tmp_path, monkeypatch, capsys, mode):
-    (tmp_path / "c.json").write_text(json.dumps({"delegation": mode}))
+    (tmp_path / "c.json").write_text(json.dumps({"delegation": mode}), encoding="utf-8")
     monkeypatch.setattr(hook, "CONFIG", tmp_path / "c.json")
     out, lines = run_check(tmp_path, monkeypatch, capsys, event(tmp_path))
-    assert out is None and lines[0]["reason"] == "off"
+    assert out is None and lines[0]["reason"] == mode and lines[0]["tool_use_id"] == "toolu_1"
 
 def test_other_tools_and_broken_events_pass_untouched(tmp_path, monkeypatch, capsys):
     for ev in ({"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": "ls"}},
                {"hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": "not a dict"},
                {"hook_event_name": "PreToolUse", "tool_name": "Agent"}):
-        out, _ = run_check(tmp_path, monkeypatch, capsys, ev)
+        out, lines = run_check(tmp_path, monkeypatch, capsys, ev)
         assert out is None
+        assert lines == []
 
 def test_the_old_tool_name_is_handled_too(tmp_path, monkeypatch, capsys):
     out, _ = run_check(tmp_path, monkeypatch, capsys, {**event(tmp_path), "tool_name": "Task"})
     assert out["hookSpecificOutput"]["updatedInput"]["model"] == "opus"
 
+def stdin(text):
+    """A stand-in for piped stdin: the hook reads its bytes."""
+    return io.TextIOWrapper(io.BytesIO(text.encode("utf-8")), encoding="utf-8")
+
 def test_main_never_fails_a_tool_call(tmp_path, monkeypatch, capsys):
-    import io
     monkeypatch.setattr(hook, "delegation_check", lambda ev: 1 / 0)
-    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(event(tmp_path))))
+    monkeypatch.setattr("sys.stdin", stdin(json.dumps(event(tmp_path))))
     assert hook.main() == 0 and capsys.readouterr().out == ""
+
+HOOK_FILE = Path(hook.__file__)
+
+def run_hook_file(tmp_path, data: bytes):
+    """The hook file run on its own, as the assistant runs it, with nothing real in reach. Its text streams get
+    a Windows code page, as on a Turkish Windows machine, so reading stdin as text would garble or fail."""
+    env = {**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path),
+           "COUNCIL_CONFIG": str(tmp_path / "no-config.json"), "PYTHONIOENCODING": "cp1254:strict"}
+    return subprocess.run([sys.executable, str(HOOK_FILE)], input=data, capture_output=True, env=env, timeout=60)
+
+def test_the_hook_file_reads_its_input_as_utf8_bytes(tmp_path):
+    text = "Şu dosyayı özetle: çığ, öğüt, İstanbul 🙂"
+    data = json.dumps(event(tmp_path, prompt=text), ensure_ascii=False).encode("utf-8")
+    done = run_hook_file(tmp_path, data)
+    assert done.returncode == 0, done.stderr
+    assert json.loads(done.stdout)["hookSpecificOutput"]["updatedInput"]["prompt"].startswith(text)
+
+def test_the_hook_file_ignores_input_that_is_not_utf8(tmp_path):
+    done = run_hook_file(tmp_path, b"\x81\x8d{")
+    assert done.returncode == 0 and done.stdout == b"", done.stderr
 
 def test_parallel_decisions_are_whole_lines(tmp_path, monkeypatch):
     import threading
@@ -177,6 +244,32 @@ def test_parallel_decisions_are_whole_lines(tmp_path, monkeypatch):
     [t.start() for t in threads]; [t.join() for t in threads]
     rows = [json.loads(x) for x in (tmp_path / "d.jsonl").read_text(encoding="utf-8").splitlines()]
     assert sorted(r["n"] for r in rows) == list(range(40))
+
+def test_the_log_is_trimmed_to_its_newer_half_and_stays_whole(tmp_path, monkeypatch):
+    log = tmp_path / "d.jsonl"
+    monkeypatch.setattr(hook, "DELEGATION_LOG", log)
+    monkeypatch.setattr(hook, "LOG_LIMIT", 10_000)
+    for i in range(200):                                          # about 60 bytes a row: several trims
+        hook.log_decision({"n": i, "pad": "x" * 40})
+        assert log.stat().st_size <= hook.LOG_LIMIT
+    rows = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+    assert rows[-1]["n"] == 199 and [r["n"] for r in rows] == list(range(rows[0]["n"], 200))
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["d.jsonl"]            # no temp file left behind
+
+# Appends are not atomic across processes on Windows; a lost log row there is accepted.
+@pytest.mark.skipif(os.name == "nt", reason="appends are not atomic across processes on Windows")
+def test_processes_appending_at_once_leave_whole_lines(tmp_path):
+    data = json.dumps(event(tmp_path)).encode("utf-8")
+    env = {**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path),
+           "COUNCIL_CONFIG": str(tmp_path / "no-config.json")}
+    procs = [subprocess.Popen([sys.executable, str(HOOK_FILE)], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, env=env) for _ in range(12)]
+    for p in procs:
+        p.stdin.write(data); p.stdin.close()
+    assert all(p.wait(timeout=60) == 0 for p in procs)
+    lines = (tmp_path / ".council" / "state" / "delegation.jsonl").read_text(encoding="utf-8").splitlines()
+    rows = [json.loads(x) for x in lines]
+    assert len(rows) == 12 and all(r["reason"] == "set" for r in rows)
 
 FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "pretooluse_agent.json").read_text(encoding="utf-8"))
 
@@ -195,10 +288,9 @@ def test_a_call_from_inside_a_sub_agent_is_left_alone(tmp_path, monkeypatch, cap
 
 
 def start(monkeypatch, capsys, fetch):
-    import io
     monkeypatch.setattr(hook, "fetch", fetch)
     monkeypatch.setattr(hook, "load_config", lambda: {"url": "http://x", "token": "t"})
-    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"hook_event_name": "SessionStart", "session_id": "s1"})))
+    monkeypatch.setattr("sys.stdin", stdin(json.dumps({"hook_event_name": "SessionStart", "session_id": "s1"})))
     assert hook.main() == 0
     return json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
 
@@ -226,10 +318,9 @@ def test_advise_keeps_the_block_and_off_drops_it(tmp_path, monkeypatch, capsys):
     assert "[Delegation]" not in start(monkeypatch, capsys, lambda c, p: "MEMORY")
 
 def test_a_message_does_not_carry_the_block(monkeypatch, capsys):
-    import io
     monkeypatch.setattr(hook, "fetch", lambda c, p: "NOTES")
     monkeypatch.setattr(hook, "load_config", lambda: {"url": "http://x", "token": "t"})
-    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(
+    monkeypatch.setattr("sys.stdin", stdin(json.dumps(
         {"hook_event_name": "UserPromptSubmit", "session_id": "s1", "prompt": "hello"})))
     hook.main()
     assert "[Delegation]" not in capsys.readouterr().out
