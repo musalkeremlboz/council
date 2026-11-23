@@ -167,11 +167,11 @@ def _usage_events(raw: list[dict]) -> list[dict]:
         else:  # a pointer, or a kind this panel does not know
             continue
         out.append({"ts": e["ts"], "kind": kind, "title": text_tr.KIND_TITLES[kind], "path": path,
-                    "memory": memory, "steps": steps})
+                    "memory": memory, "steps": steps, "key": f"u{e['row']}"})
     return out
 
 
-def _write_event(ts: float, kind: str, paths: list[str]) -> dict:
+def _write_event(ts: float, kind: str, paths: list[str], key: str) -> dict:
     if kind in _WRITES:
         path = ["h3", "yaz", "haf"]
         steps = [_step("h3", "h3"), _step("yaz", f"yaz_{kind}", text_tr.VALUES["notes"].format(n=len(paths))),
@@ -180,7 +180,7 @@ def _write_event(ts: float, kind: str, paths: list[str]) -> dict:
         path = ["h3", "ogr", "haf"]
         steps = [_step("h3", "h3"), _step("ogr", f"ogr_{kind}"), _step("haf", "haf_written", _lines(paths))]
     return {"ts": ts, "kind": kind, "title": text_tr.KIND_TITLES[kind], "path": path, "memory": "written",
-            "steps": steps}
+            "steps": steps, "key": key}
 
 
 def _is_birth(change: dict) -> bool:
@@ -188,12 +188,17 @@ def _is_birth(change: dict) -> bool:
     return set(change["paths"]) <= set(SEED) and set(change["added"]) == set(change["paths"])
 
 
-def _write_events(changes: list[dict], data_dir, since: float) -> list[dict]:
-    out = [_write_event(c["ts"], _change_kind(c["paths"]), c["paths"]) for c in changes if not _is_birth(c)]
+def _write_events(history: list[dict], data_dir, since: float) -> list[dict]:
+    """The note changes at or after ``since``: the commits of ``history`` and the rules and skills learned. A
+    learning is dropped when a commit of its kind lies within ``_SAME_COMMIT`` seconds, whichever side of
+    ``since`` that commit is on, so one event never reaches a page under two keys."""
+    out = [_write_event(c["ts"], _change_kind(c["paths"]), c["paths"], "c" + c["id"][:12])
+           for c in _since(history, since) if not _is_birth(c)]
+    commits = [(_change_kind(c["paths"]), c["ts"]) for c in _since(history, since - _SAME_COMMIT) if not _is_birth(c)]
     for e in reader.learnings(data_dir, since):
         # a rule or skill is also a commit of its own; the commit already says so
-        if not any(o["kind"] == e["kind"] and abs(o["ts"] - e["ts"]) <= _SAME_COMMIT for o in out):
-            out.append(_write_event(e["ts"], e["kind"], [e["path"]]))
+        if not any(k == e["kind"] and abs(t - e["ts"]) <= _SAME_COMMIT for k, t in commits):
+            out.append(_write_event(e["ts"], e["kind"], [e["path"]], f"l{e['ts']!r}-{e['kind']}-{e['path']}"))
     return out
 
 
@@ -247,16 +252,83 @@ def schema(data_dir, now: dt.datetime, sampler=None) -> dict:
                   "service": _now_state(sampler, ts)["service"], "check": _check_totals(sampler),
                   "panel_version": __version__, "service_version": _service_version(sampler, ts)}
         numbers = _numbers(store, data_dir, ts, index, count, history)
-        events = _usage_events(reader.events(data_dir, since)) + _write_events(_since(history, since), data_dir, since)
+        events = _usage_events(reader.events(data_dir, since)) + _write_events(history, data_dir, since)
     events.sort(key=lambda e: e["ts"], reverse=True)
     return {"status": status, "lanes": list(mechanism.LANES), "blocks": mechanism.blocks(), "numbers": numbers,
             "events": events[:EVENT_COUNT]}
 
 
+# ---------- pulse ----------
+
+FUTURE_SLACK = 60  # seconds a mark may be ahead of the clock before it is not believed
+
+
+def _mark_of(since, now: float) -> float | None:
+    """``since`` as a time the clock could have shown, or None (not a number, NaN, negative, in the future)."""
+    if isinstance(since, bool) or not isinstance(since, (int, float)):
+        return None
+    since = float(since)
+    return since if 0 <= since <= now + FUTURE_SLACK else None  # a NaN fails both comparisons
+
+
+def _newest(data_dir, history: list[dict]) -> float:
+    """The time of the newest event the schema could list, 0.0 when there is none."""
+    times = [e["ts"] for e in reader.events(data_dir, 0, limit=20)
+             if e["kind"] != "pointer" and e["kind"] in _LANE_OF]
+    times += [c["ts"] for c in history[:1 + len(SEED)] if not _is_birth(c)][:1]
+    times += [e["ts"] for e in reader.learnings(data_dir, 0)[:1]]
+    return max(times, default=0.0)
+
+
+def pulse(data_dir, now: dt.datetime, since: float | None) -> dict:
+    """What happened after the mark ``since``: the events (as the schema lists them) strictly newer than it,
+    newest first, at most ``EVENT_COUNT``, and the mark to ask with next time. Without a usable ``since`` there
+    are no events, only the newest time. The history is the cached one; the skill index is not touched."""
+    since = _mark_of(since, now.timestamp())
+    with _memory(data_dir) as store:
+        head = reader.vault_head(store)
+        history = _history(store, data_dir, head)
+        if since is None:
+            return {"mark": _newest(data_dir, history), "events": []}
+        # from the start of the mark's second: a pointer recorded just before its inject still folds into it
+        # Commits are timed to the second and usage events to the fraction: a note change in the mark's own second
+        # may be newer than the mark, so it is sent again rather than lost (the page drops repeats by key).
+        second = float(int(since))
+        usage = [e for e in _usage_events(reader.events(data_dir, second)) if e["ts"] > since]
+        events = usage + _write_events(history, data_dir, second)
+    events.sort(key=lambda e: e["ts"], reverse=True)
+    events = events[:EVENT_COUNT]
+    return {"mark": max(events[0]["ts"], since) if events else since, "events": events}
+
+
 # ---------- today ----------
 
+SESSION_ID = 8  # characters of a session id the panel shows
+
+
+def _sessions(raw: list[dict]) -> tuple[list[dict], list[int]]:
+    """The day's sessions in order of their first event (events without a session last, as ``""``) and, for each
+    of the kept events (oldest first, ``raw``), the index of its session. Sessions are told apart by the whole
+    stored id (``key``); ``id`` is the part the page shows, so two sessions may show the same ``id``."""
+    found: dict[str, dict] = {}
+    for e in raw:
+        s = found.setdefault(e["session"], {"id": e["session"][:SESSION_ID], "key": e["session"],
+                                            "first_minute": e["minute"], "events": 0,
+                                            "at_limit": 0, "chars": 0, "last_minute": e["minute"]})
+        s["events"] += 1
+        s["at_limit"] += e["at_limit"]
+        s["chars"] += e["chars"]
+        s["last_minute"] = max(s["last_minute"], e["minute"])
+    ids = sorted(found, key=lambda i: i == "")  # stable: the others stay in the order of their first event
+    order = {i: n for n, i in enumerate(ids)}
+    sessions = [{k: found[i][k] for k in ("id", "key", "first_minute", "last_minute", "events", "at_limit", "chars")}
+                for i in ids]
+    return sessions, [order[e["session"]] for e in raw]
+
+
 def today(data_dir, now: dt.datetime) -> dict:
-    """Today's usage events (the memory's local day containing ``now``), their counts and the budgets."""
+    """Today's usage events (the memory's local day containing ``now``), their counts, the sessions they belong
+    to and the budgets."""
     local = now.astimezone()
     day = local.date()
     start = dt.datetime(day.year, day.month, day.day).timestamp()  # local midnight, whatever the offset then
@@ -268,12 +340,16 @@ def today(data_dir, now: dt.datetime) -> dict:
             continue  # a message that got no note is not counted and not drawn
         counts[lane] += 1
         out.append({"minute": moment.hour * 60 + moment.minute, "lane": lane, "chars": e["chars"],
-                    "at_limit": lane == "inject" and AT_LIMIT(e["chars"])})
+                    "at_limit": lane == "inject" and AT_LIMIT(e["chars"]), "kind": e["kind"], "paths": e["paths"],
+                    "session": e["session"]})
+    sessions, indices = _sessions(out)
+    for e, i in zip(out, indices):
+        e["session"] = i
     with _memory(data_dir) as store:
         plan = _plan(store)
         chars, listed, left = _index(store, data_dir, reader.vault_head(store))
     return {"date": day.isoformat(), "now_minute": local.hour * 60 + local.minute, "lanes": list(LANES),
-            "events": out, "counts": counts, "at_limit": sum(e["at_limit"] for e in out),
+            "events": out, "sessions": sessions, "counts": counts, "at_limit": sum(e["at_limit"] for e in out),
             "budgets": {"start": {"budget": context.START_BUDGET, "parts": _parts(plan), "left_out": _left_out(plan)},
                         "message": {"budget": context.MESSAGE_BUDGET, "min_room": context.MIN_ROOM},
                         "index": {"budget": learn.INDEX_BUDGET, "chars": chars, "listed": listed,

@@ -70,17 +70,21 @@ def _paths(hits: str | None) -> list[str]:
         return []
 
 
-def events(data_dir, since: float, limit: int = 500, kind: str | None = None) -> list[dict]:
-    """Usage events since ``since``, newest first: ``{"ts", "kind", "chars", "paths"}``. With ``kind``, only
-    events of that kind; the limit applies after that filter."""
+def events(data_dir, since: float, limit: int = 500, kind: str | None = None, strict: bool = False) -> list[dict]:
+    """Usage events since ``since``, newest first: ``{"ts", "kind", "chars", "paths", "session", "row"}``. With ``kind``,
+    only events of that kind; the limit applies after that filter. With ``strict``, only events newer than
+    ``since``. ``row`` is the log's row number. ``session`` is the id as stored (at most 16 characters), ``""`` when the event has none."""
     usage = _usage(data_dir)
     if usage is None:
         return []
     try:
-        where, args = ("ts >= ?", [since]) if kind is None else ("ts >= ? AND kind = ?", [since, kind])
-        rows = usage.db.execute(f"SELECT ts, kind, chars, hits FROM events WHERE {where} ORDER BY ts DESC LIMIT ?",
-                                (*args, limit)).fetchall()
-        return [{"ts": ts, "kind": kind, "chars": chars or 0, "paths": _paths(hits)} for ts, kind, chars, hits in rows]
+        cmp = ">" if strict else ">="
+        where, args = (f"ts {cmp} ?", [since]) if kind is None else (f"ts {cmp} ? AND kind = ?", [since, kind])
+        rows = usage.db.execute(f"SELECT ts, kind, chars, hits, session, rowid FROM events WHERE {where} "
+                                "ORDER BY ts DESC LIMIT ?", (*args, limit)).fetchall()
+        return [{"ts": ts, "kind": kind, "chars": chars or 0, "paths": _paths(hits),
+                 "session": session if isinstance(session, str) else "", "row": row}
+                for ts, kind, chars, hits, session, row in rows]
     except sqlite3.Error:
         return []
     finally:
@@ -199,7 +203,7 @@ def _log(store: Store, since: float) -> list[dict] | None:
     stamp = dt.datetime.fromtimestamp(max(since, 0), dt.timezone.utc).isoformat()
     env = {**os.environ, "GIT_CEILING_DIRECTORIES": str(store.vault.parent), "GIT_TERMINAL_PROMPT": "0"}
     try:
-        r = subprocess.run(["git", "-C", str(store.vault), "log", f"--since={stamp}", "--format=@%at",
+        r = subprocess.run(["git", "-C", str(store.vault), "log", f"--since={stamp}", "--format=@%at %H",
                             "--name-status", "--", "*.md"], capture_output=True, text=True, encoding="utf-8",
                            errors="replace", timeout=GIT_TIMEOUT, env=env)
     except (OSError, subprocess.SubprocessError):
@@ -208,8 +212,9 @@ def _log(store: Store, since: float) -> list[dict] | None:
         return None
     out: list[dict] = []
     for line in r.stdout.splitlines():
-        if line.startswith("@") and line[1:].isdigit():
-            out.append({"ts": float(line[1:]), "paths": [], "added": []})
+        stamp_, _, commit = line[1:].partition(" ")
+        if line.startswith("@") and stamp_.isdigit():
+            out.append({"ts": float(stamp_), "paths": [], "added": [], "id": commit})
             continue
         m = _STATUS.match(line)
         if m and out:
@@ -223,7 +228,7 @@ def _log(store: Store, since: float) -> list[dict] | None:
 
 
 def changes(store: Store, since: float) -> list[dict]:
-    """Commits touching notes since ``since``, newest first: ``{"ts", "paths", "added"}``. Only the time of a
+    """Commits touching notes since ``since``, newest first: ``{"ts", "paths", "added", "id"}``. Only the time and id of a
     commit and the status and path of each file are asked of git; a commit's subject is never requested."""
     return _log(store, since) or []
 

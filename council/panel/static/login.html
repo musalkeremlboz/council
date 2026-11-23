@@ -4,12 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
 <title>{{title}}</title>
+<script src="{{base}}/static/theme.js"></script>
 <link rel="stylesheet" href="{{base}}/static/panel.css">
 </head>
 <body class="giris">
 <main class="kapi">
-<svg class="amblem" viewBox="0 0 400 400" role="img" aria-label="{{brand}}"><defs><mask id="kesik-panel" maskUnits="userSpaceOnUse" x="0" y="0" width="400" height="400"><rect width="400" height="400" fill="#fff"/><path transform="translate(200 200)" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0" fill="none" stroke="#000" stroke-width="48"/></mask></defs><g fill="none" stroke-width="28"><circle cx="200" cy="200" r="112" stroke="#E8421F" mask="url(#kesik-panel)"/><path transform="translate(200 200) rotate(45)" stroke="#111416" d="M168 0A168 168 0 1 1 0 -168"/><path transform="translate(200 200)" stroke="#111416" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0"/></g></svg>
+<svg class="amblem" viewBox="0 0 400 400" role="img" aria-label="{{brand}}"><defs><mask id="kesik-panel" maskUnits="userSpaceOnUse" x="0" y="0" width="400" height="400"><rect width="400" height="400" fill="#fff"/><path transform="translate(200 200)" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0" fill="none" stroke="#000" stroke-width="48"/></mask></defs><g fill="none" stroke-width="28"><circle cx="200" cy="200" r="112" class="amblem-vurgu" mask="url(#kesik-panel)"/><path transform="translate(200 200) rotate(45)" class="amblem-murekkep" d="M168 0A168 168 0 1 1 0 -168"/><path transform="translate(200 200)" class="amblem-murekkep" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0"/></g></svg>
 <h1 class="marka">{{brand}}</h1>
 <form method="post" action="{{base}}/login" class="form">
 <p class="hata" role="alert">{{error}}</p>

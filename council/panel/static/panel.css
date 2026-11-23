@@ -8,6 +8,7 @@
 @font-face { font-family: "DM Mono"; src: url("fonts/DMMono-Medium.ttf") format("truetype"); font-weight: 500; font-display: swap; }
 
 :root {
+  color-scheme: light;
   --zemin: #F4F5F3;
   --murekkep: #111416;
   --vurgu: #E8421F;
@@ -17,10 +18,58 @@
   --kil: #D5D8D4;
   --kontrol: #848B91;
   --hata: #B3123F; /* error and connection state only */
+  /* the map's stage: dark in both themes; in the dark theme it sits below the ground behind an edge */
+  --sahne: #111416;
+  --sahne-kenar: #111416;
+  --sahne-yazi: #F4F5F3;
+  --sahne-etiket: #D5D8D4;
+  --sahne-cizgi: #4A5157;
+  --sahne-ipucu: #848B91;
   --kose: 12px;
   --gosterim: "Council Halka", "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --metin: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* The dark theme is the system inverted: ground and ink swap, the accent stays. The same tokens twice: once when
+   the owner chose dark, once when the system is dark and the owner chose nothing (theme.js sets data-theme). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --zemin: #111416;
+  --murekkep: #F4F5F3;
+  --vurgu: #E8421F;
+  --yuzey: #1A1E21;
+  --sakin: #262B2F;
+  --ikincil: #A6AEB4;
+  --kil: #33393E;
+  --kontrol: #737B82;
+  --hata: #FF6F8C;
+  --sahne: #090B0C;
+  --sahne-kenar: #3C4349;
+  --sahne-yazi: #F4F5F3;
+  --sahne-etiket: #D5D8D4;
+  --sahne-cizgi: #4A5157;
+  --sahne-ipucu: #848B91;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --zemin: #111416;
+    --murekkep: #F4F5F3;
+    --vurgu: #E8421F;
+    --yuzey: #1A1E21;
+    --sakin: #262B2F;
+    --ikincil: #A6AEB4;
+    --kil: #33393E;
+    --kontrol: #737B82;
+    --hata: #FF6F8C;
+    --sahne: #090B0C;
+    --sahne-kenar: #3C4349;
+    --sahne-yazi: #F4F5F3;
+    --sahne-etiket: #D5D8D4;
+    --sahne-cizgi: #4A5157;
+    --sahne-ipucu: #848B91;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -49,6 +98,9 @@ body { margin: 0; background: var(--zemin); color: var(--murekkep); font-family:
 .ust { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 0 0 20px; }
 .kimlik { display: flex; align-items: center; gap: 12px; }
 .amblem-kucuk { width: 44px; height: 44px; flex: 0 0 44px; }
+/* the mark's strokes follow the theme: ink rings, the accent ring */
+.amblem-murekkep { stroke: var(--murekkep); }
+.amblem-vurgu { stroke: var(--vurgu); }
 .ust .marka { font-size: 28px; line-height: 1.1; letter-spacing: 0.05em; }
 .ust nav { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 auto; }
 .ust nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid var(--kontrol); border-radius: 999px; color: var(--murekkep); text-decoration: none; font-size: 14px; font-weight: 600; }
@@ -103,8 +155,10 @@ button.anahtar[aria-pressed="true"]:hover { background: var(--ikincil); border-c
 .sema-sol { flex: 999 1 720px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
 .olaylar-kart { flex: 1 1 320px; }
 
-.cizim { display: flex; flex-wrap: nowrap; align-items: stretch; }
-.seritler { flex: 999 1 520px; min-width: 0; overflow-x: auto; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; padding: 4px 0 8px; }
+/* the drawing clips the travelling dot; 4px of room on every side (given back by the margin) keeps the focus ring
+   of a block at its edge whole, and the lanes box gives its first blocks the same room on the left */
+.cizim { position: relative; overflow: hidden; display: flex; flex-wrap: nowrap; align-items: stretch; padding: 4px; margin: -4px; }
+.seritler { flex: 999 1 520px; min-width: 0; overflow-x: auto; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; padding: 4px 0 8px 4px; margin-left: -4px; }
 .serit { display: flex; flex-direction: column; gap: 8px; min-width: max-content; }
 .serit-baslik { display: flex; align-items: baseline; gap: 10px; }
 .serit-alt { font-size: 12px; color: var(--ikincil); }
@@ -122,9 +176,8 @@ button.anahtar[aria-pressed="true"]:hover { background: var(--ikincil); border-c
 .hat { position: relative; flex: 0 0 34px; height: 2px; background: var(--kil); }
 .hat.son { flex: 1 1 34px; min-width: 34px; }
 .hat.etkin { background: var(--murekkep); }
-.nokta { position: absolute; left: 0; top: -4px; width: 10px; height: 10px; border-radius: 999px; background: var(--vurgu); }
-.nokta.akar { animation: akis 1.1s linear infinite; }
-@keyframes akis { from { left: 0; } to { left: calc(100% - 10px); } }
+/* the travelling dot: one per event, moved by the script along the event's blocks, then gone */
+.nokta { position: absolute; left: 0; top: 0; z-index: 1; width: 10px; height: 10px; border-radius: 999px; background: var(--vurgu); opacity: 0; pointer-events: none; }
 
 .hafiza-sutun { flex: 1 1 200px; border-left: 2px solid var(--murekkep); padding: 4px 0 4px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
 .halka { width: 156px; height: 156px; padding: 0; border-radius: 999px; border: 16px solid var(--vurgu); background: var(--yuzey); color: var(--murekkep); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
@@ -188,13 +241,15 @@ button.anahtar[aria-pressed="true"]:hover { background: var(--ikincil); border-c
 .eksen .iz .orta { transform: translateX(-50%); }
 .eksen .iz .simdi-yazi { padding-left: 4px; color: var(--murekkep); }
 
-.isaret { position: absolute; padding: 0; border: 0; border-radius: 999px; background: var(--murekkep); opacity: 0.8; }
-.isaret:hover { opacity: 1; background: var(--ikincil); }
+/* the marks are an overview, not controls: the session rows below are what is clicked */
+.isaret { position: absolute; display: block; border-radius: 999px; background: var(--murekkep); opacity: 0.8; pointer-events: none; }
 .isaret.tur-start, .isaret.tur-open { border: 2px solid var(--murekkep); background: var(--yuzey); }
-.isaret.tur-start:hover, .isaret.tur-open:hover { border-color: var(--ikincil); background: var(--yuzey); }
 .isaret.tur-search { border-radius: 999px 0 0 999px; }
 .isaret.tur-pointer { border-radius: 0 999px 999px 0; }
-.isaret.secili, .isaret.secili:hover { opacity: 1; background: var(--vurgu); border-color: var(--vurgu); }
+/* a session is open: its marks stay in ink, the others take the quiet tone */
+.isaret.ote:not(.secili) { background: var(--kil); opacity: 1; }
+.isaret.tur-start.ote:not(.secili), .isaret.tur-open.ote:not(.secili) { border-color: var(--kil); background: var(--yuzey); }
+.isaret.secili { opacity: 1; background: var(--vurgu); border-color: var(--vurgu); }
 .isaret.sonuk { opacity: 0.15; }
 .isaret.yeni { animation: dogus 0.4s ease-out 1; }
 @keyframes dogus { from { opacity: 0; transform: scale(0.4); } }
@@ -202,6 +257,39 @@ button.anahtar[aria-pressed="true"]:hover { background: var(--ikincil); border-c
 .aciklama { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin-top: 16px; font-size: 12px; color: var(--ikincil); }
 .secili-ornek { display: inline-flex; align-items: center; gap: 6px; }
 .ornek-nokta { width: 10px; height: 10px; border-radius: 999px; background: var(--vurgu); }
+
+/* the day's sessions: one row each, opening in place on its events */
+.oturumlar { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--kil); }
+.oturumlar > .etiket { margin: 0; }
+.oturumlar > .not { margin: 4px 0 12px; }
+.oturum-listesi, .oturum-olaylari { list-style: none; margin: 0; padding: 0; }
+.oturum { border-bottom: 1px solid var(--kil); }
+.oturum:first-child { border-top: 1px solid var(--kil); }
+.oturum.acik { background: var(--zemin); }
+button.oturum-satir { width: 100%; min-height: 44px; display: grid; grid-template-columns: 120px 96px minmax(0, 1fr) 16px; align-items: center; gap: 4px 16px; padding: 10px 12px; border: 0; border-radius: 0; background: transparent; color: var(--murekkep); text-align: left; font-size: 14px; line-height: 20px; }
+button.oturum-satir:hover { background: var(--sakin); border-color: transparent; }
+button.oturum-satir:focus-visible, button.olay-satir:focus-visible { outline-offset: -2px; }
+.oturum-saat { white-space: nowrap; }
+.oturum-kimlik { color: var(--ikincil); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oturum-ozet { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; min-width: 0; }
+.oturum-sayi { font-weight: 600; }
+.oturum-tur { font-size: 13px; color: var(--ikincil); }
+.oturum-sinir { font-size: 13px; font-weight: 600; }
+.oturum-ok { justify-self: end; width: 8px; height: 8px; border-right: 2px solid var(--murekkep); border-bottom: 2px solid var(--murekkep); transform: rotate(45deg); }
+.oturum.acik .oturum-ok { transform: rotate(225deg); }
+
+.oturum-panel { min-height: 0; }
+.olay-tablo { padding: 0 0 8px; }
+.olay-baslik, button.olay-satir { display: grid; grid-template-columns: 56px minmax(0, 180px) minmax(0, 200px) minmax(0, 1fr); gap: 2px 16px; align-items: start; }
+.olay-baslik { padding: 4px 12px 4px 32px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--ikincil); }
+button.olay-satir { position: relative; width: 100%; min-height: 44px; padding: 12px 12px 12px 32px; border: 0; border-top: 1px solid var(--sakin); border-radius: 0; background: transparent; color: var(--murekkep); text-align: left; font-size: 14px; line-height: 20px; }
+button.olay-satir:hover { background: var(--sakin); border-color: var(--sakin); }
+button.olay-satir.secili::before { content: ""; position: absolute; left: 12px; top: 17px; width: 10px; height: 10px; border-radius: 999px; background: var(--vurgu); }
+.olay-karakter { display: flex; flex-wrap: wrap; gap: 0 8px; }
+.olay-sinir { font-weight: 600; }
+.olay-yollar { display: flex; flex-direction: column; min-width: 0; font-size: 12px; line-height: 20px; }
+.olay-yol { overflow-wrap: anywhere; }
+.bos-yol { color: var(--ikincil); }
 
 .halkalar { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 24px 32px; }
 .butce { display: flex; gap: 20px; align-items: center; min-width: 0; }
@@ -290,10 +378,10 @@ button.bolge[aria-pressed="true"]:hover { background: var(--ikincil); border-col
 .harita-ozet { font-size: 13px; color: var(--ikincil); }
 .harita-dugmeler { display: flex; flex-wrap: wrap; gap: 6px; }
 button.yuvarlak { width: 44px; min-height: 44px; padding: 0; font-weight: 600; background: var(--yuzey); }
-.sahne { position: relative; border-radius: var(--kose); overflow: hidden; background: var(--murekkep); }
+.sahne { position: relative; border-radius: var(--kose); overflow: hidden; background: var(--sahne); border: 1px solid var(--sahne-kenar); }
 .harita-tuval { display: block; width: 100%; height: 640px; cursor: grab; touch-action: pan-y; user-select: none; }
 .harita-tuval:active { cursor: grabbing; }
-.ipucu { position: absolute; left: 16px; bottom: 12px; margin: 0; pointer-events: none; font-size: 11px; letter-spacing: 0.06em; color: var(--kontrol); }
+.ipucu { position: absolute; left: 16px; bottom: 12px; margin: 0; pointer-events: none; font-size: 11px; letter-spacing: 0.06em; color: var(--sahne-ipucu); }
 .lejant { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; color: var(--ikincil); }
 .lejant li { display: inline-flex; align-items: center; gap: 6px; }
 .lejant-isaret { flex: 0 0 auto; border-radius: 999px; }
@@ -303,7 +391,18 @@ button.yuvarlak { width: 44px; min-height: 44px; padding: 0; font-weight: 600; b
 .son-ornek { width: 6px; height: 6px; background: var(--vurgu); }
 .harita-secim { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .harita-secim label { margin: 0; }
-select.secim { flex: 1 1 260px; min-width: 0; max-width: 100%; min-height: 44px; padding: 8px 12px; font-size: 13px; color: var(--murekkep); background: var(--yuzey); border: 1px solid var(--kontrol); border-radius: 22px 0 0 22px; }
+/* the note picker: a field that filters and the matching paths under it, drawn by the panel, not the browser */
+.secici { position: relative; flex: 1 1 260px; min-width: 0; max-width: 100%; }
+input.secim-alan { width: 100%; min-height: 44px; padding: 8px 14px; font-size: 13px; color: var(--murekkep); background: var(--yuzey); border: 1px solid var(--kontrol); border-radius: 22px 0 0 22px; }
+input.secim-alan::placeholder { color: var(--ikincil); opacity: 1; }
+.secim-liste { position: absolute; z-index: 3; left: 0; right: 0; top: calc(100% + 4px); max-height: 320px; overflow-y: auto; padding: 4px 0; background: var(--yuzey); border: 1px solid var(--kontrol); border-radius: var(--kose); }
+.secim-liste[hidden] { display: none; }
+button.secim-satir { display: block; width: 100%; min-height: 44px; padding: 12px 14px 12px 11px; border: 0; border-left: 3px solid transparent; border-radius: 0; background: transparent; color: var(--murekkep); text-align: left; font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
+button.secim-satir:hover { background: var(--sakin); border-color: transparent; }
+button.secim-satir.etkin { background: var(--sakin); border-left-color: var(--vurgu); }
+button.secim-satir[aria-selected="true"] { font-weight: 500; }
+button.secim-temizle { color: var(--ikincil); }
+.secim-fazla { margin: 0; padding: 8px 14px; font-size: 12px; line-height: 16px; color: var(--ikincil); }
 .secili-not { display: flex; flex-direction: column; gap: 12px; }
 .secili-yol { font-size: 15px; line-height: 22px; overflow-wrap: anywhere; }
 .fisler { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -345,6 +444,36 @@ button.komsu:hover { background: var(--sakin); border-color: var(--murekkep); }
 .siradaki { padding: 14px 16px; display: flex; gap: 14px; }
 .sira-no { flex: 0 0 32px; height: 32px; border: 3px solid var(--murekkep); border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
 .siradaki-yazi { min-width: 0; display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
+
+/* ---------- settings: a column of cards ---------- */
+
+.ayarlar { display: flex; flex-direction: column; gap: 24px; max-width: 760px; }
+.ayarlar p { margin: 0; }
+.ayarlar .on-cumle { margin-top: 4px; }
+.ayar-kart h2 { margin: 0; }
+.ayar-kart > .on-cumle { margin: 4px 0 20px; }
+/* three choices side by side, one pressed: ink with the accent edge, like a selected event */
+.secenekler { display: flex; gap: 8px; }
+button.secenek { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 12px; font-size: 14px; font-weight: 600; background: var(--yuzey); color: var(--murekkep); border: 1px solid var(--kontrol); }
+button.secenek:hover { background: var(--sakin); border-color: var(--murekkep); }
+button.secenek[aria-pressed="true"], button.secenek[aria-pressed="true"]:hover { background: var(--murekkep); color: var(--zemin); border: 2px solid var(--vurgu); padding: 7px 11px; }
+.ayar-kart .not { margin-top: 12px; }
+/* the password: a form of three fields; the sessions: two facts and the buttons that close the others */
+.sifre-claude { max-width: 560px; font-size: 14px; line-height: 20px; }
+.sifre-form { display: grid; gap: 12px; max-width: 420px; margin-top: 16px; }
+.ayar-kart .sifre-form .not { margin-top: 0; }
+.alan-grup { display: grid; gap: 4px; min-width: 0; }
+.alan-grup label { color: var(--ikincil); font-size: 14px; line-height: 20px; }
+input.alan { width: 100%; min-height: 44px; padding: 10px 16px; font: inherit; color: var(--murekkep); background: var(--yuzey); border: 1px solid var(--kontrol); border-radius: 999px; }
+input.alan:hover { border-color: var(--murekkep); }
+.dugmeler { display: flex; flex-wrap: wrap; gap: 8px; }
+.dugmeler button { min-height: 44px; }
+.oturum-kutu .dugmeler { margin-top: 16px; }
+button:disabled, button:disabled:hover { cursor: default; background: var(--sakin); border-color: var(--kil); color: var(--ikincil); }
+.cevap { min-height: 20px; font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
+.cevap.kotu { color: var(--hata); }
+.oturum-kutu > .cevap { margin-top: 12px; }
+.acik-oturum-sayi { font-size: 18px; line-height: 26px; font-weight: 600; }
 
 /* ---------- health ---------- */
 
@@ -407,6 +536,13 @@ button.komsu:hover { background: var(--sakin); border-color: var(--murekkep); }
   .hafiza-sutun { flex: 0 0 auto; border-left: 0; border-top: 2px solid var(--murekkep); padding: 20px 0 0; margin-top: 16px; }
   .gosterim.buyuk { font-size: 32px; }
   .butce { flex-wrap: wrap; }
+  button.oturum-satir { grid-template-columns: auto minmax(0, 1fr) 16px; gap: 2px 12px; }
+  .oturum-ozet { grid-column: 1 / 3; grid-row: 2; }
+  .oturum-ok { grid-column: 3; grid-row: 1 / 3; }
+  .olay-baslik { display: none; }
+  button.olay-satir { grid-template-columns: 48px minmax(0, 1fr); gap: 2px 12px; }
+  .olay-karakter { grid-column: 2; }
+  .olay-yollar { grid-column: 1 / -1; }
   .sira-baslik, .sira-satir { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; }
   .sira-baslik .sira-yol, .sira-satir .sira-yol { grid-column: 1 / -1; }
   .harita-tuval { height: 480px; }

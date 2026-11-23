@@ -255,13 +255,15 @@ Aynı yedek kendi bilgisayarındaki hafıza için de kurulabilir: uzak depoyu `~
 
 ### Paneli kur
 
-Panel, hafızanın nasıl çalıştığını tarayıcıdan izlemene yarar. Şunları gösterir: hafızanın işleyişini canlı bloklar olarak, bugünün olaylarını, sağlık durumunu, notların haritasını, notların kullanımını ve sürümleri. Not yollarını, sayıları ve saatleri gösterir; not metnini hiçbir yerde göstermez.
+Panel, hafızanın nasıl çalıştığını tarayıcıdan izlemene yarar. Şunları gösterir: hafızanın işleyişini canlı bloklar olarak, bugünün olaylarını, sağlık durumunu, notların haritasını, notların kullanımını, sürümleri ve ayarları (tema, şifre değiştirme, diğer oturumları kapatma). Not yollarını, sayıları ve saatleri gösterir; not metnini hiçbir yerde göstermez.
 
-Panel hafızayı yalnız okur. Yazdığı tek dosya veri klasöründeki `panel.sqlite3` dosyasıdır: oturumlar, yanlış girişler, sağlık örnekleri ve denetim sonuçları (soru metni yok) orada durur.
+Panel hafızayı yalnız okur. Kendi dosyası veri klasöründeki `panel.sqlite3` dosyasıdır: oturumlar, yanlış girişler, sağlık örnekleri ve denetim sonuçları (soru metni yok) orada durur. Bunun dışında yazdığı tek dosya `owner.json`'dur; o da yalnız Ayarlar bölümünde sahip şifresini değiştirdiğinde.
 
 Girmek için sahip şifresi gerekir (`council set-password`, bkz. yukarıdaki kurulum). Beş yanlış şifre girişi 15 dakika kilitler. Bu kilit giriş sayfasına ulaşabilen herkes için ortaktır: başkasının yanlış denemeleri seni de 15 dakikalığına dışarıda bırakabilir. Hafıza servisinin kendi giriş sayfasında da durum aynıdır. Biri yanlış şifre denemeyi sürdürdükçe kilit kapalı kalır; o sırada zaten girmiş oturumlar çalışmaya devam eder.
 
-Oturumlar `panel.sqlite3` dosyasında durur; bu yüzden şifreyi değiştirmek de panel servisini yeniden başlatmak da açık oturumları bitirmez. Bir oturum, çıkış yapınca ya da girişten 12 saat sonra biter. Hepsini hemen bitirmek için panel servisini durdur, `panel.sqlite3` dosyasını sil (sağlık geçmişi ve denetim sonuçları da silinir) ve servisi yeniden başlat.
+Sahip şifresini panelin Ayarlar bölümünden de değiştirebilirsin: şu anki şifreyi ve en az 10, en çok 200 karakterlik yeni şifreyi iki kez girersin. Bu aynı şifre bir Claude uygulamasını hafızaya bağlarken de sorulur; hafıza servisi `owner.json` dosyasını her denetimde yeniden okuduğu için yeni şifre orada da hemen geçerli olur (servisi yeniden başlatmak gerekmez). Şifreyi değiştirmek, hafızaya zaten bağlı uygulamaların bağlantısını kesmez. Yanlış girilen şu anki şifre, yanlış bir giriş gibi kilide sayılır. Panel dosyayı yarım bırakmaz: yeni kaydı aynı klasörde geçici bir dosyaya yazar, yalnız sahibin okuyabileceği hâle getirir ve eskisinin yerine koyar.
+
+Oturumlar `panel.sqlite3` dosyasında durur. Şifreyi panelden değiştirmek, değiştirdiğin oturum dışındaki bütün panel oturumlarını kapatır; `council set-password` ile değiştirmek ya da panel servisini yeniden başlatmak açık oturumları bitirmez. Ayarlar bölümü kaç oturumun açık olduğunu ve seninkinin ne zaman biteceğini gösterir; "Diğer oturumları kapat" düğmesi seninki dışındakileri bir onaydan sonra kapatır. Bir oturum, çıkış yapınca ya da girişten 12 saat sonra biter. Kendi oturumun dahil hepsini hemen bitirmek için panel servisini durdur, `panel.sqlite3` dosyasını sil (sağlık geçmişi ve denetim sonuçları da silinir) ve servisi yeniden başlat.
 
 Elle çalıştırmak için:
 

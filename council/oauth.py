@@ -10,12 +10,15 @@ local Claude Code clients.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import hmac
 import html
 import json
+import os
 import secrets
 import sqlite3
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -41,6 +44,8 @@ PENDING_TTL = 600
 HOSTED_CALLBACKS = {"https://claude.ai/api/mcp/auth_callback", "https://claude.com/api/mcp/auth_callback"}
 MAX_FAILURES = 5
 FAILURE_WINDOW = 900
+MIN_PASSWORD = 10   # characters, not bytes; the command line and the panel ask the same
+MAX_PASSWORD = 200
 
 
 def _h(token: str) -> str:
@@ -54,15 +59,63 @@ def allowed_redirect(uri: str) -> bool:
     return p.scheme == "http" and p.hostname in ("localhost", "127.0.0.1") and p.path == "/callback"
 
 
+def _encode(password: str) -> bytes:
+    """UTF-8 bytes of a password; a string that has none (a lone surrogate) raises a ValueError whose words carry
+    no character of it, so no log or traceback can."""
+    try:
+        return password.encode("utf-8")
+    except UnicodeEncodeError:
+        pass
+    raise ValueError("the password is not valid UTF-8")
+
+
 def hash_password(password: str) -> dict:
     salt = secrets.token_bytes(16)
-    dk = hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1)
+    dk = hashlib.scrypt(_encode(password), salt=salt, n=2**14, r=8, p=1)
     return {"salt": salt.hex(), "hash": dk.hex(), "n": 2**14}
 
 
 def check_password(password: str, record: dict) -> bool:
-    dk = hashlib.scrypt(password.encode(), salt=bytes.fromhex(record["salt"]), n=record["n"], r=8, p=1)
+    try:
+        raw = _encode(password)
+    except ValueError:
+        return False
+    dk = hashlib.scrypt(raw, salt=bytes.fromhex(record["salt"]), n=record["n"], r=8, p=1)
     return hmac.compare_digest(dk.hex(), record["hash"])
+
+
+def _keep_owner(old: Path, tmp: str) -> None:
+    """Give the new file the old one's owner and group, so a service running as its own user can still read a file
+    the owner replaced with sudo. Where that is not allowed or not possible (Windows), the file stays as it is."""
+    chown = getattr(os, "chown", None)
+    if chown is None:
+        return
+    try:
+        st = os.stat(old)
+        chown(tmp, st.st_uid, st.st_gid)
+    except OSError:  # PermissionError included; no old file
+        pass
+
+
+def write_owner(data_dir: Path, password: str) -> None:
+    """Replace owner.json with the record of a new password, whole or not at all: the record goes to a temporary
+    file in the same folder (so the rename is atomic), readable by the owner alone, then takes the old one's place.
+    The memory service reads the file on every check, so the new password holds there at once."""
+    data = Path(data_dir)
+    body = json.dumps(hash_password(password))
+    fd, tmp = tempfile.mkstemp(prefix=".owner-", suffix=".tmp", dir=data)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(body)
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp, 0o600)
+        _keep_owner(data / "owner.json", tmp)
+        os.replace(tmp, data / "owner.json")
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
 
 
 class OwnerOAuthProvider:

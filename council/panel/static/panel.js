@@ -1,5 +1,6 @@
 /* The shell of the panel: one section at a time, chosen by the address fragment, refreshed every five seconds
-   while the tab is visible. Section files register themselves in Panel.sections under their API name and only
+   while the tab is visible (a section marked local is drawn once and never asks; one marked drawsWithout, like the
+   settings, is drawn without data when its first answer fails and filled in when an answer comes). Section files register themselves in Panel.sections under their API name and only
    ever build the page with createElement and textContent. Every word shown comes from Panel.texts. */
 (function () {
   "use strict";
@@ -13,7 +14,7 @@
   var EVERY = 5000;
   // fragment -> the section's API name (also its key in Panel.sections)
   var ROUTES = { sema: "schema", bugun: "today", saglik: "health", harita: "map", notlar: "notes",
-    guncellemeler: "releases" };
+    guncellemeler: "releases", ayarlar: "settings" };
   var FIRST = "sema";
 
   function SignedOut() { this.name = "SignedOut"; }
@@ -73,8 +74,13 @@
     }
   };
 
+  /* get("pulse", {query: {since: 12.5}}) asks /api/pulse?since=12.5; a 401 goes to the sign-in page */
   function get(section, options) {
-    return fetch(base + "/api/" + encodeURIComponent(section), {
+    var query = options && options.query, pairs = [];
+    Object.keys(query || {}).forEach(function (k) {
+      if (query[k] !== null && query[k] !== undefined) pairs.push(encodeURIComponent(k) + "=" + encodeURIComponent(String(query[k])));
+    });
+    return fetch(base + "/api/" + encodeURIComponent(section) + (pairs.length ? "?" + pairs.join("&") : ""), {
       credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" },
       signal: options && options.signal
     }).then(function (r) {
@@ -84,6 +90,21 @@
     }).then(function (data) {
       if (!data || data.error) throw new Error((data && data.error) || "empty");
       return data;
+    });
+  }
+
+  /* post("password", {...}) sends JSON to /api/password from this page (the browser adds its Origin) and resolves
+     {status, data} for every answer but a 401, which goes to the sign-in page; data is null when the answer is not
+     JSON. The body is the caller's: nothing here keeps it. */
+  function post(path, body) {
+    return fetch(base + "/api/" + path, {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(body === undefined ? {} : body)
+    }).then(function (r) {
+      if (r.status === 401) { window.location.assign(base + "/login"); throw new SignedOut(); }
+      return r.json().then(function (data) { return { status: r.status, data: data }; },
+        function () { return { status: r.status, data: null }; });
     });
   }
 
@@ -113,7 +134,7 @@
   var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var Panel = window.Panel = {
-    base: base, texts: texts, get: get, el: el, svg: svg, fill: fill, fmt: fmt, rebuild: rebuild,
+    base: base, texts: texts, get: get, post: post, el: el, svg: svg, fill: fill, fmt: fmt, rebuild: rebuild,
     reducedMotion: reduced, sections: {}
   };
 
@@ -179,7 +200,12 @@
       if (view !== current || error instanceof SignedOut || (error && error.name === "AbortError")) return;
       // keep the last data; say so quietly
       say(texts.offline);
-      if (!view.drawn) {
+      if (!view.drawn && view.section.drawsWithout) {
+        // the parts that need no answer are drawn now; the next answer that comes fills in the rest
+        while (view.box.firstChild) view.box.removeChild(view.box.firstChild);
+        view.section.render(view.box, null);
+        view.drawn = true;
+      } else if (!view.drawn) {
         while (view.box.firstChild) view.box.removeChild(view.box.firstChild);
         view.box.appendChild(el("p", { class: "yer-tutucu" }, texts.unavailable));
       }
@@ -200,6 +226,11 @@
     var name = ROUTES[route], section = Panel.sections[name];
     if (!section) {
       box.appendChild(el("p", { class: "yer-tutucu" }, texts.placeholder));
+      return;
+    }
+    if (section.local) {
+      // drawn from the browser alone: nothing to ask the server, nothing to poll
+      section.render(box, {});
       return;
     }
     box.appendChild(el("p", { class: "yer-tutucu" }, texts.loading));

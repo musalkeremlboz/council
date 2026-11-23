@@ -23,7 +23,7 @@ def test_the_reader_gives_paths_and_counts_and_none_of_the_text(leaky):
     assert not [s for s in SECRETS if s in text]
     assert any(n["path"].startswith(f"projects/{ODD_FOLDER}/") for n in out["notes"])  # an odd name arrives as it is
     assert {e["kind"] for e in out["events"]} >= {"inject", "read", "search"}
-    assert all(set(e) == {"ts", "kind", "chars", "paths"} for e in out["events"])
+    assert all(set(e) == {"ts", "kind", "chars", "paths", "session", "row"} for e in out["events"])
     assert out["links"] and out["changes"] and out["changes"][0]["paths"]
     assert any(f"projects/{ODD_FOLDER}/plan.md" in c["paths"] for c in out["changes"])  # git's quoting is undone
     assert {l["kind"] for l in out["learn"]} == {"rule", "skill"}
@@ -110,3 +110,21 @@ def test_events_can_be_filtered_by_kind_before_the_limit(panel_data):
     assert [e["paths"] for e in reader.events(panel_data, 0, limit=1, kind="inject")] == [["n2.md"]]
     assert reader.events(panel_data, 0, kind="start") == []
     assert len(reader.events(panel_data, 0)) == 5
+
+
+def test_events_carry_the_session_id_as_stored_and_can_be_cut_strictly_after_a_time(leaky):
+    import time
+
+    from council.usage import Usage
+
+    t = time.time() + 100
+    usage = Usage(leaky / "usage.sqlite3")
+    try:
+        usage.record("read", "x" * 40, "", 1, None, [], ts=t)
+        usage.record("read", "", "", 1, None, [], ts=t + 1)
+    finally:
+        usage.db.close()
+    top = reader.events(leaky, t)
+    assert [e["session"] for e in top] == ["", "x" * 16]
+    assert [e["session"] for e in reader.events(leaky, t, strict=True)] == [""]
+    assert {e["session"] for e in reader.events(leaky, 0)} >= {"s1"}

@@ -18,7 +18,10 @@
   var ZOOM = [0.5, 2.8], WHEEL = [1.08, 0.93], STEP_ZOOM = 1.2, TURN = 0.35, DRAG = 0.008, PITCH = 1.3;
   var SPEED = 0.075;                // radians a second
   var CLICK = 4;                    // pixels a press may move and still be a click
-  var INK = "#111416", GROUND = "#F4F5F3", ACCENT = "#E8421F", HAIRLINE = "#D5D8D4", SECONDARY = "#4A5157";
+  // the stage's colours, read from the stylesheet's tokens each time a picture is painted (they follow the theme)
+  // (the named colour after each token only stands in when no stylesheet answers)
+  var TONES = { stage: ["--sahne", "black"], mark: ["--sahne-yazi", "white"], label: ["--sahne-etiket", "silver"],
+    line: ["--sahne-cizgi", "gray"], accent: ["--vurgu", "orangered"] };
   var states = new WeakMap();
 
   function upper(text) { return String(text).toLocaleUpperCase("tr-TR"); }
@@ -203,16 +206,25 @@
     return { yaw: s.view.yaw, pitch: s.view.pitch, zoom: s.view.zoom, scale: f.scale, perspective: f.perspective };
   }
 
+  function tones() {
+    var style = window.getComputedStyle ? window.getComputedStyle(document.documentElement) : null, out = {};
+    Object.keys(TONES).forEach(function (k) {
+      out[k] = (style && style.getPropertyValue(TONES[k][0]).trim()) || TONES[k][1];
+    });
+    return out;
+  }
+
   function paint(s) {
     var c = s.canvas, ctx = s.ctx;
     if (!ctx) return;
+    var tone = tones(), STAGE = tone.stage, MARK = tone.mark, ACCENT = tone.accent, LABEL = tone.label, LINE = tone.line;
     var w = c.clientWidth || 0, h = c.clientHeight || 0, ratio = window.devicePixelRatio || 1;
     if (c.width !== Math.round(w * ratio) || c.height !== Math.round(h * ratio)) {
       c.width = Math.round(w * ratio); c.height = Math.round(h * ratio);
     }
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = INK;
+    ctx.fillStyle = STAGE;
     ctx.fillRect(0, 0, w, h);
     ctx.translate(w / 2, h / 2);
     var m = s.model, v = viewOf(s), shown = shownNotes(m, s.hidden), q = projectAll(m, v), unit = v.zoom * v.scale;
@@ -220,7 +232,7 @@
     if (sel >= 0) { near[sel] = true; m.notes[sel].neighbours.forEach(function (i) { near[i] = true; }); }
 
     ctx.lineWidth = 1;
-    ctx.strokeStyle = SECONDARY;
+    ctx.strokeStyle = LINE;
     ring(ctx, 0, 0, m.extent * unit);
     ctx.strokeStyle = ACCENT;
     ctx.lineWidth = Math.max(3, 9 * unit);
@@ -228,7 +240,7 @@
     ring(ctx, 0, 0, CORE_RING * unit);
 
     ctx.lineWidth = 1;
-    ctx.strokeStyle = GROUND;
+    ctx.strokeStyle = MARK;
     m.links.forEach(function (l) {
       if (!shown[l[0]] || !shown[l[1]]) return;
       ctx.globalAlpha = sel < 0 ? 0.17 : (l[0] === sel || l[1] === sel ? 0.9 : 0.06);
@@ -240,7 +252,7 @@
       var p = q[n.i], radius = Math.max(3, n.r * p[3]), chosen = n.i === sel;
       ctx.globalAlpha = sel >= 0 && !near[n.i] ? 0.22 : depthAlpha(p[2]);
       if (chosen) ctx.globalAlpha = 1;
-      var colour = chosen ? ACCENT : GROUND;
+      var colour = chosen ? ACCENT : MARK;
       if (n.skill) { ctx.strokeStyle = colour; ctx.lineWidth = 2; ring(ctx, p[0], p[1], radius - 1); }
       else { ctx.fillStyle = colour; disc(ctx, p[0], p[1], radius); }
       if (chosen) { ctx.strokeStyle = ACCENT; ctx.lineWidth = 2; ring(ctx, p[0], p[1], radius + 4); }
@@ -248,7 +260,7 @@
     });
 
     ctx.globalAlpha = 1;
-    ctx.fillStyle = HAIRLINE;
+    ctx.fillStyle = LABEL;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.font = "600 11px " + face("--metin", "sans-serif");
@@ -265,10 +277,10 @@
     labelled(m, shown, sel, s.names).forEach(function (i) {
       var n = m.notes[i], p = q[i], x = p[0] + n.r * p[3] + 6, y = p[1], width = ctx.measureText(n.name).width;
       ctx.globalAlpha = 1;
-      ctx.fillStyle = INK;
+      ctx.fillStyle = STAGE;
       ctx.fillRect(x - 5, y - 8, width + 10, 16);
       ctx.globalAlpha = i === sel ? 1 : 0.85;
-      ctx.fillStyle = GROUND;
+      ctx.fillStyle = MARK;
       ctx.fillText(n.name, x, y);
     });
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -300,6 +312,7 @@
     s.stopped = true;
     document.removeEventListener("visibilitychange", s.onVisible);
     window.removeEventListener("resize", s.onResize);
+    window.removeEventListener("council-theme", s.onTheme);
     if (s.observer) s.observer.disconnect();
   }
 
@@ -358,17 +371,136 @@
     ];
   }
 
-  function picker(s, shown) {
-    var sel = s.selected;
-    var options = [el("option", { value: "", selected: sel === null }, t.pick_none)].concat(
-      s.model.notes.filter(function (n, i) { return shown[i]; }).map(function (n) {
-        return el("option", { value: n.path, selected: n.path === sel }, n.path);
-      }));
-    return [el("label", { class: "etiket ikincil-yazi", for: "harita-sec" }, upper(t.pick_label)),
-      el("select", { id: "harita-sec", class: "secim mono", "data-key": "secim", onchange: function (e) {
-        var i = e.target.value ? s.model.index.get(e.target.value) : -1;
-        select(s, i === undefined ? -1 : i);
-      } }, options)];
+  // ---------- the note picker: a field that filters, a list of the matching paths under it ----------
+
+  var PICK_ROWS = 50;
+
+  /* the paths that contain the query, ignoring case the Turkish way (dotted and dotless I): the first `cap` and how many match */
+  function filterNotes(paths, query, cap) {
+    var q = String(query || "").trim().toLocaleLowerCase("tr-TR"), items = [], total = 0;
+    paths.forEach(function (p) {
+      if (q && String(p).toLocaleLowerCase("tr-TR").indexOf(q) < 0) return;
+      total += 1;
+      if (items.length < cap) items.push(p);
+    });
+    return { items: items, total: total };
+  }
+
+  /* built once: the field keeps its text and focus while the map's answers come and go */
+  function pickerParts(s) {
+    var k = s.pick = { open: false, active: -1, items: [] };
+    k.input = el("input", { id: "harita-sec", type: "text", class: "secim-alan mono", role: "combobox", autocomplete: "off",
+      spellcheck: "false", "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": "harita-liste",
+      placeholder: t.pick_placeholder,
+      onfocus: function () { openPicker(s); },
+      onclick: function () { if (!k.open) openPicker(s); },
+      oninput: function () { k.active = -1; openPicker(s); },
+      onkeydown: function (e) { pickerKey(s, e); } });
+    // a press inside the list (a row, its scroll bar) never takes the focus from the field; Tab passes it by
+    k.list = el("div", { id: "harita-liste", class: "secim-liste", role: "listbox", "aria-label": t.pick_list,
+      hidden: true, tabindex: "-1",
+      onmousedown: function (e) { e.preventDefault(); } });
+    k.box = el("div", { class: "secici", onfocusout: function (e) {
+      if (!e.relatedTarget || !k.box.contains(e.relatedTarget)) closePicker(s);
+    } }, [k.input, k.list]);
+    return [el("label", { class: "etiket ikincil-yazi", for: "harita-sec" }, upper(t.pick_label)), k.box];
+  }
+
+  /* the field shows the selected note's path; while that path is all it holds, the list shows every note */
+  function queryOf(s) { return s.pick.input.value === (s.selected || "") ? "" : s.pick.input.value; }
+
+  function fillPicker(s) {
+    var k = s.pick, m = s.model, shown = shownNotes(m, s.hidden), query = queryOf(s);
+    var found = filterNotes(m.notes.filter(function (n, i) { return shown[i]; }).map(function (n) { return n.path; }),
+      query, PICK_ROWS);
+    var activePath = k.active >= 0 ? k.items[k.active] : undefined;
+    // null stands for "no note": offered first while a note is selected and nothing is typed
+    k.items = (s.selected !== null && !query.trim() ? [null] : []).concat(found.items);
+    k.active = activePath === undefined ? -1 : k.items.indexOf(activePath);
+    var top = query === k.query ? k.list.scrollTop : 0;  // a new answer for the same query keeps the list's place
+    k.query = query;
+    P.rebuild(k.list, function () {
+      k.items.forEach(function (path, i) {
+        k.list.appendChild(el("button", { type: "button", role: "option", tabindex: "-1", id: "harita-secenek-" + i,
+          class: "secim-satir" + (path === null ? " secim-temizle" : " mono") + (i === k.active ? " etkin" : ""),
+          "aria-selected": path !== null && path === s.selected ? "true" : "false",
+          onclick: function () { choose(s, i); } }, path === null ? t.pick_clear : path));
+      });
+      if (!found.total) k.list.appendChild(el("p", { class: "secim-fazla" }, t.pick_empty));
+      else if (found.total > found.items.length) {
+        k.list.appendChild(el("p", { class: "secim-fazla" },
+          P.fill(t.pick_more, { n: fmt.number(found.total - found.items.length) })));
+      }
+    });
+    k.list.scrollTop = top;
+    activate(s, k.active);
+  }
+
+  function activate(s, i) {
+    var k = s.pick, rows = k.list.querySelectorAll ? k.list.querySelectorAll("[role=option]") : [];
+    k.active = i;
+    Array.prototype.forEach.call(rows, function (row, j) {
+      if (j === i) row.classList.add("etkin"); else row.classList.remove("etkin");
+    });
+    if (i >= 0 && rows[i]) {
+      k.input.setAttribute("aria-activedescendant", rows[i].id);
+      if (rows[i].scrollIntoView) rows[i].scrollIntoView({ block: "nearest" });
+    } else k.input.removeAttribute("aria-activedescendant");
+  }
+
+  function openPicker(s) {
+    var k = s.pick;
+    if (!k.open) {
+      k.open = true;
+      k.list.hidden = false;
+      k.input.setAttribute("aria-expanded", "true");
+      if (k.input.value && !queryOf(s)) k.input.select();  // typing replaces the selected path
+    }
+    fillPicker(s);
+  }
+
+  function closePicker(s) {
+    var k = s.pick;
+    k.open = false;
+    k.list.hidden = true;
+    k.input.setAttribute("aria-expanded", "false");
+    k.active = -1;
+    k.input.removeAttribute("aria-activedescendant");
+    k.input.value = s.selected || "";  // what was typed and not chosen goes; the field shows the selection again
+  }
+
+  function choose(s, i) {
+    var path = s.pick.items[i];
+    if (path === undefined) return;
+    var index = path === null ? -1 : s.model.index.get(path);
+    closePicker(s);
+    select(s, index === undefined ? -1 : index);
+    s.pick.input.value = s.selected || "";
+  }
+
+  function pickerKey(s, e) {
+    var k = s.pick;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!k.open) { openPicker(s); return; }
+      var last = k.items.length - 1;
+      if (last < 0) return;
+      activate(s, e.key === "ArrowDown" ? Math.min(last, k.active + 1) : Math.max(0, k.active - 1));
+    } else if (e.key === "Enter" && k.open) {
+      e.preventDefault();
+      if (k.active >= 0) choose(s, k.active);
+      else if (k.items.length === 1) choose(s, 0);
+    } else if (e.key === "Escape" && k.open) {
+      e.preventDefault();
+      closePicker(s);  // the focus stays in the field
+    }
+  }
+
+  /* after every change of the map: the field follows the selection unless the owner is typing in it */
+  function syncPicker(s) {
+    var k = s.pick;
+    if (document.activeElement !== k.input) k.input.value = s.selected || "";
+    if (k.open) fillPicker(s);
   }
 
   function card(s) {
@@ -404,7 +536,8 @@
     s.parts.summary.textContent = P.fill(t.map_sum, { notes: fmt.number(count), links: fmt.number(links),
       regions: fmt.number(regions) });
     P.rebuild(s.parts.controls, function () { controls(s, count).forEach(function (n) { s.parts.controls.appendChild(n); }); });
-    P.rebuild(s.parts.picker, function () { picker(s, shown).forEach(function (n) { s.parts.picker.appendChild(n); }); });
+    if (!s.pick) pickerParts(s).forEach(function (n) { s.parts.picker.appendChild(n); });
+    syncPicker(s);
     P.rebuild(s.parts.card, function () { s.parts.card.appendChild(card(s)); });
   }
 
@@ -452,7 +585,9 @@
       if (document.visibilityState === "visible") { s.last = 0; frame(s); }
     };
     s.onResize = function () { if (!s.root.isConnected) stop(s); else frame(s); };
+    s.onTheme = function () { if (!s.root.isConnected) stop(s); else frame(s); };
     document.addEventListener("visibilitychange", s.onVisible);
+    window.addEventListener("council-theme", s.onTheme);
     if (window.ResizeObserver) { s.observer = new window.ResizeObserver(s.onResize); s.observer.observe(c); }
     else window.addEventListener("resize", s.onResize);
   }
@@ -514,5 +649,5 @@
   };
   // for the checks: the layout and the hit test as plain functions
   P.map = { layout: layout, project: project, projectAll: projectAll, shownNotes: shownNotes, hitTest: hitTest,
-    labelled: labelled, fit: fit, placeLabels: placeLabels, NAMES_LIMIT: NAMES_LIMIT, FRAME: FRAME };
+    labelled: labelled, fit: fit, placeLabels: placeLabels, filterNotes: filterNotes, NAMES_LIMIT: NAMES_LIMIT, FRAME: FRAME };
 })();

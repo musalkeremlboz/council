@@ -109,19 +109,21 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "set-password":
         import getpass
 
-        from .oauth import hash_password
+        from . import oauth
 
         if a.generate:
             words = secrets.token_urlsafe(18)
             password = "-".join(words[i:i + 6] for i in range(0, 18, 6))
         else:
             password = getpass.getpass("New owner password: ")
-            if len(password) < 10 or password != getpass.getpass("Repeat: "):
-                print("passwords differ or shorter than 10 characters", file=sys.stderr)
+            if len(password) < oauth.MIN_PASSWORD or password != getpass.getpass("Repeat: "):
+                print(f"passwords differ or shorter than {oauth.MIN_PASSWORD} characters", file=sys.stderr)
                 return 1
-        f = data / "owner.json"
-        f.write_text(json.dumps(hash_password(password)))
-        os.chmod(f, 0o600)
+        try:
+            oauth.write_owner(data, password)
+        except ValueError as e:
+            print(f"council: {e}", file=sys.stderr)  # the words carry no character of the password
+            return 1
         print(password if a.generate else "owner password set")
         return 0
 

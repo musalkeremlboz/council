@@ -75,3 +75,43 @@ def test_the_health_address_and_the_panel_file_give_away_no_question(leaky_panel
     assert leaky_panel.get("/panel/api/health").json()["runs"], "the leak test proves nothing on an empty history"
     raw = b"".join(p.read_bytes() for p in leaky.glob("panel.sqlite3*"))
     assert not leaked(raw.decode("utf-8", errors="replace"))
+
+
+def test_the_pulse_and_the_session_fields_give_away_no_text(leaky_panel, leaky):
+    import time
+
+    from council.usage import Usage
+
+    usage = Usage(leaky / "usage.sqlite3")
+    try:
+        usage.record("inject", "sess0002abcdefgh", "MESAJ-SIRRI", 300, None,
+                     [{"path": "projects/ev/kaynak.md", "heading": "BASLIK-SIRRI"}], ts=time.time())
+    finally:
+        usage.db.close()
+    # the query text of the event carries a marker; the session id is shown and is not text
+    for url in ("/panel/api/pulse", "/panel/api/pulse?since=1", "/panel/api/pulse?since=abc"):
+        body = leaky_panel.get(url).text
+        assert not leaked(body), url
+    assert leaky_panel.get("/panel/api/pulse?since=1").json()["events"], "the leak test proves nothing on no events"
+    today = leaky_panel.get("/panel/api/today").json()
+    assert today["sessions"] and all(set(s) == {"id", "key", "first_minute", "last_minute", "events", "at_limit", "chars"}
+                                     for s in today["sessions"])
+    assert not leaked(str(today))
+
+
+def test_the_settings_and_the_two_writes_give_away_no_text_and_no_password(leaky_panel):
+    same = {"Origin": "http://127.0.0.1:8766"}
+    settings = leaky_panel.get("/panel/api/settings")
+    assert set(settings.json()) == {"sessions", "expires", "min_length"} and not leaked(settings.text)
+    answers = [leaky_panel.post("/panel/api/password", json=body, headers=same) for body in (
+        {"current": "yanlis-sifre", "new": "yepyeni-sifre-456"},
+        {"current": PASSWORD, "new": "kisa"},
+        {"current": PASSWORD, "new": PASSWORD},
+        {"current": "GOVDE-SIRRI", "new": "GOVDE-SIRRI"},
+    )]
+    answers.append(leaky_panel.post("/panel/api/sessions/close-others", headers=same))
+    answers.append(leaky_panel.post("/panel/api/password", json={"current": PASSWORD, "new": "yepyeni-sifre-456"},
+                                    headers=same))
+    assert answers[-1].status_code == 200
+    for r in answers:
+        assert not leaked(r.text) and PASSWORD not in r.text and "yepyeni" not in r.text, r.text

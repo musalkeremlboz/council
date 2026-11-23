@@ -8,7 +8,7 @@ from council.oauth import hash_password
 from council.panel.app import SECTIONS, build
 
 PAGES = ["/panel/"]
-API = [f"/panel/api/{s}" for s in ("schema", "today", "health", "map", "notes", "releases")]
+API = [f"/panel/api/{s}" for s in ("schema", "today", "health", "map", "notes", "releases", "settings")]
 
 
 def test_nothing_is_served_without_a_session(panel):
@@ -103,7 +103,7 @@ def test_static_files_are_open_and_the_section_api_names_its_section(panel, pane
     assert panel.get("/panel/static/yok.css").status_code == 404
     assert set(panel_signed_in.get("/panel/api/health").json()) == {"summary", "days", "runs", "missing"}
     assert panel_signed_in.get("/panel/api/nope").status_code == 404
-    assert SECTIONS == ("schema", "today", "health", "map", "notes", "releases")
+    assert SECTIONS == ("schema", "today", "health", "map", "notes", "releases", "settings")
 
 
 def test_no_owner_password_gives_503_with_the_sentence(tmp_path):
@@ -156,3 +156,288 @@ def test_a_sign_in_from_the_same_host_opens_and_from_another_host_is_refused(pan
     assert r.status_code == 303 and "council_panel=" in r.headers.get("set-cookie", "")
     r = panel.post("/panel/login", data={"password": "dogru-sifre-123"}, headers={"Origin": "http://127.0.0.2:8766"})
     assert r.status_code == 403 and "set-cookie" not in r.headers
+
+
+def test_the_pulse_address_is_closed_signed_out_and_answers_signed_in(panel, panel_signed_in):
+    stranger = TestClient(panel.app, base_url="http://127.0.0.1:8766", follow_redirects=False)
+    try:
+        r = stranger.get("/panel/api/pulse")
+        assert r.status_code == 401 and r.json() == {"error": "signed_out"}
+    finally:
+        stranger.close()
+    r = panel_signed_in.get("/panel/api/pulse")
+    assert r.status_code == 200 and set(r.json()) == {"mark", "events"} and r.json()["events"] == []
+    for since in ("abc", "", "nan", "-5", "1e999"):
+        r = panel_signed_in.get("/panel/api/pulse", params={"since": since})
+        assert r.status_code == 200 and r.json()["events"] == [], since
+    assert "pulse" not in SECTIONS
+    assert panel_signed_in.get("/panel/api/schema").status_code == 200
+
+
+def test_the_pulse_address_runs_the_view_and_answers_unavailable_when_it_fails(panel_signed_in, monkeypatch):
+    from council.panel import views
+
+    def boom(*args):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(views, "pulse", boom)
+    r = panel_signed_in.get("/panel/api/pulse")
+    assert r.status_code == 200 and r.json() == {"error": "unavailable"}
+
+
+# ---------- the two writes: the password and the other sessions ----------
+
+SAME_ORIGIN = {"Origin": "http://127.0.0.1:8766"}
+NEW = "yepyeni-sifre-456"
+
+
+def change(client, body, headers=SAME_ORIGIN):
+    return client.post("/panel/api/password", json=body, headers=headers)
+
+
+def second_session(app):
+    other = TestClient(app, base_url="http://127.0.0.1:8766", follow_redirects=False)
+    assert other.post("/panel/login", data={"password": "dogru-sifre-123"}).status_code == 303
+    return other
+
+
+def test_the_two_writes_refuse_a_missing_a_foreign_and_a_null_origin(panel_signed_in):
+    for headers in ({}, {"Origin": "https://baska.example"}, {"Origin": "null"}, {"Origin": "http://127.0.0.1:9999"}):
+        r = change(panel_signed_in, {"current": "dogru-sifre-123", "new": NEW}, headers=headers)
+        assert r.status_code == 403 and NEW not in r.text, headers
+        r = panel_signed_in.post("/panel/api/sessions/close-others", headers=headers)
+        assert r.status_code == 403, headers
+    assert panel_signed_in.post("/panel/login", data={"password": "dogru-sifre-123"}).status_code == 303  # unchanged
+    assert panel_signed_in.app.state.gate.db.execute("SELECT COUNT(*) FROM failures").fetchone()[0] == 0
+
+
+def test_signed_out_the_two_writes_and_the_settings_answer_401(panel):
+    assert change(panel, {"current": "dogru-sifre-123", "new": NEW}).json() == {"error": "signed_out"}
+    assert change(panel, {"current": "dogru-sifre-123", "new": NEW}).status_code == 401
+    r = panel.post("/panel/api/sessions/close-others", headers=SAME_ORIGIN)
+    assert r.status_code == 401 and r.json() == {"error": "signed_out"}
+    r = panel.get("/panel/api/settings")
+    assert r.status_code == 401 and r.json() == {"error": "signed_out"}
+
+
+def test_every_answer_of_a_password_change_and_none_echoes_a_password(panel_signed_in):
+    from council.oauth import MIN_PASSWORD
+
+    c = panel_signed_in
+    cases = [
+        ({"current": "dogru-sifre-123", "new": "kisa"}, 400, {"error": "weak"}),
+        ({"current": "dogru-sifre-123", "new": "k" * 201}, 400, {"error": "weak"}),
+        ({"current": "dogru-sifre-123", "new": "dogru-sifre-123"}, 400, {"error": "same"}),
+        ({"current": "yanlis-sifre-789", "new": NEW}, 403, {"error": "wrong"}),
+        ({"current": "dogru-sifre-123"}, 400, {"error": "bad_request"}),
+        ({"current": 5, "new": NEW}, 400, {"error": "bad_request"}),
+        (["dogru-sifre-123", NEW], 400, {"error": "bad_request"}),
+    ]
+    for body, status, answer in cases:
+        r = change(c, body)
+        assert (r.status_code, r.json()) == (status, answer), body
+        for word in ("dogru-sifre-123", NEW, "yanlis-sifre-789", "kisa"):
+            assert word not in r.text, (body, word)
+    r = c.post("/panel/api/password", content=b"{not json", headers={**SAME_ORIGIN, "Content-Type": "application/json"})
+    assert (r.status_code, r.json()) == (400, {"error": "bad_request"})
+    r = c.post("/panel/api/password", data={"current": "dogru-sifre-123", "new": NEW}, headers=SAME_ORIGIN)
+    assert (r.status_code, r.json()) == (400, {"error": "bad_request"})   # a form post is not the page's request
+    r = c.post("/panel/api/password", content=b"{" + b" " * 10000 + b"}",
+               headers={**SAME_ORIGIN, "Content-Type": "application/json"})
+    assert (r.status_code, r.json()) == (400, {"error": "bad_request"})
+    assert c.get("/panel/api/settings").json()["min_length"] == MIN_PASSWORD
+
+
+def test_a_change_closes_the_other_sessions_and_the_new_password_opens_the_door(panel_signed_in):
+    c = panel_signed_in
+    other = second_session(c.app)
+    try:
+        assert c.get("/panel/api/settings").json()["sessions"] == 2
+        r = change(c, {"current": "dogru-sifre-123", "new": NEW})
+        assert (r.status_code, r.json()) == (200, {"ok": True, "closed": 1}) and NEW not in r.text
+        assert c.get("/panel/api/schema").status_code == 200       # the caller stays signed in
+        assert other.get("/panel/api/schema").status_code == 401   # the other session is closed
+        assert other.post("/panel/login", data={"password": "dogru-sifre-123"}).status_code == 401
+        assert other.post("/panel/login", data={"password": NEW}).status_code == 303
+    finally:
+        other.close()
+
+
+def test_five_wrong_current_passwords_lock_the_door_and_the_change_answers_429(panel_signed_in):
+    c = panel_signed_in
+    for _ in range(5):
+        assert change(c, {"current": "yanlis-sifre-789", "new": NEW}).status_code == 403
+    r = change(c, {"current": "dogru-sifre-123", "new": NEW})
+    assert (r.status_code, r.json()) == (429, {"error": "locked"})
+    stranger = TestClient(c.app, base_url="http://127.0.0.1:8766", follow_redirects=False)
+    try:
+        assert stranger.post("/panel/login", data={"password": "dogru-sifre-123"}).status_code == 429
+    finally:
+        stranger.close()
+
+
+def test_closing_the_other_sessions_answers_how_many_and_keeps_the_callers(panel_signed_in):
+    c = panel_signed_in
+    others = [second_session(c.app) for _ in range(2)]
+    try:
+        info = c.get("/panel/api/settings").json()
+        assert set(info) == {"sessions", "expires", "min_length"} and info["sessions"] == 3
+        r = c.post("/panel/api/sessions/close-others", headers=SAME_ORIGIN)
+        assert (r.status_code, r.json()) == (200, {"closed": 2})
+        assert all(o.get("/panel/api/schema").status_code == 401 for o in others)
+        assert c.get("/panel/api/settings").json()["sessions"] == 1
+        assert c.post("/panel/api/sessions/close-others", headers=SAME_ORIGIN).json() == {"closed": 0}
+    finally:
+        for o in others:
+            o.close()
+
+
+def test_a_change_that_cannot_be_written_answers_unavailable_and_changes_nothing(panel_signed_in, monkeypatch):
+    from council import oauth
+
+    def refuse(*a, **k):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(oauth, "write_owner", refuse)
+    r = change(panel_signed_in, {"current": "dogru-sifre-123", "new": NEW})
+    assert (r.status_code, r.json()) == (500, {"error": "unavailable"})
+    monkeypatch.undo()
+    assert panel_signed_in.get("/panel/api/schema").status_code == 200
+
+
+def test_no_log_record_carries_a_password(panel_signed_in, caplog, monkeypatch):
+    import logging
+
+    from council import oauth
+
+    caplog.set_level(logging.DEBUG)
+    c = panel_signed_in
+    change(c, {"current": "yanlis-sifre-789", "new": NEW})
+    change(c, {"current": "dogru-sifre-123", "new": "kisa-ama-gizli"[:9]})
+    real = oauth.write_owner
+
+    def refuse(*a, **k):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(oauth, "write_owner", refuse)
+    change(c, {"current": "dogru-sifre-123", "new": NEW})            # a failure is logged with its traceback
+    monkeypatch.setattr(oauth, "write_owner", real)
+    assert change(c, {"current": "dogru-sifre-123", "new": NEW}).status_code == 200
+    assert caplog.records, "the failure above is logged, so the capture is live"
+    for rec in caplog.records:
+        text = rec.getMessage() + (logging.Formatter().formatException(rec.exc_info) if rec.exc_info else "")
+        for word in ("dogru-sifre-123", NEW, "yanlis-sifre-789", "kisa-ama-"):
+            assert word not in text, (rec.name, word)
+
+
+# ---------- fix round 1 ----------
+
+def test_an_empty_origin_is_refused_like_a_missing_one(panel_signed_in):
+    other = second_session(panel_signed_in.app)
+    try:
+        r = change(panel_signed_in, {"current": "dogru-sifre-123", "new": NEW}, headers={"Origin": ""})
+        assert r.status_code == 403
+        r = panel_signed_in.post("/panel/api/sessions/close-others", headers={"Origin": ""})
+        assert r.status_code == 403
+        assert other.get("/panel/api/schema").status_code == 200          # nobody was signed out
+        assert other.post("/panel/login", data={"password": "dogru-sifre-123"}).status_code == 303
+    finally:
+        other.close()
+
+
+def test_a_password_that_cannot_be_utf8_is_a_bad_request_before_the_gate(panel_signed_in, panel_data, caplog):
+    import logging
+
+    caplog.set_level(logging.DEBUG)
+    before = (panel_data / "owner.json").read_bytes()
+    gate = panel_signed_in.app.state.gate
+    for body in ('{"current": "dogru-sifre-123", "new": "abcdefghij\\ud800"}',
+                 '{"current": "dogru-sifre-12\\udfff", "new": "yepyeni-sifre-456"}'):
+        r = panel_signed_in.post("/panel/api/password", content=body.encode(),
+                                 headers={**SAME_ORIGIN, "Content-Type": "application/json"})
+        assert (r.status_code, r.json()) == (400, {"error": "bad_request"}), body
+    assert gate.db.execute("SELECT COUNT(*) FROM failures").fetchone()[0] == 0
+    assert (panel_data / "owner.json").read_bytes() == before
+    for rec in caplog.records:
+        text = rec.getMessage() + (logging.Formatter().formatException(rec.exc_info) if rec.exc_info else "")
+        for word in ("ud800", "udfff", "\ud800", "\udfff", "abcdefghij", "position", "dogru-sifre"):
+            assert word not in text, (rec.name, word)
+
+
+def test_the_gate_itself_refuses_a_password_that_cannot_be_utf8_without_raising(panel_data):
+    from council.panel.gate import Gate
+
+    g = Gate(panel_data)
+    try:
+        mine = g.sign_in("dogru-sifre-123", now=1.0)
+        assert g.change_password(mine, "dogru-sifre-123", "abcdefghij\ud800", now=2.0) == "weak"
+        assert g.change_password(mine, "dogru\ud800", "yepyeni-sifre-456", now=2.0) == "wrong"
+        assert g.sign_in("x\udfff", now=3.0) is None
+    finally:
+        g.close()
+
+
+def test_a_failed_change_logs_no_words_of_the_exception(panel_signed_in, caplog, monkeypatch):
+    import logging
+
+    from council import oauth
+
+    def refuse(data_dir, password):
+        raise ValueError("leaky " + password)
+
+    caplog.set_level(logging.DEBUG)
+    monkeypatch.setattr(oauth, "write_owner", refuse)
+    r = change(panel_signed_in, {"current": "dogru-sifre-123", "new": NEW})
+    assert r.status_code == 500 and caplog.records
+    for rec in caplog.records:
+        text = rec.getMessage() + (logging.Formatter().formatException(rec.exc_info) if rec.exc_info else "")
+        assert NEW not in text and "leaky" not in text
+
+
+def test_a_body_declared_larger_than_the_limit_is_refused_unread():
+    import asyncio
+
+    from council.panel.app import MAX_BODY, read_limited
+
+    class Declared:
+        headers = {"content-length": str(50 * 1024 * 1024)}
+
+        async def stream(self):
+            raise AssertionError("the body was read")
+            yield b""
+
+    assert asyncio.run(read_limited(Declared(), MAX_BODY)) is None
+
+
+def test_a_body_without_a_length_is_read_only_up_to_the_limit():
+    import asyncio
+
+    from council.panel.app import MAX_BODY, read_limited
+
+    pulled = []
+
+    class Chunked:
+        def __init__(self, chunks, length=None):
+            self.chunks, self.headers = chunks, ({} if length is None else {"content-length": length})
+
+        async def stream(self):
+            for c in self.chunks:
+                pulled.append(len(c))
+                yield c
+
+    big = Chunked([b"x" * 1024] * 50000)
+    assert asyncio.run(read_limited(big, MAX_BODY)) is None
+    assert sum(pulled) <= MAX_BODY + 1024                        # stopped at the limit, not at 50 MB
+    assert asyncio.run(read_limited(Chunked([b'{"a":', b' 1}']), MAX_BODY)) == b'{"a": 1}'
+    assert asyncio.run(read_limited(Chunked([b"x" * 10], length="abc"), MAX_BODY)) == b"x" * 10
+    assert asyncio.run(read_limited(Chunked([b"x" * (MAX_BODY + 1)], length="5"), MAX_BODY)) is None  # a lie
+
+
+def test_a_large_chunked_body_through_the_route_is_a_bad_request(panel_signed_in):
+    def chunks():
+        for _ in range(2000):
+            yield b"x" * 1024
+
+    r = panel_signed_in.post("/panel/api/password", content=chunks(),
+                             headers={**SAME_ORIGIN, "Content-Type": "application/json"})
+    assert (r.status_code, r.json()) == (400, {"error": "bad_request"})

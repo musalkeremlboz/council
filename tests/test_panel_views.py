@@ -11,6 +11,7 @@ from council import context
 from council.panel import text_tr, views
 from council.store import Store
 from council.usage import Usage
+from starlette.testclient import TestClient
 
 PLAN = f"projects/{ODD_FOLDER}/plan.md"
 
@@ -189,7 +190,57 @@ def test_the_panel_writes_nothing_but_its_own_file(leaky_panel, leaky):
     assert sampler.run_check(force=True)
     for section in SECTIONS:  # once more, now with a sample and a check run behind them
         leaky_panel.get(f"/panel/api/{section}")
+    # the pulse and the settings are asked for on their own addresses: they write nothing either
+    mark = leaky_panel.get("/panel/api/pulse").json()["mark"]
+    assert isinstance(mark, (int, float))
+    for query in ("", f"?since={mark - 3600}", "?since=yok", "?since=nan", "?since=-5"):
+        assert leaky_panel.get(f"/panel/api/pulse{query}").status_code in (200, 400), query
+    assert leaky_panel.get("/panel/api/settings").status_code == 200
     assert everything(leaky) == before
+
+
+def test_the_settings_answer_counts_the_sessions_and_names_this_ones_end(leaky_panel, leaky):
+    from conftest import PASSWORD
+
+    from council.oauth import MIN_PASSWORD
+    from council.panel.gate import SESSION_TTL
+
+    start = time.time()
+    first = leaky_panel.get("/panel/api/settings").json()
+    assert set(first) == {"sessions", "expires", "min_length"}
+    assert first["sessions"] == 1 and first["min_length"] == MIN_PASSWORD
+    assert start - 60 + SESSION_TTL < first["expires"] <= start + SESSION_TTL
+    before = everything(leaky)
+    other = TestClient(leaky_panel.app, base_url="http://127.0.0.1:8766", follow_redirects=False)
+    try:
+        assert other.post("/panel/login", data={"password": PASSWORD}).status_code == 303
+        mine, theirs = leaky_panel.get("/panel/api/settings").json(), other.get("/panel/api/settings").json()
+        assert mine["sessions"] == theirs["sessions"] == 2
+        assert mine["expires"] == first["expires"] and theirs["expires"] > mine["expires"]  # each its own end
+    finally:
+        other.close()
+    assert everything(leaky) == before
+
+
+def test_a_password_change_writes_owner_json_and_the_panels_file_only(leaky_panel, leaky):
+    from conftest import PASSWORD
+
+    other = TestClient(leaky_panel.app, base_url="http://127.0.0.1:8766", follow_redirects=False)
+    try:
+        assert other.post("/panel/login", data={"password": PASSWORD}).status_code == 303
+        before = everything(leaky)
+        same = {"Origin": "http://127.0.0.1:8766"}
+        assert leaky_panel.post("/panel/api/password", json={"current": "yanlis-sifre", "new": "yepyeni-sifre-456"},
+                                headers=same).status_code == 403
+        assert leaky_panel.post("/panel/api/sessions/close-others", headers=same).json() == {"closed": 1}
+        assert everything(leaky) == before                            # a refusal and a closing touch no memory file
+        r = leaky_panel.post("/panel/api/password", json={"current": PASSWORD, "new": "yepyeni-sifre-456"}, headers=same)
+        assert r.status_code == 200
+        after = everything(leaky)
+        assert set(after) == set(before)                              # no file added, none left behind
+        assert {k for k in before if before[k] != after[k]} == {"owner.json"}
+    finally:
+        other.close()
 
 
 def test_an_empty_memory_gives_empty_sections_not_an_error(panel_data, panel_signed_in):
@@ -578,3 +629,262 @@ def test_the_guides_give_the_same_caddy_lines_and_the_same_facts_about_sessions(
         text = (root / guide).read_text(encoding="utf-8")
         assert "@panel path /panel /panel/*" in text and "handle @panel {" in text and "/panel*" not in text, guide
         assert "panel.sqlite3" in text and "12" in text, guide
+        assert "owner.json" in text and "Claude" in text and "council set-password" in text, guide
+    tr, en = (root / "kurulum.md").read_text(encoding="utf-8"), (root / "setup.md").read_text(encoding="utf-8")
+    assert "en az 10, en çok 200 karakterlik yeni şifre" in tr
+    assert "a new one of at least 10 and at most 200 characters" in en
+    # the seven sections, the last one named with what it holds
+    assert "sürümleri ve ayarları (tema, şifre değiştirme, diğer oturumları kapatma)" in tr
+    assert "the releases, and the settings (theme, password change, closing other sessions)" in en
+    assert "Şifreyi değiştirmek, hafızaya zaten bağlı uygulamaların bağlantısını kesmez." in (
+        root / "kurulum.md").read_text(encoding="utf-8")
+    assert "Changing the password does not disconnect apps that are already connected." in (
+        root / "setup.md").read_text(encoding="utf-8")
+
+
+def test_the_guides_minimum_follows_the_constant():
+    from council.oauth import MIN_PASSWORD
+
+    from council.oauth import MAX_PASSWORD
+
+    assert MIN_PASSWORD == 10, "the guides say 10: change them with the constant"
+    assert MAX_PASSWORD == 200, "the guides say 200: change them with the constant"
+
+
+# ---------- pulse: what is new since a mark ----------
+
+def _record_in(data, rows):
+    """Usage events as (kind, session, chars, paths, ts) rows."""
+    usage = Usage(data / "usage.sqlite3")
+    try:
+        for kind, session, chars, paths, ts in rows:
+            usage.record(kind, session, "MESAJ-SIRRI", chars, None,
+                         [{"path": p, "heading": "BASLIK-SIRRI"} for p in paths], ts=ts)
+    finally:
+        usage.db.close()
+
+
+def _schema_shape(event):
+    return {"ts", "kind", "title", "path", "memory", "steps", "key"} == set(event)
+
+
+def test_pulse_without_a_mark_gives_no_events_and_the_newest_time(leaky):
+    now = dt.datetime.now().astimezone()
+    out = views.pulse(leaky, now, None)
+    assert out["events"] == []
+    newest_ts = views.schema(leaky, now)["events"][0]["ts"]
+    assert out["mark"] == newest_ts
+    assert views.pulse(leaky, now, None) == out
+
+
+def test_pulse_of_an_empty_memory_has_mark_zero(panel_data):
+    assert views.pulse(panel_data, dt.datetime.now().astimezone(), None) == {"mark": 0.0, "events": []}
+    assert views.pulse(panel_data, dt.datetime.now().astimezone(), 5.0) == {"mark": 5.0, "events": []}
+
+
+def test_pulse_returns_new_usage_and_note_changes_newest_first(leaky):
+    now = dt.datetime.now().astimezone()
+    mark = views.pulse(leaky, now, None)["mark"]
+    # the mark is the memory's newest time (a learning of the fixture, a float of the moment it was built); what
+    # happens after it is stamped after it, not by the wall clock, so no run depends on where in a second it is
+    _record_in(leaky, [("read", "sess0001", 40, ["core.md"], mark + 0.5)])
+    _commit_at(leaky, "projects/ev/sonradan.md", int(mark) + 1)
+    out = views.pulse(leaky, dt.datetime.now().astimezone(), mark)
+    # note changes of the mark's own second come again (commits are timed to the second); the page drops them by key
+    assert len([e for e in out["events"] if e["key"].startswith("u")]) == 1
+    assert any("projects/ev/sonradan.md" in s["value"] for e in out["events"] for s in e["steps"])
+    assert all(_schema_shape(e) for e in out["events"])
+    assert [e["ts"] for e in out["events"]] == sorted((e["ts"] for e in out["events"]), reverse=True)
+    assert out["mark"] == max(e["ts"] for e in out["events"]) > mark
+    assert any("projects/ev/sonradan.md" in s["value"] for e in out["events"] for s in e["steps"])
+    again = views.pulse(leaky, dt.datetime.now().astimezone(), out["mark"])
+    assert not [e for e in again["events"] if e["key"].startswith("u")] and again["mark"] == out["mark"]
+    assert {e["key"] for e in again["events"]} <= {e["key"] for e in out["events"]}  # repeats keep their keys
+
+
+def test_pulse_events_are_the_schema_events(leaky):
+    now = dt.datetime.now().astimezone()
+    # a pointer folds into the inject of its own whole second: both are stamped inside one second, not by the clock
+    t = int(time.time()) + 5 - 0.5
+    _record_in(leaky, [("inject", "sess0001", 300, ["core.md"], t + 0.7), ("pointer", "sess0001", 0, ["skills/a.md"], t + 0.9)])
+    since = now.timestamp() - 1000  # the fixture's notes and usage were made a moment ago: all of it is newer
+    out = views.pulse(leaky, now, since)["events"]
+    schema = views.schema(leaky, now)["events"]
+    by_key = {e["key"]: e for e in schema}
+    assert out and all(by_key[e["key"]] == e for e in out)  # whole events agree, usage and note changes alike
+    assert {e["key"] for e in schema} == {e["key"] for e in out}  # nothing newer than the mark is left out
+    (folded,) = [e for e in out if e["ts"] == t + 0.7]
+    assert "isa" in folded["path"]  # the pointer is folded into the inject, as in the schema
+
+
+def test_pulse_is_strictly_newer_but_keeps_events_of_the_same_second(leaky):
+    now = dt.datetime.now().astimezone()
+    t = int(time.time()) + 5.0
+    _record_in(leaky, [("read", "s", 1, ["core.md"], t + 0.25), ("read", "s", 2, ["core.md"], t + 0.75)])
+    both = views.pulse(leaky, now, t - 0.5)
+    assert [e["ts"] for e in both["events"]] == [t + 0.75, t + 0.25]
+    after_first = views.pulse(leaky, now, t + 0.25)
+    assert [e["ts"] for e in after_first["events"]] == [t + 0.75]
+    assert views.pulse(leaky, now, t + 0.75)["events"] == []
+
+
+def test_pulse_treats_an_odd_mark_as_no_mark(leaky):
+    now = dt.datetime.now().astimezone()
+    nothing = views.pulse(leaky, now, None)
+    for odd in (float("nan"), -1.0, -1, now.timestamp() + 3600, float("inf")):
+        assert views.pulse(leaky, now, odd) == nothing, odd
+
+
+def test_pulse_gives_at_most_the_newest_event_count(leaky):
+    now = dt.datetime.now().astimezone()
+    t = time.time()
+    _record_in(leaky, [("read", "s", i, ["core.md"], t + i * 0.01) for i in range(views.EVENT_COUNT + 20)])
+    out = views.pulse(leaky, now, t - 1)
+    assert len(out["events"]) == views.EVENT_COUNT
+    assert out["mark"] == out["events"][0]["ts"] == t + (views.EVENT_COUNT + 19) * 0.01
+
+
+def test_a_repeated_pulse_walks_no_history_and_builds_no_skill_index(leaky, monkeypatch):
+    from council.panel import reader
+
+    now = dt.datetime.now().astimezone()
+    views.pulse(leaky, now, now.timestamp() - 100)
+    walks, built = [], []
+    history = reader.history
+    index = views.context.skills_index
+    monkeypatch.setattr(reader, "history", lambda store: walks.append(1) or history(store))
+    monkeypatch.setattr(views.context, "skills_index", lambda *a, **k: built.append(1) or index(*a, **k))
+    views.pulse(leaky, now, now.timestamp() - 100)
+    views.pulse(leaky, now, None)
+    assert walks == [] and built == []
+
+
+# ---------- today: events gathered by session ----------
+
+def test_today_gathers_events_by_session(panel_data):
+    now = dt.datetime(2026, 6, 15, 12, 0).astimezone()
+    t = dt.datetime(2026, 6, 15, 9, 0).astimezone().timestamp()
+    _record_in(panel_data, [
+        ("start", "abcdefgh1234", 10, [], t),
+        ("inject", "abcdefgh1234", 3400, ["core.md"], t + 60),
+        ("read", "", 5, ["core.md", "threads.md"], t + 90),
+        ("inject", "zzzzzzzz9999", 100, ["core.md"], t + 120),
+        ("inject", "zzzzzzzz9999", 0, [], t + 130),  # no note: not drawn, not counted
+        ("read", "abcdefgh1234", 7, ["core.md"], t + 600),
+    ])
+    out = views.today(panel_data, now)
+    assert out["sessions"] == [
+        {"id": "abcdefgh", "key": "abcdefgh1234", "first_minute": 540, "last_minute": 550, "events": 3,
+         "at_limit": 1, "chars": 3417},
+        {"id": "zzzzzzzz", "key": "zzzzzzzz9999", "first_minute": 542, "last_minute": 542, "events": 1,
+         "at_limit": 0, "chars": 100},
+        {"id": "", "key": "", "first_minute": 541, "last_minute": 541, "events": 1, "at_limit": 0, "chars": 5}]
+    assert [(e["session"], e["kind"]) for e in out["events"]] == [
+        (0, "start"), (0, "inject"), (2, "read"), (1, "inject"), (0, "read")]
+    assert out["events"][2]["paths"] == ["core.md", "threads.md"]
+    assert out["counts"]["inject"] == 2 and out["at_limit"] == 1
+    for e in out["events"]:
+        assert out["sessions"][e["session"]]["events"] > 0
+
+
+def test_sessions_are_grouped_by_their_whole_id_and_show_its_first_eight_characters(panel_data):
+    now = dt.datetime(2026, 6, 15, 12, 0).astimezone()
+    t = dt.datetime(2026, 6, 15, 9, 0).astimezone().timestamp()
+    _record_in(panel_data, [("read", "abcdefgh-1", 1, [], t), ("read", "abcdefgh-2", 2, [], t + 1),
+                            ("read", "abcdefgh-1", 3, [], t + 2)])
+    out = views.today(panel_data, now)
+    assert [(s["id"], s["key"], s["events"]) for s in out["sessions"]] == [("abcdefgh", "abcdefgh-1", 2),
+                                                                           ("abcdefgh", "abcdefgh-2", 1)]
+    assert [e["session"] for e in out["events"]] == [0, 1, 0]
+
+
+def test_today_without_events_has_no_sessions(panel_data):
+    assert views.today(panel_data, dt.datetime.now().astimezone())["sessions"] == []
+
+
+# ---------- a commit is timed to the second, a usage event to the fraction ----------
+
+def _commit_at(data, path, second):
+    """Commit a note and give the commit the author and committer time ``second`` (a whole second)."""
+    import os
+    import subprocess
+
+    store = Store(data)
+    try:
+        store.write(path, f"# {path}\n")
+        env = {**os.environ, "GIT_COMMITTER_DATE": f"{second} +0000", "GIT_AUTHOR_DATE": f"{second} +0000"}
+        subprocess.run(["git", "-C", str(store.vault), "commit", "--amend", "--no-edit", "--date", f"{second} +0000"],
+                       check=True, capture_output=True, env=env)
+    finally:
+        store.index.db.close()
+
+
+def test_a_note_change_in_the_second_of_a_usage_mark_is_not_lost(panel_data):
+    now = dt.datetime.now().astimezone()
+    second = int(time.time()) - 1000
+    _record_in(panel_data, [("read", "s", 1, ["core.md"], second + 0.7)])
+    mark = views.pulse(panel_data, now, None)["mark"]
+    assert mark == second + 0.7
+    _commit_at(panel_data, "projects/ev/yeni.md", second)  # stored as `second`, shown as older than the mark
+    out = views.pulse(panel_data, now, mark)
+    assert [e["kind"] for e in out["events"]] == ["note"] and out["events"][0]["ts"] == second
+    assert out["mark"] == mark  # the mark never goes back
+
+
+def test_two_commits_of_one_second_are_both_returned_with_different_keys(panel_data):
+    now = dt.datetime.now().astimezone()
+    second = int(time.time()) - 1000
+    _commit_at(panel_data, "projects/ev/bir.md", second)
+    _commit_at(panel_data, "projects/ev/iki.md", second)
+    out = views.pulse(panel_data, now, second + 0.5)
+    assert len(out["events"]) == 2 and out["events"][0]["kind"] == out["events"][1]["kind"] == "note"
+    keys = [e["key"] for e in out["events"]]
+    assert len(set(keys)) == 2 and all(k.startswith("c") and len(k) == 13 for k in keys)
+
+
+def test_an_event_has_one_key_in_the_schema_and_in_the_pulse(leaky):
+    now = dt.datetime.now().astimezone()
+    t = time.time()
+    _record_in(leaky, [("read", "s", 1, ["core.md"], t - 0.2), ("read", "s", 1, ["core.md"], t - 0.1)])
+    _commit_a_note(leaky)
+    events = views.schema(leaky, now)["events"]
+    keys = [e["key"] for e in events]
+    assert len(set(keys)) == len(keys) and any(k.startswith("u") for k in keys) and any(k.startswith("c") for k in keys)
+    pulsed = views.pulse(leaky, now, 1.0)["events"]
+    assert pulsed and all(e in events for e in pulsed)
+    assert views.pulse(leaky, now, None)["events"] == []
+
+
+def test_a_repeated_pulse_may_repeat_a_note_change_with_the_same_key(panel_data):
+    now = dt.datetime.now().astimezone()
+    second = int(time.time()) - 1000
+    _commit_at(panel_data, "projects/ev/bir.md", second)
+    first = views.pulse(panel_data, now, second - 5.5)
+    again = views.pulse(panel_data, now, first["mark"])
+    assert [e["key"] for e in first["events"]] == [e["key"] for e in again["events"]] and again["events"]
+    assert views.pulse(panel_data, now, first["mark"] + 1)["events"] == []
+
+
+def test_a_learning_without_a_commit_has_a_key_from_its_time_kind_and_path(panel_data, monkeypatch):
+    from council.panel import reader
+
+    t = time.time() - 50
+    monkeypatch.setattr(reader, "learnings", lambda d, since: [{"ts": t, "kind": "rule", "path": "rules.md", "undone": False}])
+    now = dt.datetime.now().astimezone()
+    (event,) = views.pulse(panel_data, now, t - 1)["events"]
+    assert event["key"] == f"l{t!r}-rule-rules.md"
+    assert views.schema(panel_data, now)["events"][0]["key"] == event["key"]
+
+
+def test_a_learning_whose_commit_lies_before_the_pulse_window_is_not_sent_again(panel_data, monkeypatch):
+    from council.panel import reader
+
+    now = dt.datetime.now().astimezone()
+    T = int(time.time()) - 1000
+    _commit_at(panel_data, "projects/ev/rules.md", T - 1)  # a rule's commit, outside the window of floor(since)
+    monkeypatch.setattr(reader, "learnings", lambda d, since: [
+        e for e in [{"ts": T + 0.2, "kind": "rule", "path": "projects/ev/rules.md", "undone": False}] if e["ts"] >= since])
+    out = views.pulse(panel_data, now, T + 0.1)
+    assert [e for e in out["events"] if e["key"].startswith("l")] == []
+    assert views.pulse(panel_data, now, T - 5.5)["events"][0]["key"].startswith("c")  # the commit is the one event
+    assert not [e for e in views.pulse(panel_data, now, T - 5.5)["events"] if e["key"].startswith("l")]

@@ -255,13 +255,15 @@ The same backup works for the memory on your own computer: add the remote inside
 
 ### Set up the panel
 
-The panel lets you watch how the memory works from a browser. It shows how the memory works as live blocks, today's events, the health, the map of notes, how notes are used, and the releases. It shows note paths, counts and times; it never shows note text.
+The panel lets you watch how the memory works from a browser. It shows how the memory works as live blocks, today's events, the health, the map of notes, how notes are used, the releases, and the settings (theme, password change, closing other sessions). It shows note paths, counts and times; it never shows note text.
 
-The panel only reads the memory. The one file it writes is `panel.sqlite3` in the data folder: sessions, failed sign-ins, health samples and check results (no question text) are kept there.
+The panel only reads the memory. Its own file is `panel.sqlite3` in the data folder: sessions, failed sign-ins, health samples and check results (no question text) are kept there. The one other file it writes is `owner.json`, and only when you change the owner password in its Settings section.
 
 You need the owner password to sign in (`council set-password`, see the server setup above). Five wrong passwords lock the sign-in for 15 minutes. This lock is shared by everyone who can reach the sign-in page: someone else's wrong attempts can lock you out for 15 minutes at a time. The memory service's own sign-in works the same way. As long as someone keeps trying wrong passwords the lock stays closed; sessions already signed in keep working meanwhile.
 
-Sessions are kept in `panel.sqlite3`, so neither changing the password nor restarting the panel service ends the open ones. A session ends when you sign out, or 12 hours after signing in. To end them all at once, stop the panel service, delete `panel.sqlite3` (the health history and check results go with it) and start the service again.
+You can also change the owner password in the panel's Settings section: you give the current password and a new one of at least 10 and at most 200 characters twice. The same password is asked when a Claude app is connected to the memory; the memory service reads `owner.json` again on every check, so the new password holds there at once (no restart needed). Changing the password does not disconnect apps that are already connected. A wrong current password counts towards the lock like a wrong sign-in. The panel never leaves the file half written: it writes the new record to a temporary file in the same folder, makes it readable by the owner only and puts it in place of the old one.
+
+Sessions are kept in `panel.sqlite3`. Changing the password in the panel closes every panel session except the one you changed it from; changing it with `council set-password` or restarting the panel service does not end the open ones. The Settings section shows how many sessions are open and when yours ends; its "Close other sessions" button closes all but yours after one confirmation. A session ends when you sign out, or 12 hours after signing in. To end them all at once, your own included, stop the panel service, delete `panel.sqlite3` (the health history and check results go with it) and start the service again.
 
 To run it by hand:
 
