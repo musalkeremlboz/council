@@ -1,9 +1,6 @@
 import json
-import os
-import shutil
-import stat
 
-from conftest import ODD_FOLDER, SECRETS
+from conftest import ODD_FOLDER, SECRETS, remove_history
 
 from council import check
 from council.panel import reader
@@ -56,15 +53,10 @@ def test_events_and_changes_and_learnings_honour_their_limits(leaky):
         s.index.db.close()
 
 
-def _unlock(func, path, _exc):
-    os.chmod(path, stat.S_IWRITE)
-    func(path)
-
-
 def test_a_memory_with_nothing_recorded_yet_reads_as_empty(tmp_path):
     data = tmp_path / "data"
     Store(data).index.db.close()
-    shutil.rmtree(data / "vault" / ".git", onerror=_unlock)
+    remove_history(data / "vault")
     for name in ("usage.sqlite3", "learning.json", "backup.json"):
         assert not (data / name).exists()
     s = reader.open_memory(data)

@@ -1,9 +1,22 @@
 import json
+import os
+import shutil
+import stat
 from pathlib import Path
 
 import pytest
 
 PASSWORD = "dogru-sifre-123"
+
+
+def remove_history(vault: Path) -> None:
+    """Delete a vault's .git folder. Git marks its object files read-only, and Windows refuses to delete those."""
+
+    def unlock(func, path, _exc):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
+    shutil.rmtree(vault / ".git", onerror=unlock)
 
 
 @pytest.fixture

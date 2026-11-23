@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 import pytest
-from conftest import ODD_FOLDER
+from conftest import ODD_FOLDER, remove_history
 
 from council import context
 from council.panel import text_tr, views
@@ -260,11 +260,10 @@ def test_the_first_recorded_change_is_dated_even_before_the_window(leaky):
 
 
 def test_a_memory_without_history_has_no_first_change(panel_data):
-    import shutil
     import subprocess
 
     vault = panel_data / "vault"
-    shutil.rmtree(vault / ".git")
+    remove_history(vault)
     subprocess.run(["git", "-C", str(vault), "init", "-q"], check=True)
     notes = views.notes(panel_data, dt.datetime.now().astimezone())
     assert notes["first_change"] is None
