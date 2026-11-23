@@ -148,6 +148,14 @@ def main(argv: list[str] | None = None) -> int:
         if sys.stderr is None:  # started without a console (Windows, at login): keep a log instead
             sys.stdout = sys.stderr = open(data / "service.log", "a", buffering=1, encoding="utf-8")
         (data / "service.pid").write_text(str(os.getpid()))
+        try:  # an installation older than the sub-agent hook gets it; a hand-run or system-wide server edits nothing
+            from . import local
+
+            setup = local.Setup(data, port=a.port)
+            if setup.service_installed():
+                setup.ensure_tool_hooks()
+        except Exception:
+            pass
 
         app, _ = build(str(data), public_hosts=a.public_host)
         uvicorn.run(app, host=a.host, port=a.port, log_level="warning", proxy_headers=True, timeout_graceful_shutdown=3)

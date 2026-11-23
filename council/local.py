@@ -32,6 +32,7 @@ WIN_RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 WIN_RUN_NAME = "COUNCIL Memory"
 WIN_TASK = "COUNCIL Update"
 HOOKS = {"SessionStart": 10, "UserPromptSubmit": 8, "Stop": 5}
+TOOL_HOOKS: dict[str, tuple[str, int]] = {"PreToolUse": ("Agent|Task", 5)}  # event -> (matcher, timeout)
 HOOK_MARK = ".council/hook.py"
 
 
@@ -297,8 +298,7 @@ class Setup:
         if settings is None:
             problems.append(f"{self.settings} is not valid JSON, so the hooks were not added.")
         else:
-            # forward slashes work in every shell Claude Code may use, on Windows too
-            command = f"{_quote(Path(sys.executable).as_posix())} {_quote(self.hook.as_posix())}"
+            command = self._hook_command()
             hooks = settings.setdefault("hooks", {})
             for event, timeout in HOOKS.items():
                 entries = hooks.setdefault(event, [])
@@ -308,6 +308,7 @@ class Setup:
                         h["command"] = command
                 else:
                     entries.append({"hooks": [{"type": "command", "command": command, "timeout": timeout}]})
+            self._register_tool_hooks(hooks, command)
             self._backup_once(self.settings)
             self._write_json(self.settings, settings)
 
@@ -321,6 +322,24 @@ class Setup:
             self._backup_once(self.claude_json)
             self._write_json(self.claude_json, cj, mode=0o600)
         return problems
+
+    def _hook_command(self) -> str:
+        # forward slashes work in every shell Claude Code may use, on Windows too
+        return f"{_quote(Path(sys.executable).as_posix())} {_quote(self.hook.as_posix())}"
+
+    def _register_tool_hooks(self, hooks: dict, command: str) -> None:
+        """Add or refresh, in place, our entry for each tool event; the user's own entries are left as they are."""
+        for event, (matcher, timeout) in TOOL_HOOKS.items():
+            entries = hooks.setdefault(event, [])
+            ours = [e for e in entries if any(HOOK_MARK in str(h.get("command", "")) for h in e.get("hooks", []))]
+            if ours:
+                for e in ours:
+                    e["matcher"] = matcher
+                    for h in e.get("hooks", []):
+                        if HOOK_MARK in str(h.get("command", "")):
+                            h["command"] = command
+            else:
+                entries.append({"matcher": matcher, "hooks": [{"type": "command", "command": command, "timeout": timeout}]})
 
     def disconnect(self) -> None:
         settings = self._read_json(self.settings)
@@ -348,6 +367,21 @@ class Setup:
         settings = self._read_json(self.settings) or {}
         return all(any(HOOK_MARK in str(h.get("command", "")) for e in settings.get("hooks", {}).get(event, [])
                        for h in e.get("hooks", [])) for event in HOOKS)
+
+    def tool_hooks_installed(self) -> bool:
+        settings = self._read_json(self.settings) or {}
+        return all(any(HOOK_MARK in str(h.get("command", "")) for e in settings.get("hooks", {}).get(event, [])
+                       for h in e.get("hooks", [])) for event in TOOL_HOOKS)
+
+    def ensure_tool_hooks(self) -> bool:
+        """Add the tool hook to an installation made before it existed. Returns whether the settings were written."""
+        settings = self._read_json(self.settings)
+        if settings is None or not self.hooks_installed() or self.tool_hooks_installed():
+            return False
+        self._register_tool_hooks(settings.setdefault("hooks", {}), self._hook_command())
+        self._backup_once(self.settings)
+        self._write_json(self.settings, settings)
+        return True
 
 
 class SetupError(Exception):
@@ -439,6 +473,9 @@ def status(s: Setup) -> int:
     s.say(f"service      {'running on ' + s.url + (' (' + version + ')' if version else '') if version else 'not running'}"
           + ("" if s.service_installed() else " · not installed as a background service"))
     s.say(f"hooks        {'installed' if s.hooks_installed() else 'not installed'}")
+    mode = (s._read_json(s.config) or {}).get("delegation")  # the hook's rule: enforce unless advise or off
+    mode = mode if mode in ("advise", "off") else "enforce"
+    s.say(f"delegation   {mode}" + (" · hook not registered" if mode == "enforce" and not s.tool_hooks_installed() else ""))
     mcp = (s._read_json(s.claude_json) or {}).get("mcpServers", {}).get("council", {}).get("url", "")
     s.say(f"mcp tools    {'connected to Claude Code' if mcp.startswith(s.url) else 'not connected to Claude Code'}")
     s.say(f"auto-update  {'on' if s.updater_installed() else 'off'}"

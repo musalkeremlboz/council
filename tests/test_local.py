@@ -317,3 +317,84 @@ def test_status_reports_connections_and_imports(home):
     assert local.status(s) == 0
     text = "\n".join(said)
     assert "mcp tools    connected to Claude Code" in text and "imported     3 notes, from:" in text
+
+
+def tool_entries(home):
+    settings = json.loads((home / ".claude/settings.json").read_text())
+    return [e for e in settings["hooks"].get("PreToolUse", []) if any(".council/hook.py" in h["command"] for h in e["hooks"])]
+
+def test_install_registers_the_sub_agent_hook_with_its_matcher(home):
+    (home / ".claude/settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [
+        {"matcher": "Bash", "hooks": [{"type": "command", "command": "other-tool"}]}]}}))
+    s = make(home)
+    local.install(s); local.install(s)                                   # twice: no duplicate
+    entries = tool_entries(home)
+    assert len(entries) == 1 and entries[0]["matcher"] == "Agent|Task" and entries[0]["hooks"][0]["timeout"] == 5
+    assert hook_commands(home, "PreToolUse")[0] == "other-tool"          # the user's own entry survives
+    assert s.hooks_installed() and s.tool_hooks_installed()
+
+def test_an_old_matcher_of_ours_is_refreshed_in_place(home):
+    s = make(home); local.install(s)
+    settings = json.loads((home / ".claude/settings.json").read_text())
+    settings["hooks"]["PreToolUse"][0]["matcher"] = "Task"
+    (home / ".claude/settings.json").write_text(json.dumps(settings))
+    local.install(s)
+    assert [e["matcher"] for e in tool_entries(home)] == ["Agent|Task"]
+
+def three_hook_install(home):
+    """An installation made by a release that knew only the memory hooks."""
+    s = make(home); local.install(s)
+    settings = json.loads((home / ".claude/settings.json").read_text())
+    del settings["hooks"]["PreToolUse"]
+    (home / ".claude/settings.json").write_text(json.dumps(settings))
+    return s
+
+def test_an_older_installation_still_counts_as_installed_and_gets_the_hook_added(home):
+    s = three_hook_install(home)
+    assert s.hooks_installed() and not s.tool_hooks_installed()
+    assert s.ensure_tool_hooks() is True and s.tool_hooks_installed()
+    assert s.ensure_tool_hooks() is False                                 # nothing left to do
+
+def test_ensure_leaves_a_computer_without_our_hooks_alone(home):
+    (home / ".claude/settings.json").write_text(json.dumps({"hooks": {"Stop": [
+        {"hooks": [{"type": "command", "command": "other-tool"}]}]}}))
+    before = (home / ".claude/settings.json").read_text()
+    assert make(home).ensure_tool_hooks() is False
+    assert (home / ".claude/settings.json").read_text() == before
+
+def test_ensure_leaves_invalid_settings_alone(home):
+    s = three_hook_install(home)
+    (home / ".claude/settings.json").write_text("{not json")
+    assert s.ensure_tool_hooks() is False and (home / ".claude/settings.json").read_text() == "{not json"
+
+def test_uninstall_removes_the_sub_agent_hook_and_keeps_the_users(home):
+    (home / ".claude/settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [
+        {"matcher": "Bash", "hooks": [{"type": "command", "command": "other-tool"}]}]}}))
+    s = make(home); local.install(s); local.uninstall(s)
+    assert json.loads((home / ".claude/settings.json").read_text())["hooks"] == {"PreToolUse": [
+        {"matcher": "Bash", "hooks": [{"type": "command", "command": "other-tool"}]}]}
+
+def test_status_reports_delegation_on_its_own_line(home):
+    s = three_hook_install(home)
+    said = []; s.say = said.append
+    local.status(s)
+    text = "\n".join(said)
+    assert "hooks        installed" in text and "delegation   enforce · hook not registered" in text
+    s.ensure_tool_hooks()
+    cfg = json.loads((home / ".config/council/config.json").read_text())
+    (home / ".config/council/config.json").write_text(json.dumps({**cfg, "delegation": "off"}))
+    said.clear(); local.status(s)
+    assert "delegation   off" in "\n".join(said) and "not registered" not in "\n".join(said)
+
+def test_the_service_adds_the_hook_only_on_an_installer_made_setup(home, monkeypatch):
+    from council import cli
+    s = three_hook_install(home)
+    seen = []
+    monkeypatch.setattr(local, "Setup", lambda *a, **k: s)
+    monkeypatch.setattr(s, "ensure_tool_hooks", lambda: seen.append("ensured") or True)
+    monkeypatch.setattr("uvicorn.run", lambda *a, **k: None)
+    monkeypatch.setattr(s, "service_installed", lambda: True)
+    cli.main(["--data", str(home / ".council"), "serve", "--port", "8799"])
+    monkeypatch.setattr(s, "service_installed", lambda: False)             # e.g. a server run by hand or by systemd
+    cli.main(["--data", str(home / ".council"), "serve", "--port", "8799"])
+    assert seen == ["ensured"]
