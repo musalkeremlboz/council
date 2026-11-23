@@ -1,6 +1,6 @@
 # Model kademesi: yönetici model işi bir alt kademeye dağıtır
 
-**Durum:** proje sahibi onayladı (2026-11-23 21:59, "Onaylıyorum"). Yapım planı: `2026-11-23-model-kademesi-plan.md`. Kod yazılmadı.
+**Durum:** proje sahibi onayladı (2026-11-23 21:59, "Onaylıyorum"). Yapıldı: `model-kademesi` dalında (2026-11-23), `main`'e birleştirilmedi, gönderilmedi, hiçbir bilgisayarda açılmadı. Yapım planı: `2026-11-23-model-kademesi-plan.md`. Metinle uygulamanın ayrıldığı yerler en sondaki "Yapım sırasında değişenler" bölümünde.
 **Ad:** "model kademesi" geçici addır; halkadaki tek sözcüklük adı proje sahibi koyacak.
 **Dal ve sürüm:** çalışma `main`'den açılan `model-kademesi` dalında yapılır. Sürüm numarası yayında belirlenir (bugün yayınlanmış sürüm 0.2.1; 0.3.0 henüz çıkmadı). `main`'e birleşme ve yayın ayrı onayla.
 
@@ -213,3 +213,17 @@ Sonda bir maddeyi çürütürse o parça yeniden tasarlanır ve proje sahibine b
 4. **`claude`, `Plan` ve `Explore` ana modeli devralıyor.** Ana model Sonnet iken üçü de model belirtilmeden Sonnet ile çalıştı. Üçü de devralan türler listesine girer.
 5. **İç içe çağrı ayırt edilebiliyor.** Bir alt ajanın kendi alt ajan çağrısında hook girdisi `agent_id` ve `agent_type` alanlarını taşıyor; ana sohbetin çağrısında bu alanlar yok. İç içe çağrıya dokunulmaz (`agent_id` varsa).
 6. **Masaüstü uygulaması:** deneme uygulamanın kendi istemcisiyle yapıldı, ama uygulamanın penceresinden değil. Pencereden yapılan ilk gerçek dağıtım, Mac'te açıldıktan sonra karar kaydından ve alt ajanın kaydından doğrulanacak.
+
+## Yapım sırasında değişenler (2026-11-23, son denetimden sonra)
+
+Bu bölüm yukarıdaki metinle çeliştiği yerde geçerlidir. Hepsi Claude'un kararıdır; proje sahibine bildirildi.
+
+- **Tavanın üstünde model isteyen ajan dosyası da indirilir.** "Zorlama" bölümü, kendi modeli olan türlere dokunulmayacağını söylüyordu. Kullanıcının ya da projenin ajan klasöründeki bir tanım dosyası tavanın üstünde bir model istiyorsa (ör. en üst model), çağrı tavana indirilir (neden `lowered`). Tavanda ya da altında model isteyen dosyaya ve tanınmayan türlere (eklenti ajanları) yine dokunulmaz. Hiçbir durumda model yükseltilmez.
+- **Karar kaydı** her satırda araç çağrısının kimliğini de taşır (`tool_use_id`); özellik `advise` ya da `off` iken neden olarak kipin kendisi yazılır.
+- **Rapor, ihlalleri hook'un kararına göre ayırır.** Tavanın üstünde çalışan her alt ajan yine sayılır; yanında hook'un o çağrı için yazdığı neden (ör. `own-model`: tanınmayan türün kendi modeli; `unknown-main`: ana model okunamadı; `no-decision`: hook o çağrıda hiç çalışmadı) ve bu alt ajanların liste fiyatıyla bedeli gösterilir. Eşleştirme araç çağrısının kimliğiyle yapılır. Ana modelin bilinmediği anda başlamış alt ajan ihlal sayılmaz (hook da orada bir şey zorlamaz). "Tamam" ölçütündeki "0 ihlal" bu dökümle birlikte okunur: hook'un dokunabildiği çağrılarda ihlal olmamalıdır; dokunamadıkları ayrıca görünür.
+- **Önbelleğe yazma, ömrüne göre fiyatlanır:** 5 dakikalık yazma girdi fiyatının 1,25 katı, 1 saatlik yazma 2 katı (Anthropic fiyat sayfasından 2026-11-23'te okundu). Proje sahibinin oturumları yalnız 1 saatlik yazıyor.
+- **Hook girdisini UTF-8 bayt olarak okur.** Windows'ta girdi yerel kod sayfasıyla çözüldüğü için yeniden yazılan görev tarifindeki Türkçe karakterler bozuluyordu.
+- **Kurucu, kullanıcının kendi hook'uyla aynı kayıtta duran komutumuzu o kayıttan çıkarıp ayrı bir kayda taşır;** kullanıcının kaydı ve eşleşmesi olduğu gibi kalır. Servis, ayar dosyasına dokunmadan önce `…before-council-delegation` adıyla bir kopya alır.
+- **Elle kurulum belgeleri** (`docs/kurulum.md`, `docs/setup.md`) dördüncü hook kaydını da gösterir.
+- **Rapor komutu veri klasörü açmaz.**
+- **Uçtan uca doğrulama (23:05):** daldaki hook, yalıtılmış bir deneme oturumunda (ana model Sonnet) iki alt ajan çağrısını da Haiku'ya çekti (biri modelsiz, biri `sonnet` istenmiş); ikisi de gerçekten Haiku ile çalıştı, Türkçe karakterler bozulmadı, yönerge oturum başında geldi, izin sorusu çıkmadı. Bedeli liste fiyatıyla 0,06 $.

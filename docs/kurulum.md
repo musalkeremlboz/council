@@ -211,7 +211,7 @@ chmod 600 ~/.config/council/config.json
 | `SessionStart` | Oturum açılınca | Başlangıç bağlamını yükler |
 | `UserPromptSubmit` | Her mesajında | Mesajla ilgili notları ekler |
 | `Stop` | Yardımcı cevabını bitirince | Kaydedilmemiş iş varsa bir kez hatırlatır |
-| `PreToolUse` (`Agent\|Task`) | Yardımcı bir alt ajan başlatınca | Alt ajanı oturumun modelinden bir kademe aşağıda tutar (yukarıdaki `delegation` ayarına bak) |
+| `PreToolUse` (`Agent\|Task`) | Yardımcı bir alt ajan başlatınca | Alt ajanı oturumun modelinin en çok bir kademe altında tutar (daha ucuz bir istek olduğu gibi kalır) (yukarıdaki `delegation` ayarına bak) |
 
 **MCP araçları.**
 
