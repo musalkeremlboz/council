@@ -91,6 +91,13 @@ def main(argv: list[str] | None = None) -> int:
     pw = sub.add_parser("set-password", help="set the owner password used to approve Claude app connections")
     pw.add_argument("--generate", action="store_true", help="generate a random password and print it once")
 
+    dl = sub.add_parser("delegation", help="what each model spent on sub-agents and whether the ceiling held (read-only)")
+    dl.add_argument("action", choices=["report"])
+    dl.add_argument("--days", type=float, default=14, help="sessions whose record changed in this many days")
+    dl.add_argument("--json", action="store_true", help="print the numbers as JSON")
+    dl.add_argument("--projects", default=None, help="folder of session records (default ~/.claude/projects)")
+    dl.add_argument("--log", default=None, help="hook decision log (default ~/.council/state/delegation.jsonl)")
+
     a = ap.parse_args(argv)
     data = Path(a.data).expanduser()
     if a.cmd in NEEDS_MEMORY and not (data / "vault").is_dir():
@@ -139,6 +146,15 @@ def main(argv: list[str] | None = None) -> int:
         if a.cmd in ("status", "durum"):
             return local.status(setup)
         return local.update(setup, force=a.force)
+
+    if a.cmd == "delegation":
+        from . import delegation
+
+        projects = Path(a.projects).expanduser() if a.projects else delegation.DEFAULT_PROJECTS
+        log = Path(a.log).expanduser() if a.log else delegation.DEFAULT_LOG
+        summary = delegation.summarise(projects, log, a.days)
+        print(json.dumps(summary, indent=2) if a.json else delegation.render(summary), end="\n" if a.json else "")
+        return 0
 
     if a.cmd == "serve":
         import uvicorn
