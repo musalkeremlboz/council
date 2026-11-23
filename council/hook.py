@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """COUNCIL hook client for Claude Code. Standard library only, so it runs without a venv.
 
-Usage in settings.json: ``python3 ~/.council/hook.py`` for SessionStart, UserPromptSubmit and Stop.
+Usage in settings.json: ``python3 ~/.council/hook.py`` for SessionStart, UserPromptSubmit and Stop,
+and for PreToolUse on Agent (sub-agent calls).
 Config: ``~/.config/council/config.json`` -> {"url": "https://host", "token": "..."}.
 """
 
@@ -223,6 +224,107 @@ def delegation_mode() -> str:
     return value if value in ("advise", "off") else "enforce"
 
 
+INHERITING = frozenset({"", "general-purpose", "claude", "Plan", "Explore"})  # run on the session's model
+WORKER_NOTE = ("COUNCIL memory is readable with council_search and council_read. Do not write to it; "
+               "the session that started you records the work.")
+DELEGATION_LOG = STATE / "delegation.jsonl"
+LOG_LIMIT = 1 << 20  # bytes; past this the decision log keeps its newer half
+
+
+def agent_inherits(agent_type: str, cwd: str, home: Path | None = None) -> bool:
+    """True when a sub-agent of this type runs on the session's model if no model is asked for: the built-in
+    inheriting types, or an agent file (project first, then the user's) whose front matter names no model or
+    ``inherit``. An unknown type is left alone."""
+    if agent_type in INHERITING:
+        return True
+    if not agent_type or any(c in agent_type for c in "/\\:") or agent_type.startswith("."):
+        return False
+    roots = ([Path(cwd)] if cwd else []) + [home if home is not None else Path.home()]
+    for root in roots:
+        try:
+            lines = (root / ".claude" / "agents" / f"{agent_type}.md").read_text(encoding="utf-8").splitlines()
+        except (OSError, ValueError):
+            continue
+        marks = [i for i, line in enumerate(lines) if line.strip() == "---"]
+        front = lines[marks[0] + 1:marks[1]] if len(marks) >= 2 else []
+        for line in front:
+            key, sep, value = line.partition(":")
+            if sep and key.strip() == "model":
+                return value.strip().strip("\"'") in ("", "inherit")
+        return True
+    return False
+
+
+def decide(tool_input: dict, main: str | None, cwd: str = "", home: Path | None = None) -> tuple[dict | None, str]:
+    """The sub-agent call held one tier below the session's model (``None`` when nothing changes) and why."""
+    rank = tier(main)
+    if not rank:
+        return None, "unknown-main"
+    agent_type = str(tool_input.get("subagent_type") or "")
+    if agent_type == "fork":
+        return None, "fork"
+    ceiling = max(rank - 1, 1)
+    asked = tool_input.get("model")
+    if asked not in (None, ""):
+        asked_rank = tier(asked)
+        if not asked_rank:
+            return None, "unknown-model"
+        if asked_rank <= ceiling:
+            return None, "kept"
+        reason = "lowered"
+    elif agent_inherits(agent_type, cwd, home):
+        reason = "set"
+    else:
+        return None, "own-model"
+    new = {**tool_input, "model": ALIASES[ceiling]}
+    if isinstance(tool_input.get("prompt"), str):
+        new["prompt"] = tool_input["prompt"] + "\n\n" + WORKER_NOTE
+    return new, reason
+
+
+def log_decision(row: dict) -> None:
+    """Append one line to the decision log with a single write; never raises."""
+    try:
+        path = DELEGATION_LOG
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            if path.stat().st_size > LOG_LIMIT:
+                data = path.read_bytes()
+                tail = data[len(data) // 2:]
+                path.write_bytes(tail[tail.find(b"\n") + 1:] if b"\n" in tail else b"")
+        except OSError:
+            pass
+        with open(path, "ab", buffering=0) as fh:
+            fh.write((json.dumps(row) + "\n").encode("utf-8"))
+    except Exception:
+        pass
+
+
+def delegation_check(event: dict) -> None:
+    """PreToolUse: hold a sub-agent call one tier below the session's model by rewriting its ``model``.
+    Prints only an updated input, never a permission decision."""
+    if event.get("tool_name") not in ("Agent", "Task"):
+        return
+    tool_input = event.get("tool_input")
+    if not isinstance(tool_input, dict):
+        return
+    transcript = str(event.get("transcript_path", ""))
+    asked = tool_input.get("model")
+    row = {"ts": dt.datetime.now().timestamp(), "session": str(event.get("session_id", ""))[:16],
+           "type": str(tool_input.get("subagent_type") or ""), "asked": asked, "model": None, "main": None}
+    if delegation_mode() != "enforce":
+        log_decision({**row, "reason": "off"})
+        return
+    if event.get("agent_id"):
+        log_decision({**row, "reason": "nested"})
+        return
+    main = main_model(transcript)
+    new, reason = decide(tool_input, main, str(event.get("cwd", "")))
+    log_decision({**row, "model": new["model"] if new else None, "main": main, "reason": reason})
+    if new is not None:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "updatedInput": new}}))
+
+
 def review_question(sid: str, skills: list[str]) -> str:
     text = (
         "Look back at this piece of work once and save what you learned. "
@@ -304,8 +406,16 @@ def main() -> int:
         event = json.load(sys.stdin)
     except json.JSONDecodeError:
         return 0
+    if not isinstance(event, dict):
+        return 0
     name = event.get("hook_event_name", "")
     sid = str(event.get("session_id", ""))
+    if name == "PreToolUse":
+        try:
+            delegation_check(event)
+        except Exception:  # a sub-agent call is never failed or delayed over this
+            pass
+        return 0
     if name == "Stop":
         stop_check(event)
         return 0
