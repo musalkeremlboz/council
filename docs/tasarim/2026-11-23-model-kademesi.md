@@ -202,3 +202,14 @@ Sonda bir maddeyi çürütürse o parça yeniden tasarlanır ve proje sahibine b
 
 - Özelliğin halkadaki adı (proje sahibi).
 - Karşılaştırmalı denemede kullanılacak üç iş (proje sahibiyle seçilir).
+
+## Sonda sonuçları (2026-11-23 22:15)
+
+Üç kısa deneme oturumu, masaüstü uygulamasının içindeki istemciyle (2.1.328), boş bir geçici projede, yalnız proje ayarları yüklenerek (`--setting-sources project`) çalıştırıldı. Proje sahibinin hafıza hook'ları bu oturumlarda çalışmadı; süren denemenin sayılarından düşülecek bir şey yok. Liste fiyatıyla toplam bedel yaklaşık 0,24 $.
+
+1. **Hook alt ajan çağrısında çalışıyor.** Araç adı `Agent`. Girdideki alanlar: `session_id`, `transcript_path`, `cwd`, `permission_mode`, `effort`, `prompt_id`, `tool_use_id`, `tool_name`, `tool_input` (`description`, `prompt`, `subagent_type`, isteğe bağlı `model`, `run_in_background`). Girdide ana modelin adı **yok**.
+2. **Model değişiyor, izin değişmiyor.** Hook `updatedInput` ile `sonnet` isteğini `haiku`ya çevirdi, `permissionDecision` vermedi; alt ajan gerçekten Haiku ile çalıştı (kendi kaydındaki `message.model`), izin reddi ya da ek soru olmadı. Ana kayıt ise çağrıyı ilk hâliyle (`sonnet`) saklıyor: gerçek model yalnız alt ajanın kendi kaydından okunabilir.
+3. **İlk turda kayıtta yardımcı mesajı henüz yok**; tasarımdaki yedek de yok: oturum başı girdisinde `model` alanı gelmiyor (alanlar: `cwd`, `session_id`, `source`, `transcript_path`). Ama kayıtta, yanıt gelmeden önce yazılan bir **istek satırı** var (`type: "api-request"`, modeli `params.model`); hook çalıştığı anda o satır yerindeydi. Yerel 52 oturum kaydının hepsinde bu satırlar var ve modelleri her zaman ana sohbetin modeli. **Karar (Claude):** ana model, kayıttaki son yardımcı mesajından *ya da* son istek satırından, hangisi daha sondaysa ondan okunur. Böylece ilk turda ve oturum ortasındaki model değişiminde de doğru değer bulunur. İstek satırı belgelenmiş bir biçim değil; bulunamazsa hook dokunmaz (ilk turdaki çağrı tavansız kalır, yönerge yine geçerlidir).
+4. **`claude`, `Plan` ve `Explore` ana modeli devralıyor.** Ana model Sonnet iken üçü de model belirtilmeden Sonnet ile çalıştı. Üçü de devralan türler listesine girer.
+5. **İç içe çağrı ayırt edilebiliyor.** Bir alt ajanın kendi alt ajan çağrısında hook girdisi `agent_id` ve `agent_type` alanlarını taşıyor; ana sohbetin çağrısında bu alanlar yok. İç içe çağrıya dokunulmaz (`agent_id` varsa).
+6. **Masaüstü uygulaması:** deneme uygulamanın kendi istemcisiyle yapıldı, ama uygulamanın penceresinden değil. Pencereden yapılan ilk gerçek dağıtım, Mac'te açıldıktan sonra karar kaydından ve alt ajanın kaydından doğrulanacak.

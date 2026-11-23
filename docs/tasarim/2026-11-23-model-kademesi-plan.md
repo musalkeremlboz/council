@@ -49,6 +49,7 @@ The spec's section "Sonda" lists what is known from documentation only. Nothing 
   2. Did the sub-agent actually run on Haiku (read `message.model` in its own `agent-*.jsonl`) with no `permissionDecision` in the output? Was a permission question asked that is not asked without the hook?
   3. At the moment the hook ran, did the session record already contain an assistant line with `message.model` for that turn?
   4. Repeat Step 2 three times with no `model` in the request, for agent types `claude`, `Plan` and `Explore` (probe hook switched off): which model did each run on?
+- [x] **Done 2026-11-23 — see the spec's `## Sonda sonuçları`.** Outcome: the model can be changed without a permission decision; `claude`, `Plan`, `Explore` inherit; a nested call carries `agent_id`; the session's model is read from the last `assistant` *or* `api-request` line; there is no `SessionStart` fallback.
 - [ ] **Step 4: Decide and write down the consequences.** If 2 fails (the model is not changed, or changing it needs `permissionDecision`): stop, tell the owner; the feature becomes directive-only and Tasks 2 and 4 are dropped. If 3 fails: Task 2 also stores the `model` field of the `SessionStart` input in `~/.council/state/<session>.json` and reads it as a fallback. From 4: every type that ran on the main model joins `INHERITING` in Task 2. From 1: the name of the "inside a sub-agent" field for Task 2 (if there is none, that rule is dropped and the spec says so).
 - [ ] **Step 5: Commit** the spec section and the fixture: `Delegation: what the probe showed about the sub-agent hook`.
 
@@ -65,7 +66,7 @@ The spec's section "Sonda" lists what is known from documentation only. Nothing 
   - `TIERS: dict[str, int] = {"fable": 4, "mythos": 4, "opus": 3, "sonnet": 2, "haiku": 1}`
   - `ALIASES: dict[int, str] = {4: "fable", 3: "opus", 2: "sonnet", 1: "haiku"}`
   - `tier(model: object) -> int` — 0 for anything that is not a string naming a known family (case-insensitive substring match).
-  - `main_model(transcript: str) -> str | None` — `message.model` of the last line whose `type` is `assistant`, skipping lines with `isSidechain` true and models that start with `<`.
+  - `main_model(transcript: str) -> str | None` — the model on the last qualifying line of the record. Two kinds of line qualify (Task 0, answer 3): `type == "assistant"` (model in `message.model`) and `type == "api-request"` (model in `params.model`; written before the reply arrives, so it is there on a session's first turn). Lines with `isSidechain` true and models that start with `<` are skipped.
   - `delegation_mode() -> str` — `"enforce"`, `"advise"` or `"off"`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -102,6 +103,13 @@ def test_main_model_skips_sidechains_synthetic_and_broken_lines(tmp_path):
     path = record(tmp_path, [assistant("claude-opus-5-5"), assistant("claude-haiku-5-5", isSidechain=True),
                              assistant("<synthetic>"), '{"type": "assistant", "message": {"mod'])
     assert hook.main_model(path) == "claude-opus-5-5"
+
+def test_main_model_reads_the_request_line_before_any_reply_and_after_a_switch(tmp_path):
+    request = lambda model: {"type": "api-request", "querySource": "sdk", "params": {"model": model}}
+    assert hook.main_model(record(tmp_path, [{"type": "user"}, request("claude-haiku-5-5")])) == "claude-haiku-5-5"
+    path = record(tmp_path, [request("claude-opus-5-5"), assistant("claude-opus-5-5"), request("claude-mythos-5-2")])
+    assert hook.main_model(path) == "claude-mythos-5-2"
+    assert hook.main_model(record(tmp_path, [assistant("claude-opus-5-5"), {"type": "api-request", "params": "x"}])) == "claude-opus-5-5"
 
 def test_main_model_is_none_without_a_record_or_an_assistant_line(tmp_path):
     assert hook.main_model(str(tmp_path / "missing.jsonl")) is None
@@ -158,7 +166,7 @@ Expected: PASS
 **Interfaces:**
 - Consumes: `tier`, `ALIASES`, `main_model`, `delegation_mode` (Task 1); Task 0's answers (the sub-agent marker field, the inheriting types, whether the `SessionStart` fallback is needed).
 - Produces:
-  - `INHERITING: frozenset[str]` — `{"", "general-purpose"}` plus the types Task 0 saw running on the main model.
+  - `INHERITING: frozenset[str]` — `{"", "general-purpose", "claude", "Plan", "Explore"}` (Task 0, answer 4: all of them ran on the session's model when no model was asked for).
   - `WORKER_NOTE = "COUNCIL memory is readable with council_search and council_read. Do not write to it; the session that started you records the work."`
   - `DELEGATION_LOG = STATE / "delegation.jsonl"`
   - `agent_inherits(agent_type: str, cwd: str, home: Path | None = None) -> bool`
@@ -275,7 +283,26 @@ def test_parallel_decisions_are_whole_lines(tmp_path, monkeypatch):
     assert sorted(r["n"] for r in rows) == list(range(40))
 ```
 
-Add one more test from Task 0's fixture: load `tests/fixtures/pretooluse_agent.json`, point its `transcript_path` at a record whose model is Fable, and assert the handler returns `model == "opus"` with every other key of the real input preserved. If Task 0 found the "inside a sub-agent" field, add `test_a_call_from_inside_a_sub_agent_is_left_alone` asserting no output and reason `nested`.
+Two more tests use the real inputs Task 0 captured (`tests/fixtures/pretooluse_agent.json`, keys `main` and `nested`; replace `TRANSCRIPT_PATH` with a record whose model is Fable and `CWD` with `tmp_path`):
+
+```python
+FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "pretooluse_agent.json").read_text(encoding="utf-8"))
+
+def real(tmp_path, key):
+    return {**FIXTURE[key], "cwd": str(tmp_path), "transcript_path": record(tmp_path, [assistant("claude-fable-5-2")])}
+
+def test_a_real_input_is_rewritten_and_keeps_its_other_fields(tmp_path, monkeypatch, capsys):
+    out, _ = run_check(tmp_path, monkeypatch, capsys, real(tmp_path, "main"))
+    new, old = out["hookSpecificOutput"]["updatedInput"], FIXTURE["main"]["tool_input"]
+    assert new["model"] == "opus" and new["prompt"].startswith(old["prompt"])
+    assert {k: new[k] for k in old if k != "prompt"} == {k: v for k, v in old.items() if k != "prompt"}
+
+def test_a_call_from_inside_a_sub_agent_is_left_alone(tmp_path, monkeypatch, capsys):
+    out, lines = run_check(tmp_path, monkeypatch, capsys, real(tmp_path, "nested"))   # the input carries agent_id
+    assert out is None and lines[0]["reason"] == "nested"
+```
+
+(`from pathlib import Path` joins the test file's imports.) A call is nested when the event has a non-empty `agent_id` (Task 0, answer 5). No `SessionStart` fallback is built: that input carries no model (Task 0, answer 3).
 
 - [ ] **Step 2: Run them and see them fail**
 
