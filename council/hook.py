@@ -239,6 +239,8 @@ WORKER_NOTE = ("COUNCIL memory is readable with council_search and council_read.
                "the session that started you records the work.")
 DELEGATION_LOG = STATE / "delegation.jsonl"
 LOG_LIMIT = 1 << 20  # bytes; past this the decision log keeps its newer half
+LOCK_AT = 1 << 40  # Windows only: the byte, far past any data, that a writer of the decision log holds while it writes
+LOCK_TRIES, LOCK_WAIT = 200, 0.005  # at most a second of waiting for that byte
 
 
 def front_matter(lines: list[str]) -> list[str]:
@@ -325,10 +327,35 @@ def log_decision(row: dict) -> None:
                     raise
         except OSError:
             pass
-        with open(path, "ab", buffering=0) as fh:
-            fh.write(line)
+        append_line(path, line)
     except Exception:
         pass
+
+
+def append_line(path: Path, line: bytes) -> None:
+    """One whole line at the end of the file, with one write. Elsewhere that is atomic. Windows seeks to the end
+    and then writes, so two writers can land on the same offset and one row replaces the other: there a byte far
+    past the data is locked for the length of the write. A lock not won in time is written without."""
+    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | getattr(os, "O_BINARY", 0), 0o644)
+    try:
+        locked = False
+        if os.name == "nt":
+            import msvcrt
+
+            os.lseek(fd, LOCK_AT, os.SEEK_SET)
+            for _ in range(LOCK_TRIES):
+                try:
+                    msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                    locked = True
+                    break
+                except OSError:
+                    time.sleep(LOCK_WAIT)
+        os.write(fd, line)  # opened for append: the write goes to the end wherever the lock moved the position
+        if locked:
+            os.lseek(fd, LOCK_AT, os.SEEK_SET)
+            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+    finally:
+        os.close(fd)
 
 
 def delegation_check(event: dict) -> None:

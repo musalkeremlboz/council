@@ -245,6 +245,34 @@ def test_parallel_decisions_are_whole_lines(tmp_path, monkeypatch):
     rows = [json.loads(x) for x in (tmp_path / "d.jsonl").read_text(encoding="utf-8").splitlines()]
     assert sorted(r["n"] for r in rows) == list(range(40))
 
+def test_on_windows_a_far_byte_is_locked_around_the_write(tmp_path, monkeypatch):
+    """Windows appends by seeking and then writing, so writers must take turns (seen on CI: rows replaced)."""
+    log = tmp_path / "d.jsonl"
+    calls = []
+
+    class FakeMsvcrt:
+        LK_NBLCK, LK_UNLCK = 2, 0
+        busy = 3                                          # the first three tries find the byte taken
+
+        @classmethod
+        def locking(cls, fd, mode, nbytes):
+            if mode == cls.LK_NBLCK and cls.busy:
+                cls.busy -= 1
+                raise OSError("locked")
+            calls.append((mode, os.lseek(fd, 0, os.SEEK_CUR), nbytes))
+
+    monkeypatch.setitem(sys.modules, "msvcrt", FakeMsvcrt)
+    monkeypatch.setattr(hook, "LOCK_WAIT", 0)
+    monkeypatch.setattr(os, "name", "nt")
+    try:
+        hook.append_line(log, b"one\n")
+        FakeMsvcrt.busy = 10 ** 6                         # never won: the row is written all the same
+        hook.append_line(log, b"two\n")
+    finally:
+        monkeypatch.setattr(os, "name", "posix" if os.sep == "/" else "nt")
+    assert calls == [(2, hook.LOCK_AT, 1), (0, hook.LOCK_AT, 1)]
+    assert log.read_bytes() == b"one\ntwo\n"
+
 def test_the_log_is_trimmed_to_its_newer_half_and_stays_whole(tmp_path, monkeypatch):
     log = tmp_path / "d.jsonl"
     monkeypatch.setattr(hook, "DELEGATION_LOG", log)
@@ -256,8 +284,6 @@ def test_the_log_is_trimmed_to_its_newer_half_and_stays_whole(tmp_path, monkeypa
     assert rows[-1]["n"] == 199 and [r["n"] for r in rows] == list(range(rows[0]["n"], 200))
     assert sorted(p.name for p in tmp_path.iterdir()) == ["d.jsonl"]            # no temp file left behind
 
-# Appends are not atomic across processes on Windows; a lost log row there is accepted.
-@pytest.mark.skipif(os.name == "nt", reason="appends are not atomic across processes on Windows")
 def test_processes_appending_at_once_leave_whole_lines(tmp_path):
     data = json.dumps(event(tmp_path)).encode("utf-8")
     env = {**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path),
