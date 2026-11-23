@@ -127,9 +127,15 @@ def _stem(w: str) -> str:
 
 
 class Index:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, readonly: bool = False):
+        """``readonly`` opens an existing index as it is: nothing is created, reset or written."""
         self.path = Path(path)
         self._lock = threading.Lock()
+        if readonly:
+            if not self.path.is_file():
+                raise FileNotFoundError(str(self.path))
+            self.db = sqlite3.connect(f"{self.path.resolve().as_uri()}?mode=ro", uri=True, check_same_thread=False)
+            return
         self.db = sqlite3.connect(self.path, check_same_thread=False)
         self.db.executescript(
             """

@@ -74,11 +74,24 @@ def now_local() -> dt.datetime:
 
 
 class Store:
-    def __init__(self, data_dir: str | os.PathLike, readonly: bool = False):
+    def __init__(self, data_dir: str | os.PathLike, readonly: bool = False, frozen: bool = False):
         """``readonly`` opens the notes as they are on disk: nothing is seeded and nothing is committed (the
-        search index, a cache outside the vault, is still brought in line with the files)."""
+        search index, a cache outside the vault, is still brought in line with the files).
+
+        ``frozen`` writes nothing at all: no folder is created, no git command runs, nothing is seeded and
+        the search index is opened read-only and not synced. The data must already exist. Its write methods
+        are not guarded; whoever freezes a store does not call them."""
         self.data = Path(data_dir).expanduser().resolve()
         self.vault = self.data / "vault"
+        if frozen:
+            if not self.vault.is_dir():
+                raise StoreError(f"no memory at {self.data}")
+            self._lock_path = self.data / ".write.lock"
+            try:
+                self.index = Index(self.data / "index.sqlite3", readonly=True)
+            except FileNotFoundError:
+                raise StoreError(f"no search index at {self.data}") from None
+            return
         self.vault.mkdir(parents=True, exist_ok=True)
         self._lock_path = self.data / ".write.lock"
         self.index = Index(self.data / "index.sqlite3")

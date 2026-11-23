@@ -12,7 +12,7 @@ from pathlib import Path
 DEFAULT_DATA = os.environ.get("COUNCIL_DATA", "~/.council")
 # Commands that work on a memory that is already there: run against a folder without one (a mistyped --data),
 # they say so instead of starting an empty memory in it.
-NEEDS_MEMORY = {"context", "search", "check", "reindex", "usage", "backup", "watch-release", "watch-size"}
+NEEDS_MEMORY = {"context", "search", "check", "reindex", "usage", "backup", "watch-release", "watch-size", "panel"}
 # Commands that only read the notes: they seed nothing and commit nothing, so an edit made by hand stays
 # an uncommitted edit.
 READS_ONLY = {"context", "search", "check", "reindex", "usage"}
@@ -46,6 +46,12 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8765)
     s.add_argument("--public-host", action="append", default=[], help="extra allowed Host header, e.g. memory.example.com")
+
+    pn = sub.add_parser("panel", help="run the password-protected web panel")
+    pn.add_argument("--host", default="127.0.0.1")
+    pn.add_argument("--port", type=int, default=8766)
+    pn.add_argument("--base-path", default="/panel")
+    pn.add_argument("--service-url", default="http://127.0.0.1:8765")
 
     t = sub.add_parser("token", help="create (or show) the access token")
     t.add_argument("--rotate", action="store_true")
@@ -143,6 +149,22 @@ def main(argv: list[str] | None = None) -> int:
 
         app, _ = build(str(data), public_hosts=a.public_host)
         uvicorn.run(app, host=a.host, port=a.port, log_level="warning", proxy_headers=True, timeout_graceful_shutdown=3)
+        return 0
+
+    if a.cmd == "panel":
+        import uvicorn
+
+        from .panel.app import build as build_panel
+
+        if not (data / "owner.json").exists():
+            print("council panel: set the owner password first: council set-password", file=sys.stderr)
+            return 2
+        app = build_panel(data, base_path=a.base_path, service_url=a.service_url)
+        try:
+            uvicorn.run(app, host=a.host, port=a.port, log_level="warning", proxy_headers=True,
+                        timeout_graceful_shutdown=3)
+        finally:
+            app.state.gate.close()
         return 0
 
     from .store import Store

@@ -21,7 +21,7 @@ from mcp.types import Icon
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse
 
 from . import __version__
-from .context import SessionSeen, bootstrap, relevant, skills_block, skills_index
+from .context import START_BUDGET, SessionSeen, bootstrap, relevant, skills_block, skills_index
 from .learn import Learning
 from .oauth import OwnerOAuthProvider
 from .store import Store, StoreError
@@ -260,7 +260,7 @@ def build(data_dir: str, public_hosts: list[str] | None = None):
                 text += ("\n" if text else "") + skills
         else:
             seen.reset(sid)  # a session start (new, resumed or compacted) has nothing in its context yet
-            text = INSTRUCTIONS + "\n\n" + bootstrap(store, query, budget=int(body.get("budget", 9000)))
+            text = INSTRUCTIONS + "\n\n" + bootstrap(store, query, budget=int(body.get("budget", START_BUDGET)))
             if index := skills_index(learning):
                 text += "\n" + index
             usage.record("start", sid, chars=len(text))

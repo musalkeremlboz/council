@@ -17,8 +17,16 @@ COUNTS = {"inject": "injected", "read": "read", "search": "found"}
 
 
 class Usage:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, readonly: bool = False):
+        """``readonly`` opens an existing log as it is: no table is created, no row deleted, record() does nothing."""
         self._lock = threading.Lock()
+        self.readonly = readonly
+        if readonly:
+            path = Path(path)
+            if not path.is_file():
+                raise FileNotFoundError(str(path))
+            self.db = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True, check_same_thread=False)
+            return
         self.db = sqlite3.connect(path, check_same_thread=False)
         with self.db:
             self.db.execute("CREATE TABLE IF NOT EXISTS events(ts REAL, kind TEXT, session TEXT, query TEXT, "
@@ -28,6 +36,8 @@ class Usage:
     def record(self, kind: str, session: str = "", query: str = "", chars: int = 0, top: float | None = None,
                hits=(), ts: float | None = None) -> None:
         """Log one event. ``hits`` are the note sections involved; ``top`` the best match score seen."""
+        if self.readonly:
+            return
         rows = [{k: h[k] for k in ("path", "heading", "score") if k in h} for h in hits]
         try:
             with self._lock, self.db:

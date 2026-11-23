@@ -253,6 +253,49 @@ The timer runs every 15 minutes. If the backup fails for two days, your agent te
 
 The same backup works for the memory on your own computer: add the remote inside `~/.council/vault` and run `council backup`.
 
+### Set up the panel
+
+The panel lets you watch how the memory works from a browser. It shows how the memory works as live blocks, today's events, the health, the map of notes, how notes are used, and the releases. It shows note paths, counts and times; it never shows note text.
+
+The panel only reads the memory. The one file it writes is `panel.sqlite3` in the data folder: sessions, failed sign-ins, health samples and check results (no question text) are kept there.
+
+You need the owner password to sign in (`council set-password`, see the server setup above). Five wrong passwords lock the sign-in for 15 minutes. This lock is shared by everyone who can reach the sign-in page: someone else's wrong attempts can lock you out for 15 minutes at a time. The memory service's own sign-in works the same way. As long as someone keeps trying wrong passwords the lock stays closed; sessions already signed in keep working meanwhile.
+
+Sessions are kept in `panel.sqlite3`, so neither changing the password nor restarting the panel service ends the open ones. A session ends when you sign out, or 12 hours after signing in. To end them all at once, stop the panel service, delete `panel.sqlite3` (the health history and check results go with it) and start the service again.
+
+To run it by hand:
+
+```sh
+sudo COUNCIL_DATA=/var/lib/council /opt/council/.venv/bin/council panel
+```
+
+| Option | Default | What it does |
+|---|---|---|
+| `--host` | `127.0.0.1` | The address the panel listens on |
+| `--port` | `8766` | The panel's port |
+| `--base-path` | `/panel` | The path the panel lives under |
+| `--service-url` | `http://127.0.0.1:8765` | Where to find the memory service for the health samples |
+
+To keep it running, copy [`deploy/council-panel.service`](../deploy/council-panel.service) into `/etc/systemd/system/`:
+
+```sh
+sudo systemctl enable --now council-panel.service
+```
+
+Then add these lines from [`deploy/Caddyfile`](../deploy/Caddyfile) to your own Caddy configuration: exactly `/panel` and the paths under `/panel/` go to the panel (`/panelx` does not), everything else to the memory service.
+
+```
+@panel path /panel /panel/*
+handle @panel {
+	reverse_proxy 127.0.0.1:8766
+}
+handle {
+	reverse_proxy 127.0.0.1:8765
+}
+```
+
+The panel's address is `https://your-domain/panel/`. Behind a proxy, the `Host` header must reach the panel unchanged (Caddy's `reverse_proxy` does this by default). A proxy that rewrites `Host` makes sign-in answer 403, because the panel compares the request's Origin with its Host.
+
 ## 5. Commands
 
 | Command | What it does |
@@ -272,6 +315,7 @@ The same backup works for the memory on your own computer: add the remote inside
 | `council reindex` | Rebuilds the search index from the notes |
 | `council usage --days 7` | Summarizes what the memory handed out lately |
 | `council backup` | Pushes the notes to the remote named `backup` |
+| `council panel` | Runs the read-only monitoring panel (`--host`, `--port`, `--base-path`, `--service-url`) |
 
 The data folder is `~/.council` by default. For another folder use `--data FOLDER` or `COUNCIL_DATA`.
 

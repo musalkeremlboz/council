@@ -1,9 +1,17 @@
 # COUNCIL public endpoint. Replace memory.example.com with your own domain;
 # Caddy gets the HTTPS certificate by itself once the domain points at this server.
+# /panel and /panel/... go to the read-only panel (council-panel.service); everything else to the memory service.
+# Caddy passes the Host header on unchanged, which the panel's sign-in needs.
 memory.example.com {
 	encode zstd gzip
 	log {
 		output file /var/log/caddy/council-access.log
 	}
-	reverse_proxy 127.0.0.1:8765
+	@panel path /panel /panel/*
+	handle @panel {
+		reverse_proxy 127.0.0.1:8766
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8765
+	}
 }

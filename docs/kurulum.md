@@ -253,6 +253,49 @@ Zamanlayıcı 15 dakikada bir çalışır. Yedek iki gün başarısız kalırsa 
 
 Aynı yedek kendi bilgisayarındaki hafıza için de kurulabilir: uzak depoyu `~/.council/vault` içine ekle ve `council backup` komutunu çalıştır.
 
+### Paneli kur
+
+Panel, hafızanın nasıl çalıştığını tarayıcıdan izlemene yarar. Şunları gösterir: hafızanın işleyişini canlı bloklar olarak, bugünün olaylarını, sağlık durumunu, notların haritasını, notların kullanımını ve sürümleri. Not yollarını, sayıları ve saatleri gösterir; not metnini hiçbir yerde göstermez.
+
+Panel hafızayı yalnız okur. Yazdığı tek dosya veri klasöründeki `panel.sqlite3` dosyasıdır: oturumlar, yanlış girişler, sağlık örnekleri ve denetim sonuçları (soru metni yok) orada durur.
+
+Girmek için sahip şifresi gerekir (`council set-password`, bkz. yukarıdaki kurulum). Beş yanlış şifre girişi 15 dakika kilitler. Bu kilit giriş sayfasına ulaşabilen herkes için ortaktır: başkasının yanlış denemeleri seni de 15 dakikalığına dışarıda bırakabilir. Hafıza servisinin kendi giriş sayfasında da durum aynıdır. Biri yanlış şifre denemeyi sürdürdükçe kilit kapalı kalır; o sırada zaten girmiş oturumlar çalışmaya devam eder.
+
+Oturumlar `panel.sqlite3` dosyasında durur; bu yüzden şifreyi değiştirmek de panel servisini yeniden başlatmak da açık oturumları bitirmez. Bir oturum, çıkış yapınca ya da girişten 12 saat sonra biter. Hepsini hemen bitirmek için panel servisini durdur, `panel.sqlite3` dosyasını sil (sağlık geçmişi ve denetim sonuçları da silinir) ve servisi yeniden başlat.
+
+Elle çalıştırmak için:
+
+```sh
+sudo COUNCIL_DATA=/var/lib/council /opt/council/.venv/bin/council panel
+```
+
+| Seçenek | Varsayılan | Ne yapar |
+|---|---|---|
+| `--host` | `127.0.0.1` | Panelin dinlediği adres |
+| `--port` | `8766` | Panelin portu |
+| `--base-path` | `/panel` | Panelin adresteki yolu |
+| `--service-url` | `http://127.0.0.1:8765` | Sağlık örneği için hafıza servisinin adresi |
+
+Sürekli çalışması için [`deploy/council-panel.service`](../deploy/council-panel.service) dosyasını `/etc/systemd/system/` altına kopyala:
+
+```sh
+sudo systemctl enable --now council-panel.service
+```
+
+Sonra [`deploy/Caddyfile`](../deploy/Caddyfile) içindeki satırları kendi Caddy ayarına ekle: tam olarak `/panel` ve `/panel/` ile başlayan yollar panele gider (`/panelx` gitmez), geri kalan her şey hafıza servisine.
+
+```
+@panel path /panel /panel/*
+handle @panel {
+	reverse_proxy 127.0.0.1:8766
+}
+handle {
+	reverse_proxy 127.0.0.1:8765
+}
+```
+
+Panelin adresi `https://alan-adin/panel/` olur. Bir vekil sunucunun arkasında `Host` başlığı panele değişmeden ulaşmalıdır (Caddy'nin `reverse_proxy` komutu bunu kendiliğinden yapar). `Host` başlığını değiştiren bir vekil girişin 403 vermesine yol açar; çünkü panel isteğin Origin başlığını Host başlığıyla karşılaştırır.
+
 ## 5. Komutlar
 
 | Komut | Ne yapar |
@@ -272,6 +315,7 @@ Aynı yedek kendi bilgisayarındaki hafıza için de kurulabilir: uzak depoyu `~
 | `council reindex` | Arama indeksini notlardan yeniden kurar |
 | `council usage --days 7` | Hafızanın son günlerde neyi verdiğini özetler |
 | `council backup` | Notları `backup` adlı uzak depoya gönderir |
+| `council panel` | Salt okunur izleme panelini çalıştırır (`--host`, `--port`, `--base-path`, `--service-url`) |
 
 Veri klasörü varsayılan olarak `~/.council` olur. Başka bir klasör için `--data KLASÖR` ya da `COUNCIL_DATA`.
 

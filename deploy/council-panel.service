@@ -1,0 +1,23 @@
+[Unit]
+Description=COUNCIL panel (read-only monitoring page)
+After=council.service
+
+[Service]
+Type=simple
+Environment=COUNCIL_DATA=/var/lib/council
+# Your time zone: dates written into notes use it.
+Environment=TZ=Europe/Istanbul
+ExecStart=/opt/council/.venv/bin/council panel --host 127.0.0.1 --port 8766 --base-path /panel
+Restart=on-failure
+# Exit status 2: no owner password is set yet; restarting would not help (run council set-password).
+RestartPreventExitStatus=2
+RestartSec=3
+TimeoutStopSec=8
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/council
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

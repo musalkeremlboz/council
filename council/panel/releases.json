@@ -1,0 +1,120 @@
+{
+  "ring": [
+    {
+      "n": 1,
+      "name": "Hafıza",
+      "state": "full"
+    },
+    {
+      "n": 2,
+      "name": "İşlerden öğrenme",
+      "state": "measured"
+    },
+    {
+      "n": 3,
+      "state": "waiting"
+    },
+    {
+      "n": 4,
+      "state": "waiting"
+    },
+    {
+      "n": 5,
+      "state": "waiting"
+    },
+    {
+      "n": 6,
+      "state": "waiting"
+    }
+  ],
+  "versions": [
+    {
+      "version": "0.3.0",
+      "state": "pending",
+      "date": "yayın bekliyor",
+      "summary": "Yardımcı işlerden öğreniyor, hafıza kendini denetleyebiliyor.",
+      "added": [
+        "İşlerden öğrenme",
+        "İş tarifi dizini ve işaret",
+        "Hafıza denetimi",
+        "Aramada bulunamayan sözcüklerin bildirilmesi ve uzun kelime biçimleri",
+        "Yalnız okuyan komutların kayıt atmaması, yedeğin denetim sorularını taşıması"
+      ]
+    },
+    {
+      "version": "0.2.1",
+      "state": "released",
+      "date": "21.11.2026",
+      "summary": "Yardımcın COUNCIL'i kendisi kuruyor.",
+      "added": [
+        "Yardımcıya tek cümleyle kurulum yönergesi",
+        "Durum komutunda bağlantı ve içe aktarılanlar",
+        "Tek dosya içe alma",
+        "Kapı çakışmasının bildirilmesi"
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "state": "released",
+      "date": "21.11.2026",
+      "summary": "Tek komutla kurulum.",
+      "added": [
+        "Servis, bağlantı, içe aktarma ve güncelleme tek adımda",
+        "macOS, Linux, Windows",
+        "Var olan hafızanın aktarımı",
+        "Kendiliğinden güncelleme"
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "state": "first",
+      "date": "ilk sürüm",
+      "summary": "Ortak hafıza.",
+      "added": [
+        "Düz metin notlar ve değişiklik geçmişi",
+        "Oturum başında, her mesajda ve iş bitince kendiliğinden çalışma",
+        "Kelimeyle arama",
+        "Çakışma koruması",
+        "Sunucu, telefon ve web bağlantısı",
+        "Yedek"
+      ]
+    }
+  ],
+  "next": [
+    {
+      "title": "Canlı deneme değerlendirmesi",
+      "text": "Öğrenmelerin en çok yüzde 20'si geri alınmış olmalı; aynı düzeltme iki kez yapılmamış olmalı.",
+      "waits_for": "05.12.2026"
+    },
+    {
+      "title": "Öğrenmenin gerçek mesajlarla ölçümü",
+      "text": "Doğru tarifin açılması en az yüzde 80, yanlış öneri en çok yüzde 20 olmalı.",
+      "waits_for": "25 konulu mesaj birikince"
+    },
+    {
+      "title": "0.3.0 yayını",
+      "text": "Tanıtım sayfası hazır. Yayınlanınca başka kurulumlara da ulaşır.",
+      "waits_for": "proje sahibinin kararı"
+    },
+    {
+      "title": "Panel",
+      "text": "Bu arayüz: canlı şema, hafıza haritası, sağlık, güncellemeler.",
+      "waits_for": "yapım sürüyor"
+    },
+    {
+      "title": "Antigravity'de hatırlatma ve öğrenme sorusu",
+      "text": "Bugün yalnız bağlam geliyor; iş bitince çalışan kısım taşınmadı.",
+      "waits_for": "sırada"
+    },
+    {
+      "title": "Anlam tabanlı arama",
+      "text": "İki kez ölçüldü, iki ölçüt eksik kaldı: yeterince fazla doğru not getirmedi ve yavaştı. Kurulmadı.",
+      "waits_for": "200 notta yeniden ölçülecek"
+    },
+    {
+      "title": "Halkanın kalan dört parçası",
+      "text": "Hangi özellikler olacağı ve sırası.",
+      "waits_for": "proje sahibinin kararı"
+    }
+  ]
+}

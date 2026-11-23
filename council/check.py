@@ -216,15 +216,52 @@ def _targets(text: str) -> list[tuple[str, bool]]:
     return [(t, wiki) for _, t, wiki in sorted(out)]
 
 
-def _resolves(note: str, target: str, wiki: bool, notes: set[str], stems: set[str]) -> bool:
-    """Whether ``target`` written in ``note`` names a note: from the vault root or from the note's folder,
-    with or without ``.md``. A bare ``[[name]]`` also names a note of that name in any folder."""
+def _resolve(note: str, target: str, wiki: bool, notes: set[str], by_stem: dict[str, str]) -> str | None:
+    """The note that ``target`` written in ``note`` names, or None: from the vault root or from the note's
+    folder, with or without ``.md``. A bare ``[[name]]`` also names a note of that name in any folder
+    (``by_stem`` maps a name to the first such note)."""
     names = [target] if target.endswith(".md") else [target, target + ".md"]
     for name in names:
         for base in ("", posixpath.dirname(note)):
-            if posixpath.normpath(posixpath.join(base, name) if base else name.lstrip("/")) in notes:
-                return True
-    return wiki and "/" not in target and target.removesuffix(".md") in stems
+            found = posixpath.normpath(posixpath.join(base, name) if base else name.lstrip("/"))
+            if found in notes:
+                return found
+    if wiki and "/" not in target:
+        return by_stem.get(target.removesuffix(".md"))
+    return None
+
+
+def _resolves(note: str, target: str, wiki: bool, notes: set[str], by_stem: dict[str, str]) -> bool:
+    return _resolve(note, target, wiki, notes, by_stem) is not None
+
+
+def _by_stem(notes: set[str]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for p in sorted(notes):
+        out.setdefault(posixpath.basename(p).removesuffix(".md"), p)
+    return out
+
+
+def note_links(store: Store) -> dict[str, list[str]]:
+    """For every note (history included), the notes its links lead to: each once, never itself, none that
+    do not resolve. Paths only; no text of any note leaves this function."""
+    listed = _listed(store)
+    notes = set(listed)
+    by_stem = _by_stem(notes)
+    out: dict[str, list[str]] = {}
+    for note in sorted(notes):
+        try:
+            text = _nfc(store.read(listed[note]).text)
+        except (StoreError, OSError, ValueError):
+            out[listed[note]] = []
+            continue
+        leads: list[str] = []
+        for target, wiki in _targets(text):
+            found = _resolve(note, target, wiki, notes, by_stem)
+            if found and found != note and listed[found] not in leads:
+                leads.append(listed[found])
+        out[listed[note]] = leads
+    return out
 
 
 def link_report(store: Store) -> dict:
@@ -232,7 +269,7 @@ def link_report(store: Store) -> dict:
     day it was written. A broken link comes with notes of the same file name elsewhere, if there are any."""
     listed = _listed(store)
     notes = set(listed)
-    stems = {posixpath.basename(p).removesuffix(".md") for p in notes}
+    by_stem = _by_stem(notes)
     by_name: dict[str, list[str]] = {}
     for p in sorted(notes):
         by_name.setdefault(posixpath.basename(p), []).append(listed[p])
@@ -246,7 +283,7 @@ def link_report(store: Store) -> dict:
             continue
         for target, wiki in _targets(text):
             checked += 1
-            if not _resolves(note, target, wiki, notes, stems):
+            if not _resolves(note, target, wiki, notes, by_stem):
                 name = posixpath.basename(target)
                 name = name if name.endswith(".md") else name + ".md"
                 broken[(note, target)] = {"note": listed[note], "target": target,
