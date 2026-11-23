@@ -198,6 +198,9 @@ chmod 600 ~/.config/council/config.json
     ],
     "Stop": [
       {"hooks": [{"type": "command", "command": "python3 ~/.council/hook.py", "timeout": 5}]}
+    ],
+    "PreToolUse": [
+      {"matcher": "Agent|Task", "hooks": [{"type": "command", "command": "python3 ~/.council/hook.py", "timeout": 5}]}
     ]
   }
 }
@@ -208,6 +211,7 @@ chmod 600 ~/.config/council/config.json
 | `SessionStart` | When a session opens | Loads the starting context |
 | `UserPromptSubmit` | With each of your messages | Adds the notes relevant to the message |
 | `Stop` | When the agent finishes its reply | Reminds once if there is unrecorded work |
+| `PreToolUse` (`Agent\|Task`) | When the agent starts a sub-agent | Holds the sub-agent one model tier below the session's model (see `delegation` above) |
 
 **MCP tools.**
 

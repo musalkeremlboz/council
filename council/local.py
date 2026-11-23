@@ -25,6 +25,7 @@ import urllib.request
 from pathlib import Path
 
 from . import REPO, __version__
+from .hook import mode_of
 
 SERVICE = "ai.council.memory"
 UPDATER = "ai.council.update"
@@ -328,17 +329,24 @@ class Setup:
         return f"{_quote(Path(sys.executable).as_posix())} {_quote(self.hook.as_posix())}"
 
     def _register_tool_hooks(self, hooks: dict, command: str) -> None:
-        """Add or refresh, in place, our entry for each tool event; the user's own entries are left as they are."""
+        """Add or refresh, in place, our entry for each tool event. The user's own hooks and their matchers are left
+        as they are: ours is taken out of an entry it shares with them and gets an entry of its own."""
         for event, (matcher, timeout) in TOOL_HOOKS.items():
             entries = hooks.setdefault(event, [])
-            ours = [e for e in entries if any(HOOK_MARK in str(h.get("command", "")) for h in e.get("hooks", []))]
-            if ours:
-                for e in ours:
-                    e["matcher"] = matcher
-                    for h in e.get("hooks", []):
-                        if HOOK_MARK in str(h.get("command", "")):
-                            h["command"] = command
-            else:
+            own = False
+            for e in entries:
+                hs = e.get("hooks", [])
+                kept = [h for h in hs if HOOK_MARK not in str(h.get("command", ""))]
+                if len(kept) == len(hs):
+                    continue
+                if kept:  # shared with the user's hooks
+                    e["hooks"] = kept
+                    continue
+                own = True
+                e["matcher"] = matcher
+                for h in hs:
+                    h["command"] = command
+            if not own:
                 entries.append({"matcher": matcher, "hooks": [{"type": "command", "command": command, "timeout": timeout}]})
 
     def disconnect(self) -> None:
@@ -363,15 +371,17 @@ class Setup:
             self.config.unlink(missing_ok=True)
             self.hook.unlink(missing_ok=True)
 
-    def hooks_installed(self) -> bool:
+    def _registered(self, events) -> bool:
+        """Whether our hook is in the settings for every one of these events."""
         settings = self._read_json(self.settings) or {}
         return all(any(HOOK_MARK in str(h.get("command", "")) for e in settings.get("hooks", {}).get(event, [])
-                       for h in e.get("hooks", [])) for event in HOOKS)
+                       for h in e.get("hooks", [])) for event in events)
+
+    def hooks_installed(self) -> bool:
+        return self._registered(HOOKS)
 
     def tool_hooks_installed(self) -> bool:
-        settings = self._read_json(self.settings) or {}
-        return all(any(HOOK_MARK in str(h.get("command", "")) for e in settings.get("hooks", {}).get(event, [])
-                       for h in e.get("hooks", [])) for event in TOOL_HOOKS)
+        return self._registered(TOOL_HOOKS)
 
     def ensure_tool_hooks(self) -> bool:
         """Add the tool hook to an installation made before it existed. Returns whether the settings were written."""
@@ -380,6 +390,9 @@ class Setup:
             return False
         self._register_tool_hooks(settings.setdefault("hooks", {}), self._hook_command())
         self._backup_once(self.settings)
+        backup = self.settings.with_name(self.settings.name + ".before-council-delegation")
+        if not backup.exists():  # the service edits on its own, so its edit gets a copy of its own
+            shutil.copy2(self.settings, backup)
         self._write_json(self.settings, settings)
         return True
 
@@ -473,8 +486,7 @@ def status(s: Setup) -> int:
     s.say(f"service      {'running on ' + s.url + (' (' + version + ')' if version else '') if version else 'not running'}"
           + ("" if s.service_installed() else " · not installed as a background service"))
     s.say(f"hooks        {'installed' if s.hooks_installed() else 'not installed'}")
-    mode = (s._read_json(s.config) or {}).get("delegation")  # the hook's rule: enforce unless advise or off
-    mode = mode if mode in ("advise", "off") else "enforce"
+    mode = mode_of(s._read_json(s.config))
     s.say(f"delegation   {mode}" + (" · hook not registered" if mode == "enforce" and not s.tool_hooks_installed() else ""))
     mcp = (s._read_json(s.claude_json) or {}).get("mcpServers", {}).get("council", {}).get("url", "")
     s.say(f"mcp tools    {'connected to Claude Code' if mcp.startswith(s.url) else 'not connected to Claude Code'}")
