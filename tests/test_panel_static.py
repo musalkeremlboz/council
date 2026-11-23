@@ -99,3 +99,20 @@ def test_every_file_the_stylesheet_names_is_shipped(static_dir):
     assert named, "the stylesheet names its display face"
     for name in named:
         assert (static_dir / name).is_file(), name
+
+
+TEXT_FACES = {"DM Sans": ("fonts/DMSans.ttf",), "DM Mono": ("fonts/DMMono-Regular.ttf", "fonts/DMMono-Medium.ttf")}
+
+
+def test_the_text_faces_are_shipped_with_their_licences_and_served(static_dir, panel_signed_in):
+    css = (static_dir / "panel.css").read_text(encoding="utf-8")
+    rules = re.findall(r"@font-face\s*{[^}]*}", css)
+    for family, files in TEXT_FACES.items():
+        for name in files:
+            assert any(f'font-family: "{family}"' in rule and f'url("{name}")' in rule for rule in rules), name
+            data = (static_dir / name).read_bytes()
+            assert data[:4] == b"\x00\x01\x00\x00", name  # a TrueType file, not an error page saved under its name
+            served = panel_signed_in.get(f"/panel/static/{name}")
+            assert served.status_code == 200 and served.content == data, name
+    for licence in ("fonts/OFL-DMSans.txt", "fonts/OFL-DMMono.txt"):
+        assert "SIL Open Font License" in (static_dir / licence).read_text(encoding="utf-8"), licence

@@ -1,7 +1,11 @@
 /* Panel colours and type. Full circles, flat cuts, 12px cards, no shadows, no gradients.
    The accent (kor) marks only the memory itself, the selected or focused item and the travelling dot. */
 @font-face { font-family: "Council Halka"; src: url("fonts/CouncilHalka.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
-/* The text faces are named, not shipped: an installed DM Sans or DM Mono is used, otherwise the system faces. */
+/* DM Sans (variable) and DM Mono come from the google/fonts repository, unchanged, under the SIL Open Font
+   License; the licence texts are beside the files (fonts/OFL-*.txt). */
+@font-face { font-family: "DM Sans"; src: url("fonts/DMSans.ttf") format("truetype"); font-weight: 100 1000; font-display: swap; }
+@font-face { font-family: "DM Mono"; src: url("fonts/DMMono-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "DM Mono"; src: url("fonts/DMMono-Medium.ttf") format("truetype"); font-weight: 500; font-display: swap; }
 
 :root {
   --zemin: #F4F5F3;
