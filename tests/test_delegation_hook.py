@@ -192,3 +192,44 @@ def test_a_real_input_is_rewritten_and_keeps_its_other_fields(tmp_path, monkeypa
 def test_a_call_from_inside_a_sub_agent_is_left_alone(tmp_path, monkeypatch, capsys):
     out, lines = run_check(tmp_path, monkeypatch, capsys, real(tmp_path, "nested"))   # the input carries agent_id
     assert out is None and lines[0]["reason"] == "nested"
+
+
+def start(monkeypatch, capsys, fetch):
+    import io
+    monkeypatch.setattr(hook, "fetch", fetch)
+    monkeypatch.setattr(hook, "load_config", lambda: {"url": "http://x", "token": "t"})
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"hook_event_name": "SessionStart", "session_id": "s1"})))
+    assert hook.main() == 0
+    return json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+
+def test_the_block_fits_and_says_the_essentials():
+    b = hook.DELEGATION_BLOCK
+    assert b.startswith("[Delegation]") and len(b) <= 1200
+    for phrase in ("fable/mythos -> opus", "opus -> sonnet", "sonnet -> haiku", "Do it yourself", "Hand off",
+                   "Never higher", "Brief each worker", "Check a worker's result", "Do not redo",
+                   "Tell the user in one line", "fork"):
+        assert phrase in b
+
+def test_session_start_ends_with_the_block(monkeypatch, capsys):
+    text = start(monkeypatch, capsys, lambda cfg, payload: "MEMORY")
+    assert "MEMORY" in text and text.endswith("\n\n" + hook.DELEGATION_BLOCK)
+
+def test_the_block_is_sent_even_when_memory_is_unreachable(monkeypatch, capsys):
+    def down(cfg, payload): raise OSError("down")
+    text = start(monkeypatch, capsys, down)
+    assert "unreachable" in text and text.endswith("\n\n" + hook.DELEGATION_BLOCK)
+
+def test_advise_keeps_the_block_and_off_drops_it(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(hook, "delegation_mode", lambda: "advise")
+    assert start(monkeypatch, capsys, lambda c, p: "MEMORY").endswith(hook.DELEGATION_BLOCK)
+    monkeypatch.setattr(hook, "delegation_mode", lambda: "off")
+    assert "[Delegation]" not in start(monkeypatch, capsys, lambda c, p: "MEMORY")
+
+def test_a_message_does_not_carry_the_block(monkeypatch, capsys):
+    import io
+    monkeypatch.setattr(hook, "fetch", lambda c, p: "NOTES")
+    monkeypatch.setattr(hook, "load_config", lambda: {"url": "http://x", "token": "t"})
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(
+        {"hook_event_name": "UserPromptSubmit", "session_id": "s1", "prompt": "hello"})))
+    hook.main()
+    assert "[Delegation]" not in capsys.readouterr().out

@@ -175,6 +175,8 @@ On every computer where you use Claude Code:
 
 `timezone` is optional. It keeps the time written into notes right on a machine set to another time zone.
 
+`delegation` is optional and sets which model sub-agents run on. Values: `enforce` (the default), `advise`, `off`. `enforce`: a short directive is added to the context at the start of a session (when to hand work off, how to brief a worker and check its result) and sub-agents run at most one tier below the session's own model; the hook lowers a higher model if one is asked for. `advise`: only the directive is added, no model is changed. `off`: neither. Any other value, or a missing key, counts as `enforce`.
+
 **Hook script.**
 
 ```sh

@@ -175,6 +175,8 @@ Claude Code kullandığın her bilgisayarda:
 
 `timezone` isteğe bağlıdır. Notlara yazılan saatin, saat dilimi farklı bir makinede de doğru çıkmasını sağlar.
 
+`delegation` isteğe bağlıdır ve alt ajanların hangi modelle çalışacağını belirler. Değerler: `enforce` (varsayılan), `advise`, `off`. `enforce`: oturum başında bağlama kısa bir yönerge eklenir (işi ne zaman devredeceği, nasıl yönlendirip kontrol edeceği) ve alt ajanlar oturumun modelinden en çok bir kademe aşağıda çalışır; hook daha yüksek bir model istenirse onu düşürür. `advise`: yalnız yönerge eklenir, modele dokunulmaz. `off`: ikisi de kapalıdır. Bunların dışındaki bir değer ya da eksik anahtar `enforce` sayılır.
+
 **Hook betiği.**
 
 ```sh

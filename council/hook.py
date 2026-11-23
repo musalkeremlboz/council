@@ -401,6 +401,23 @@ def stop_check(event: dict, session_info=server_session) -> None:
     print(json.dumps({"decision": "block", "reason": "\n\n".join(parts)}))
 
 
+DELEGATION_BLOCK = """[Delegation] Sub-agents here run one tier below the session's model: fable/mythos -> opus,
+opus -> sonnet, sonnet -> haiku. A hook enforces the ceiling.
+- Do it yourself: one small task, a quick lookup, steps that depend on each other, anything
+  that needs this conversation to judge. Handing these off costs more time and tokens.
+- Hand off: two or more independent pieces of real work, or one bulky piece (wide reading,
+  many files, a long tool loop) whose result fits in a short report. Start independent
+  workers in the same turn.
+- A simpler piece may go lower than the default: searching, reading, summarising -> haiku;
+  well-specified code, tests, docs -> sonnet. Never higher.
+- Brief each worker once and fully: goal, files, what is known, what done looks like, what
+  to return. It sees neither this conversation nor the memory context.
+- Check a worker's result itself (the diff, the test output, the file) against what the
+  user asked before relying on it. Do not redo its work.
+- Tell the user in one line what you handed off and to which model.
+- A fork runs on your own model; use a fresh agent for handed-off work."""
+
+
 def main() -> int:
     try:
         event = json.load(sys.stdin)
@@ -429,10 +446,13 @@ def main() -> int:
             text = ""
         else:
             text = fetch(cfg, {"mode": "prompt", "query": str(event.get("prompt", "")), "session_id": sid})
-        emit_context(name, stamp(sid) + "\n" + text if text else stamp(sid))
+        context = stamp(sid) + "\n" + text if text else stamp(sid)
     except (OSError, urllib.error.URLError, KeyError, ValueError) as e:
-        emit_context(name, f"{stamp(sid)}\nCOUNCIL memory is unreachable ({type(e).__name__}); "
-                     "tell the user once and continue without memory.")
+        context = (f"{stamp(sid)}\nCOUNCIL memory is unreachable ({type(e).__name__}); "
+                   "tell the user once and continue without memory.")
+    if name == "SessionStart" and delegation_mode() != "off":
+        context += "\n\n" + DELEGATION_BLOCK
+    emit_context(name, context)
     return 0
 
 
