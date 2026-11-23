@@ -163,6 +163,66 @@ def review_interval() -> int:
         return REVIEW_EVERY
 
 
+TIERS = {"fable": 4, "mythos": 4, "opus": 3, "sonnet": 2, "haiku": 1}
+ALIASES = {4: "fable", 3: "opus", 2: "sonnet", 1: "haiku"}
+CHUNK = 1 << 20  # bytes read per step when scanning a session record from its end
+
+
+def tier(model: object) -> int:
+    """Rank of a model by the family name inside its id (never a version number); 0 when unknown."""
+    if not isinstance(model, str):
+        return 0
+    name = model.lower()
+    return max((rank for family, rank in TIERS.items() if family in name), default=0)
+
+
+def line_model(line: bytes) -> str | None:
+    """The model a record line names if it is a main-thread assistant or request line, else None."""
+    if b'"model"' not in line:
+        return None
+    try:
+        entry = json.loads(line)
+    except ValueError:  # a cut-off or foreign line
+        return None
+    if not isinstance(entry, dict) or entry.get("isSidechain"):
+        return None
+    kind = entry.get("type")
+    holder = entry.get("message") if kind == "assistant" else entry.get("params") if kind == "api-request" else None
+    model = holder.get("model") if isinstance(holder, dict) else None
+    return model if isinstance(model, str) and model and not model.startswith("<") else None
+
+
+def main_model(transcript: str) -> str | None:
+    """Model on the last qualifying line of the session record, read backwards in bounded chunks."""
+    try:
+        with open(transcript, "rb") as fh:
+            fh.seek(0, os.SEEK_END)
+            pos = fh.tell()
+            carry = b""  # the front of the text read so far: a line whose start is not read yet
+            while pos > 0:
+                step = min(CHUNK, pos)
+                pos -= step
+                fh.seek(pos)
+                lines = (fh.read(step) + carry).split(b"\n")
+                carry = lines.pop(0) if pos > 0 else b""
+                for line in reversed(lines):
+                    model = line_model(line)
+                    if model:
+                        return model
+    except OSError:
+        return None
+    return None
+
+
+def delegation_mode() -> str:
+    """"enforce" (default), "advise" or "off"; config "delegation" overrides, anything else means "enforce"."""
+    try:
+        value = load_config().get("delegation")
+    except Exception:  # no config file yet: nothing to override
+        return "enforce"
+    return value if value in ("advise", "off") else "enforce"
+
+
 def review_question(sid: str, skills: list[str]) -> str:
     text = (
         "Look back at this piece of work once and save what you learned. "
