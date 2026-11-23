@@ -47,7 +47,8 @@ def _memory(data_dir):
 class _Cache:
     """One value per data folder and kind, kept with the mark it was computed for (the vault's HEAD, the usage
     log's rows) and computed again when the mark moves. A value is stored whole, as one tuple, so two requests
-    that race compute it twice at worst and never see half of one. It holds only what an answer carries."""
+    that race compute it twice at worst and never see half of one. A value of None (a read that failed) is not
+    kept. It holds only what an answer carries: times, paths and counts."""
 
     def __init__(self):
         self._lock = threading.Lock()
@@ -62,8 +63,9 @@ class _Cache:
         if entry is not None and entry[0] == mark:
             return entry[1]
         value = compute()
-        with self._lock:
-            self._entries[key] = (mark, value)
+        if value is not None:
+            with self._lock:
+                self._entries[key] = (mark, value)
         return value
 
 
@@ -88,10 +90,24 @@ def _parts(plan: dict) -> list[dict]:
     return [{"name": text_tr.SECTION_NAMES[s["path"]], "chars": _shown_chars(s)} for s in plan["sections"]]
 
 
-def _index(store) -> tuple[int, int, int]:
-    """Characters of the skill index as served, skills listed, skills left out."""
-    paths, left = Learning(store).index()
-    return len(context.skills_index(Learning(store), learn.INDEX_BUDGET)), len(paths), left
+def _history(store, data_dir, head) -> list[dict]:
+    """Every commit touching notes, newest first (times and paths, as ``reader.changes`` gives them). The whole
+    history is read once for a HEAD of the vault (``head``) and kept until it moves; the sections cut their own
+    windows out of it. Callers only read the list."""
+    return _CACHE.get(data_dir, "history", head, lambda: reader.history(store)) or []
+
+
+def _since(history: list[dict], since: float) -> list[dict]:
+    return [c for c in history if c["ts"] >= since]
+
+
+def _index(store, data_dir, head) -> tuple[int, int, int]:
+    """Characters of the skill index as served, skills listed, skills left out; kept until the vault's HEAD
+    moves (a skill is a note: every change to one is a commit)."""
+    def build():
+        paths, left = Learning(store).index()
+        return len(context.skills_index(Learning(store), learn.INDEX_BUDGET)), len(paths), left
+    return _CACHE.get(data_dir, "index", head, build)
 
 
 # ---------- the schema ----------
@@ -172,9 +188,8 @@ def _is_birth(change: dict) -> bool:
     return set(change["paths"]) <= set(SEED) and set(change["added"]) == set(change["paths"])
 
 
-def _write_events(store, data_dir, since: float) -> list[dict]:
-    out = [_write_event(c["ts"], _change_kind(c["paths"]), c["paths"])
-           for c in reader.changes(store, since) if not _is_birth(c)]
+def _write_events(changes: list[dict], data_dir, since: float) -> list[dict]:
+    out = [_write_event(c["ts"], _change_kind(c["paths"]), c["paths"]) for c in changes if not _is_birth(c)]
     for e in reader.learnings(data_dir, since):
         # a rule or skill is also a commit of its own; the commit already says so
         if not any(o["kind"] == e["kind"] and abs(o["ts"] - e["ts"]) <= _SAME_COMMIT for o in out):
@@ -182,7 +197,8 @@ def _write_events(store, data_dir, since: float) -> list[dict]:
     return out
 
 
-def _numbers(store, data_dir, now: float, index: tuple[int, int, int], notes: int) -> dict[str, list[str]]:
+def _numbers(store, data_dir, now: float, index: tuple[int, int, int], notes: int,
+             history: list[dict]) -> dict[str, list[str]]:
     n = text_tr.NUMBERS
     numbers: dict[str, list[str]] = {b["id"]: [] for b in mechanism.blocks()}
     plan = _plan(store)
@@ -201,7 +217,7 @@ def _numbers(store, data_dir, now: float, index: tuple[int, int, int], notes: in
     week = now - 7 * DAY
     numbers["isa"] = [n["isa_pointers"].format(n=reader.pointed(data_dir, week)),
                       n["isa_opened"].format(n=reader.event_totals(data_dir, "open", week)["count"])]
-    changed = [c for c in reader.changes(store, week) if not _is_birth(c)]
+    changed = [c for c in _since(history, week) if not _is_birth(c)]
     numbers["haf"] = [n["haf_notes"].format(n=notes), n["haf_changes"].format(n=len(changed))]
     backup = reader.backup_state(data_dir)
     ok = backup and backup["last_ok"]
@@ -220,7 +236,9 @@ def schema(data_dir, now: dt.datetime, sampler=None) -> dict:
     ts = now.timestamp()
     since = ts - SCHEMA_WINDOW
     with _memory(data_dir) as store:
-        index = _index(store)
+        head = reader.vault_head(store)
+        history = _history(store, data_dir, head)
+        index = _index(store, data_dir, head)
         _, listed, left = index
         count = reader.note_count(store)
         backup = reader.backup_state(data_dir) or {}
@@ -228,8 +246,8 @@ def schema(data_dir, now: dt.datetime, sampler=None) -> dict:
                   "backup_failing": bool(backup.get("failing")), "skills": listed + left,
                   "service": _now_state(sampler, ts)["service"], "check": _check_totals(sampler),
                   "panel_version": __version__, "service_version": _service_version(sampler, ts)}
-        numbers = _numbers(store, data_dir, ts, index, count)
-        events = _usage_events(reader.events(data_dir, since)) + _write_events(store, data_dir, since)
+        numbers = _numbers(store, data_dir, ts, index, count, history)
+        events = _usage_events(reader.events(data_dir, since)) + _write_events(_since(history, since), data_dir, since)
     events.sort(key=lambda e: e["ts"], reverse=True)
     return {"status": status, "lanes": list(mechanism.LANES), "blocks": mechanism.blocks(), "numbers": numbers,
             "events": events[:EVENT_COUNT]}
@@ -253,7 +271,7 @@ def today(data_dir, now: dt.datetime) -> dict:
                     "at_limit": lane == "inject" and AT_LIMIT(e["chars"])})
     with _memory(data_dir) as store:
         plan = _plan(store)
-        chars, listed, left = _index(store)
+        chars, listed, left = _index(store, data_dir, reader.vault_head(store))
     return {"date": day.isoformat(), "now_minute": local.hour * 60 + local.minute, "lanes": list(LANES),
             "events": out, "counts": counts, "at_limit": sum(e["at_limit"] for e in out),
             "budgets": {"start": {"budget": context.START_BUDGET, "parts": _parts(plan), "left_out": _left_out(plan)},
@@ -319,10 +337,10 @@ def _local_midnight(day: dt.date) -> float:
     return dt.datetime(day.year, day.month, day.day).timestamp()
 
 
-def _calendar(store, today_: dt.date) -> list[dict]:
+def _calendar(history: list[dict], today_: dt.date) -> list[dict]:
     first = today_ - dt.timedelta(days=CALENDAR_DAYS - 1)
     days = {first + dt.timedelta(days=i): {"changes": 0, "paths": set(), "added": 0} for i in range(CALENDAR_DAYS)}
-    for c in reader.changes(store, _local_midnight(first)):
+    for c in _since(history, _local_midnight(first)):
         day = dt.datetime.fromtimestamp(c["ts"]).date()
         if day not in days or _is_birth(c):
             continue
@@ -339,7 +357,7 @@ def notes(data_dir, now: dt.datetime) -> dict:
     usage = _CACHE.get(data_dir, "usage", reader.usage_mark(data_dir), lambda: reader.note_usage(data_dir))
     with _memory(data_dir) as store:
         paths = [n["path"] for n in reader.note_list(store)]
-        days = _calendar(store, now.astimezone().date())
+        days = _calendar(_history(store, data_dir, reader.vault_head(store)), now.astimezone().date())
         born = reader.first_change(store)
     used = [{"path": p, **usage[p]} for p in paths if p in usage and sum(usage[p].values())]
     used.sort(key=lambda u: (-(u["injected"] + u["read"] + u["found"]), u["path"]))
@@ -365,12 +383,12 @@ def _region(path: str) -> str:
     return parts[0]
 
 
-def _map_notes(store) -> dict:
+def _map_notes(store, history: list[dict]) -> dict:
     """The part of the map that only a commit changes: the notes, their links and regions."""
     listed = reader.note_list(store)
     links = reader.note_links(store)
     newest: dict[str, float] = {}
-    for c in reader.changes(store, 0):  # newest first
+    for c in history:  # newest first
         for p in c["paths"]:
             newest.setdefault(p, c["ts"])
     index = {n["path"]: i for i, n in enumerate(listed)}
@@ -390,7 +408,8 @@ def memory_map(data_dir, now: dt.datetime) -> dict:
     """Every note with its folder region and last change, the links between notes, and the notes of the newest
     message. The notes and links are kept until the vault's HEAD moves; the newest message is read every time."""
     with _memory(data_dir) as store:
-        fixed = _CACHE.get(data_dir, "map", reader.vault_head(store), lambda: _map_notes(store))
+        head = reader.vault_head(store)
+        fixed = _CACHE.get(data_dir, "map", head, lambda: _map_notes(store, _history(store, data_dir, head)))
     recent = next((e["paths"] for e in reader.events(data_dir, 0, limit=1, kind="inject")), [])
     return {**fixed, "recent": recent}
 

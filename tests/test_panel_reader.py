@@ -49,6 +49,7 @@ def test_events_and_changes_and_learnings_honour_their_limits(leaky):
         assert reader.usage_since(leaky) is not None
         added = [p for c in reader.changes(s, 0) for p in c["added"]]
         assert "projects/ev/kaynak.md" in added
+        assert reader.history(s) == reader.changes(s, 0) != []
     finally:
         s.index.db.close()
 
@@ -64,6 +65,7 @@ def test_a_memory_with_nothing_recorded_yet_reads_as_empty(tmp_path):
         assert reader.events(data, 0) == [] and reader.note_usage(data) == {}
         assert reader.usage_since(data) is None
         assert reader.changes(s, 0) == [] and reader.learnings(data, 0) == []
+        assert reader.history(s) is None  # no history to read is told apart from an empty one
         assert reader.backup_state(data) is None
         assert reader.note_list(s)  # the seed notes are still listed
     finally:

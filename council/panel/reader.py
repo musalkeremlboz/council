@@ -194,9 +194,8 @@ def _unquote(name: str) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
-def changes(store: Store, since: float) -> list[dict]:
-    """Commits touching notes since ``since``, newest first: ``{"ts", "paths", "added"}``. Only the time of a
-    commit and the status and path of each file are asked of git; a commit's subject is never requested."""
+def _log(store: Store, since: float) -> list[dict] | None:
+    """Commits touching notes since ``since``, newest first, or None when git could not be asked or refused."""
     stamp = dt.datetime.fromtimestamp(max(since, 0), dt.timezone.utc).isoformat()
     env = {**os.environ, "GIT_CEILING_DIRECTORIES": str(store.vault.parent), "GIT_TERMINAL_PROMPT": "0"}
     try:
@@ -204,9 +203,9 @@ def changes(store: Store, since: float) -> list[dict]:
                             "--name-status", "--", "*.md"], capture_output=True, text=True, encoding="utf-8",
                            errors="replace", timeout=GIT_TIMEOUT, env=env)
     except (OSError, subprocess.SubprocessError):
-        return []
+        return None
     if r.returncode != 0:
-        return []
+        return None
     out: list[dict] = []
     for line in r.stdout.splitlines():
         if line.startswith("@") and line[1:].isdigit():
@@ -221,6 +220,18 @@ def changes(store: Store, since: float) -> list[dict]:
             if m.group(1) == "A":
                 out[-1]["added"].append(paths[0])
     return [c for c in out if c["paths"]]
+
+
+def changes(store: Store, since: float) -> list[dict]:
+    """Commits touching notes since ``since``, newest first: ``{"ts", "paths", "added"}``. Only the time of a
+    commit and the status and path of each file are asked of git; a commit's subject is never requested."""
+    return _log(store, since) or []
+
+
+def history(store: Store) -> list[dict] | None:
+    """Every commit touching notes, newest first, as ``changes`` gives them; None when the history could not be
+    read (no repository, no commit yet, git failed), which is not the same as a history without notes."""
+    return _log(store, 0)
 
 
 def first_change(store: Store) -> float | None:

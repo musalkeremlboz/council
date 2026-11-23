@@ -478,11 +478,77 @@ def test_the_map_is_cached_by_the_head_of_the_notes_and_its_recent_part_stays_li
     assert after != first and "projects/ev/yeni.md" in [n["path"] for n in after["notes"]]
     assert after == _uncached_map(leaky, monkeypatch)
     walks = []
-    changes = reader.changes
-    monkeypatch.setattr(reader, "changes", lambda *a: walks.append(a) or changes(*a))
+    history = reader.history
+    monkeypatch.setattr(reader, "history", lambda *a: walks.append(a) or history(*a))
     monkeypatch.setattr(reader, "note_links", lambda store: walks.append("links") or {})
     views.memory_map(leaky, now)
     assert walks == []  # the same head: the history and the links are not read again
+
+
+def _commit_a_note(data, path="projects/ev/sonradan.md"):
+    store = Store(data)
+    try:
+        store.write(path, "# Sonradan\n")
+    finally:
+        store.index.db.close()
+
+
+def _uncached(view, data, now, monkeypatch):
+    with monkeypatch.context() as m:
+        m.setattr(views, "_CACHE", views._Cache())
+        return view(data, now)
+
+
+def test_the_history_is_read_once_per_head_whichever_section_asks(leaky, monkeypatch):
+    from council.panel import reader
+
+    now = dt.datetime.now().astimezone()
+    reads = []
+    history = reader.history
+    monkeypatch.setattr(reader, "history", lambda store: reads.append(1) or history(store))
+    first = views.schema(leaky, now)
+    assert views.schema(leaky, now) == first == _uncached(views.schema, leaky, now, monkeypatch)
+    reads.clear()
+    notes = views.notes(leaky, now)
+    views.memory_map(leaky, now)
+    views.schema(leaky, now)
+    assert reads == []  # the same head: nobody walks the history again
+    assert notes == _uncached(views.notes, leaky, now, monkeypatch)
+    reads.clear()
+    _commit_a_note(leaky)
+    later = dt.datetime.now().astimezone()
+    after = views.schema(leaky, later)
+    assert len(reads) == 1 and after == _uncached(views.schema, leaky, later, monkeypatch)
+    assert any("projects/ev/sonradan.md" in s["value"] for e in after["events"] for s in e["steps"])
+    assert views.notes(leaky, later)["days"][-1]["changes"] == notes["days"][-1]["changes"] + 1
+
+
+def test_a_history_that_could_not_be_read_is_not_kept(leaky, monkeypatch):
+    from council.panel import reader
+
+    now = dt.datetime.now().astimezone()
+    whole = _uncached(views.notes, leaky, now, monkeypatch)
+    assert sum(d["changes"] for d in whole["days"]) > 0
+    with monkeypatch.context() as m:
+        m.setattr(reader, "history", lambda store: None)  # git timed out, say
+        assert sum(d["changes"] for d in views.notes(leaky, now)["days"]) == 0
+    assert views.notes(leaky, now) == whole
+
+
+def test_the_skill_index_is_built_once_per_head_for_schema_and_today(leaky, monkeypatch):
+    now = dt.datetime.now().astimezone()
+    built = []
+    index = views.context.skills_index
+    monkeypatch.setattr(views.context, "skills_index", lambda *a, **k: built.append(1) or index(*a, **k))
+    schema, today = views.schema(leaky, now), views.today(leaky, now)
+    views.schema(leaky, now), views.today(leaky, now)
+    assert len(built) == 1
+    assert schema == _uncached(views.schema, leaky, now, monkeypatch)
+    assert today == _uncached(views.today, leaky, now, monkeypatch)
+    built.clear()
+    _commit_a_note(leaky)
+    views.today(leaky, now)
+    assert len(built) == 1  # the notes moved: built again
 
 
 def test_note_usage_is_read_again_only_when_the_log_grew(panel_data, monkeypatch):
