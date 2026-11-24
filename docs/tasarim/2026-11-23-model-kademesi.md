@@ -1,6 +1,6 @@
 # Model kademesi: yönetici model işi bir alt kademeye dağıtır
 
-**Durum:** proje sahibi onayladı (2026-11-23 21:59, "Onaylıyorum"). Yapıldı: `model-kademesi` dalında (2026-11-23), `main`'e birleştirilmedi, gönderilmedi, hiçbir bilgisayarda açılmadı. Yapım planı: `2026-11-23-model-kademesi-plan.md`. Metinle uygulamanın ayrıldığı yerler en sondaki "Yapım sırasında değişenler" bölümünde.
+**Durum:** proje sahibi onayladı (2026-11-23 21:59, "Onaylıyorum"). Yapıldı ve `main`'e birleştirildi (2026-11-24, `c4544f0`; testler Linux, macOS ve Windows'ta geçiyor). Yayınlanmadı. Proje sahibinin Mac'inde 24.11.2026'dan beri açık; iki haftalık kullanım 08.12.2026'da değerlendirilir. Yapım planı: `2026-11-23-model-kademesi-plan.md`. Metinle uygulamanın ayrıldığı yerler en sondaki "Yapım sırasında değişenler" bölümünde.
 **Ad:** "model kademesi" geçici addır; halkadaki tek sözcüklük adı proje sahibi koyacak.
 **Dal ve sürüm:** çalışma `main`'den açılan `model-kademesi` dalında yapılır. Sürüm numarası yayında belirlenir (bugün yayınlanmış sürüm 0.2.1; 0.3.0 henüz çıkmadı). `main`'e birleşme ve yayın ayrı onayla.
 
