@@ -427,7 +427,7 @@ button.komsu:hover { background: var(--sakin); border-color: var(--murekkep); }
 .parca-ornek { flex: 0 0 14px; height: 10px; border-radius: 999px 0 0 999px; }
 .parca-ornek.vurgu { background: var(--vurgu); }
 .parca-ornek.dolu { background: var(--murekkep); }
-.parca-ornek.olculuyor { border: 2px dashed var(--murekkep); }
+.parca-ornek.olculuyor { background: repeating-linear-gradient(90deg, var(--murekkep) 0 3px, transparent 3px 5px); }
 .parca-ornek.bekliyor { background: var(--kil); }
 .guncellemeler-ic { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
 .surumler { flex: 999 1 620px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
