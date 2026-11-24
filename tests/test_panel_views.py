@@ -365,13 +365,16 @@ def test_releases_has_six_ring_parts_four_versions_and_seven_next_items():
     assert [p["n"] for p in r["ring"]] == [1, 2, 3, 4, 5, 6]
     assert r["ring"][0] == {"n": 1, "name": "Hafıza", "state": "full"}
     assert r["ring"][1] == {"n": 2, "name": "İşlerden öğrenme", "state": "measured"}
-    assert all(p["state"] == "waiting" for p in r["ring"][2:])
+    assert r["ring"][2] == {"n": 3, "name": "Model kademesi", "state": "measured"}
+    assert all(p["state"] == "waiting" and "name" not in p for p in r["ring"][3:])
     assert [v["version"] for v in r["versions"]] == ["0.3.0", "0.2.1", "0.2.0", "0.1.0"]
     assert len({v["version"] for v in r["versions"]}) == 4
     assert [v["state"] for v in r["versions"]] == ["pending", "released", "released", "first"]
     assert all(v["summary"] and v["added"] for v in r["versions"])
     assert len(r["next"]) == 7
     assert all(n["title"] and n["text"] and n["waits_for"] for n in r["next"])
+    assert "Model kademesi" in " ".join(r["versions"][0]["added"])            # what the unreleased version holds
+    assert not any(n["waits_for"] == "yapım sürüyor" for n in r["next"])      # the panel is built: no stale line
 
 
 def test_the_three_addresses_are_served(leaky_panel):

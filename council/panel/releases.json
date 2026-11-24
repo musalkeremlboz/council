@@ -12,7 +12,8 @@
     },
     {
       "n": 3,
-      "state": "waiting"
+      "name": "Model kademesi",
+      "state": "measured"
     },
     {
       "n": 4,
@@ -32,10 +33,13 @@
       "version": "0.3.0",
       "state": "pending",
       "date": "yayın bekliyor",
-      "summary": "Yardımcı işlerden öğreniyor, hafıza kendini denetleyebiliyor.",
+      "summary": "Yardımcı işlerden öğreniyor, işi alt yardımcılara dağıtıyor, hafıza kendini denetleyebiliyor.",
       "added": [
         "İşlerden öğrenme",
         "İş tarifi dizini ve işaret",
+        "Model kademesi: alt yardımcılar oturumun modelinin en çok bir kademe altında çalışır",
+        "Modellere göre harcama raporu",
+        "İzleme paneli: canlı şema, hafıza haritası, sağlık, güncellemeler",
         "Hafıza denetimi",
         "Aramada bulunamayan sözcüklerin bildirilmesi ve uzun kelime biçimleri",
         "Yalnız okuyan komutların kayıt atmaması, yedeğin denetim sorularını taşıması"
@@ -97,9 +101,9 @@
       "waits_for": "proje sahibinin kararı"
     },
     {
-      "title": "Panel",
-      "text": "Bu arayüz: canlı şema, hafıza haritası, sağlık, güncellemeler.",
-      "waits_for": "yapım sürüyor"
+      "title": "Model kademesinin iki haftalık kullanımı",
+      "text": "Hiçbir alt yardımcı tavanın üstünde çalışmamış olmalı; küçük işlerin dağıtılma payı yüzde 20'nin altında kalmalı.",
+      "waits_for": "08.12.2026"
     },
     {
       "title": "Antigravity'de hatırlatma ve öğrenme sorusu",
@@ -112,7 +116,7 @@
       "waits_for": "200 notta yeniden ölçülecek"
     },
     {
-      "title": "Halkanın kalan dört parçası",
+      "title": "Halkanın kalan üç parçası",
       "text": "Hangi özellikler olacağı ve sırası.",
       "waits_for": "proje sahibinin kararı"
     }

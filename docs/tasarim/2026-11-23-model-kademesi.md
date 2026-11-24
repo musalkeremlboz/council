@@ -226,4 +226,5 @@ Bu bölüm yukarıdaki metinle çeliştiği yerde geçerlidir. Hepsi Claude'un k
 - **Kurucu, kullanıcının kendi hook'uyla aynı kayıtta duran komutumuzu o kayıttan çıkarıp ayrı bir kayda taşır;** kullanıcının kaydı ve eşleşmesi olduğu gibi kalır. Servis, ayar dosyasına dokunmadan önce `…before-council-delegation` adıyla bir kopya alır.
 - **Elle kurulum belgeleri** (`docs/kurulum.md`, `docs/setup.md`) dördüncü hook kaydını da gösterir.
 - **Rapor komutu veri klasörü açmaz.**
+- **Panelin sürüm dosyası güncellendi (2026-11-24).** "Panel klasörüne dokunulmaz" kuralının tek istisnası: `council/panel/releases.json`. Halkanın üçüncü parçası "Model kademesi" adıyla "yazıldı, ölçülüyor" durumunda; ad proje sahibi başkasını koyana dek geçicidir. Panelin kodu değişmedi.
 - **Uçtan uca doğrulama (23:05):** daldaki hook, yalıtılmış bir deneme oturumunda (ana model Sonnet) iki alt ajan çağrısını da Haiku'ya çekti (biri modelsiz, biri `sonnet` istenmiş); ikisi de gerçekten Haiku ile çalıştı, Türkçe karakterler bozulmadı, yönerge oturum başında geldi, izin sorusu çıkmadı. Bedeli liste fiyatıyla 0,06 $.
