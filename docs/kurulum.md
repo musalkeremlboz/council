@@ -68,8 +68,8 @@ Bu bilgisayar zaten başka bir COUNCIL hafızasına bağlıysa kurulum hiçbir �
 Windows'ta komut `%USERPROFILE%\.council\venv\Scripts\council.exe` yolundadır.
 
 ```text
-version      0.2.1
-service      running on http://127.0.0.1:8765 (0.2.1)
+version      0.2.2
+service      running on http://127.0.0.1:8765 (0.2.2)
 hooks        installed
 auto-update  on
 notes        /Users/sen/.council/vault

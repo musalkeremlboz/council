@@ -13,7 +13,7 @@ Kurmak için şu cümleyi yapay zekâ yardımcına yapıştır. Gerisini o yapar
 
 **[Kurulum](#kurulum)** · [Nasıl çalışır](#nasil-calisir) · [Neden farklı](#neden-farkli) · [Sık sorulanlar](#sik-sorulanlar) · [English](README.en.md)
 
-macOS · Linux · Windows &nbsp;|&nbsp; Python 3.11+ &nbsp;|&nbsp; sürüm 0.2.1 &nbsp;|&nbsp; [MIT lisansı](LICENSE)
+macOS · Linux · Windows &nbsp;|&nbsp; Python 3.11+ &nbsp;|&nbsp; sürüm 0.2.2 &nbsp;|&nbsp; [MIT lisansı](LICENSE)
 
 <br>
 
@@ -318,7 +318,7 @@ Güncelleme yalnız bu deponun yayınlanmış sürümlerinden, şifreli bağlant
 - **[deploy/](deploy)**: Linux sunucu için örnek servis ve zamanlayıcı dosyaları
 - **[brand/](brand)**: logo dosyaları ve Council Halka yazı tipi
 
-COUNCIL 0.2.1 sürümündedir ve tek kişinin günlük kullanımında gelişiyor. Fikir olarak [Avenox Beyin](https://github.com/avenoxai/avenoxbeyin)'den esinlenmiştir. Kodun 60 testi var ve kurulum her değişiklikte Linux, macOS ve Windows'ta denenir: `pip install -e ".[dev]" && pytest`. Hata bildirimi ve öneri için [bir konu aç](https://github.com/musalkeremlboz/council/issues).
+COUNCIL 0.2.2 sürümündedir ve tek kişinin günlük kullanımında gelişiyor. Fikir olarak [Avenox Beyin](https://github.com/avenoxai/avenoxbeyin)'den esinlenmiştir. Kodun 60 testi var ve kurulum her değişiklikte Linux, macOS ve Windows'ta denenir: `pip install -e ".[dev]" && pytest`. Hata bildirimi ve öneri için [bir konu aç](https://github.com/musalkeremlboz/council/issues).
 
 <p align="center">
   <picture>

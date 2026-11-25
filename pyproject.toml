@@ -1,6 +1,6 @@
 [project]
 name = "council-memory"
-version = "0.2.1"
+version = "0.2.2"
 description = "COUNCIL: a source-backed, self-hosted memory system for AI agents (MCP + hooks)."
 readme = "README.md"
 requires-python = ">=3.11"

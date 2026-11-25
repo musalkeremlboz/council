@@ -13,7 +13,7 @@ Read these instructions and set up COUNCIL: https://raw.githubusercontent.com/mu
 
 **[Setup](#setup)** · [How it works](#how-it-works) · [Why it is different](#why-different) · [Questions](#questions) · [Türkçe](README.md)
 
-macOS · Linux · Windows &nbsp;|&nbsp; Python 3.11+ &nbsp;|&nbsp; version 0.2.1 &nbsp;|&nbsp; [MIT license](LICENSE)
+macOS · Linux · Windows &nbsp;|&nbsp; Python 3.11+ &nbsp;|&nbsp; version 0.2.2 &nbsp;|&nbsp; [MIT license](LICENSE)
 
 <br>
 
@@ -318,7 +318,7 @@ Updates are installed only from this repository's published releases, over an en
 - **[deploy/](deploy)**: example service and timer files for a Linux server
 - **[brand/](brand)**: logo files and the Council Halka typeface
 
-COUNCIL is at version 0.2.1 and grows through one person's daily use. Its idea was inspired by [Avenox Beyin](https://github.com/avenoxai/avenoxbeyin). The code has 60 tests, and setup is tried on Linux, macOS and Windows with every change: `pip install -e ".[dev]" && pytest`. To report a bug or suggest something, [open an issue](https://github.com/musalkeremlboz/council/issues).
+COUNCIL is at version 0.2.2 and grows through one person's daily use. Its idea was inspired by [Avenox Beyin](https://github.com/avenoxai/avenoxbeyin). The code has 60 tests, and setup is tried on Linux, macOS and Windows with every change: `pip install -e ".[dev]" && pytest`. To report a bug or suggest something, [open an issue](https://github.com/musalkeremlboz/council/issues).
 
 <p align="center">
   <picture>

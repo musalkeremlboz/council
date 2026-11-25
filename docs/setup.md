@@ -68,8 +68,8 @@ If this computer is already connected to another COUNCIL memory, setup stops wit
 On Windows the command is at `%USERPROFILE%\.council\venv\Scripts\council.exe`.
 
 ```text
-version      0.2.1
-service      running on http://127.0.0.1:8765 (0.2.1)
+version      0.2.2
+service      running on http://127.0.0.1:8765 (0.2.2)
 hooks        installed
 auto-update  on
 notes        /Users/you/.council/vault
