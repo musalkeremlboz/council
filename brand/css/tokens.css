@@ -1,0 +1,141 @@
+/* COUNCIL — generated from tokens.json */
+:root {
+  --zemin: #F4F5F3;
+  --yuzey: #FFFFFF;
+  --yuzey-2: #E9EBE8;
+  --murekkep: #111416;
+  --murekkep-2: #4A5157;
+  --murekkep-3: #656D74;
+  --cizgi: #D5D8D4;
+  --cizgi-guclu: #848B91;
+  --kor: #E8421F;
+  --kor-metin: #C2330F;
+  --kor-zemin: #FBE4DD;
+  --kor-ustu: #111416;
+  --basari: #1F7A4D;
+  --uyari: #8A5A00;
+  --hata: #B3123F;
+  --murekkep-bas: #2E3438;
+  --kor-bas: #F25A38;
+  --pasif-zemin: #E2E4E1;
+  --pasif-yazi: #5B6166;
+  --ton: rgb(17 20 22 / .07);
+  --ara-1: 4px;
+  --ara-2: 8px;
+  --ara-3: 12px;
+  --ara-4: 16px;
+  --ara-6: 24px;
+  --ara-8: 32px;
+  --ara-12: 48px;
+  --ara-16: 64px;
+  --kose-0: 0;
+  --kose-tam: 999px;
+  --sure-bas: 70ms;
+  --sure-tepki: 140ms;
+  --sure-panel: 240ms;
+  --sure-sahne: 420ms;
+  --sure-gecis-en-cok: 840ms;
+  --egri-ac: cubic-bezier(.2,0,0,1);
+  --egri-kapa: cubic-bezier(.4,0,1,1);
+  --font-display: "Council Halka", "DM Sans", system-ui, sans-serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --zemin: #111416;
+    --yuzey: #1A1E21;
+    --yuzey-2: #23282C;
+    --murekkep: #F4F5F3;
+    --murekkep-2: #B4BBC0;
+    --murekkep-3: #8A9299;
+    --cizgi: #2E3438;
+    --cizgi-guclu: #6A737A;
+    --kor: #E8421F;
+    --kor-metin: #FF7A5C;
+    --kor-zemin: #3A1A12;
+    --kor-ustu: #111416;
+    --basari: #4CC38A;
+    --uyari: #E3B341;
+    --hata: #FF6B8B;
+    --murekkep-bas: #D3D7D2;
+    --kor-bas: #F25A38;
+    --pasif-zemin: #23282B;
+    --pasif-yazi: #9AA0A4;
+    --ton: rgb(244 245 243 / .08);
+  }
+}
+:root[data-theme="dark"] {
+  --zemin: #111416;
+  --yuzey: #1A1E21;
+  --yuzey-2: #23282C;
+  --murekkep: #F4F5F3;
+  --murekkep-2: #B4BBC0;
+  --murekkep-3: #8A9299;
+  --cizgi: #2E3438;
+  --cizgi-guclu: #6A737A;
+  --kor: #E8421F;
+  --kor-metin: #FF7A5C;
+  --kor-zemin: #3A1A12;
+  --kor-ustu: #111416;
+  --basari: #4CC38A;
+  --uyari: #E3B341;
+  --hata: #FF6B8B;
+  --murekkep-bas: #D3D7D2;
+  --kor-bas: #F25A38;
+  --pasif-zemin: #23282B;
+  --pasif-yazi: #9AA0A4;
+  --ton: rgb(244 245 243 / .08);
+}
+.yazi-baslik-xl {
+  font-family: var(--font-display);
+  font-size: 64px;
+  line-height: 1.05;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.yazi-baslik-l {
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1.1;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.yazi-baslik-m {
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+.yazi-etiket {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.yazi-govde-l {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  line-height: 28px;
+  font-weight: 400;
+}
+.yazi-govde {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+}
+.yazi-govde-k {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+.yazi-kod {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+}
