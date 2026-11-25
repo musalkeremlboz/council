@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kurul Turu</title>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400&display=swap">
+<style>
+@font-face{font-family:"Council Halka";src:url(data:font/woff2;base64,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) format("woff2");font-display:block}
+:root{
+  --zemin:#F4F5F3; --murekkep:#111416; --yuzey:#FFFFFF; --kor:#E8421F;
+  --kor-metin:#C2330F; --ikincil:#4A5157;
+  --acilis:cubic-bezier(.2,0,0,1); --kapanis:cubic-bezier(.4,0,1,1);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --zemin:#111416; --murekkep:#F4F5F3; --yuzey:#1A1E21; --kor-metin:#FF7A5C; --ikincil:#B4BBC0; }
+}
+:root[data-theme="dark"]{ --zemin:#111416; --murekkep:#F4F5F3; --yuzey:#1A1E21; --kor-metin:#FF7A5C; --ikincil:#B4BBC0; color-scheme:dark; }
+:root[data-theme="light"]{ color-scheme:light; }
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--zemin);color:var(--murekkep);
+  font-family:"DM Sans",system-ui,sans-serif;font-size:17px;line-height:1.5;overflow-x:clip}
+
+/* --- üst bilgi --- */
+.bas{max-width:1200px;margin:0 auto;padding:40px clamp(16px,5vw,64px) 8px}
+.bas .ust{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;letter-spacing:.06em;color:var(--ikincil);margin:0 0 10px}
+.bas h1{font-size:clamp(24px,3.2vw,34px);font-weight:600;line-height:1.15;margin:0 0 10px;letter-spacing:-.01em}
+.bas p{margin:0;max-width:60ch;color:var(--ikincil)}
+.bas .ipucu{margin-top:18px;font-family:"DM Mono",ui-monospace,monospace;font-size:12px;color:var(--ikincil)}
+
+/* --- sahne --- */
+.hikaye{position:relative;height:450vh}
+.atla{display:inline-block;margin-top:14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12px;color:var(--ikincil);
+  text-decoration:underline;text-underline-offset:3px}
+.atla:hover{color:var(--murekkep)}
+.sahne{position:sticky;top:0;height:100vh;height:100svh;max-width:1200px;margin:0 auto;
+  padding:0 clamp(16px,5vw,64px);display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+  align-items:center;gap:clamp(16px,4vw,56px)}
+.gorsel{margin:0;display:flex;flex-direction:column;align-items:center;min-width:0}
+.gorsel svg{display:block;width:100%;height:min(62vh,560px);height:min(62svh,560px);overflow:visible}
+.yazi-imi{font-family:"Council Halka","DM Sans",sans-serif;font-size:clamp(26px,3.6vw,44px);
+  letter-spacing:.06em;line-height:1;margin-top:10px;height:1em;white-space:nowrap}
+.kayit{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;color:var(--ikincil);
+  margin-top:12px;text-align:center;line-height:1.6;max-width:100%}
+.kayit .satir{display:grid;min-height:1.6em}
+.kayit span{grid-area:1/1;opacity:0;transition:opacity 140ms var(--kapanis)}
+.kayit span.acik{opacity:1;transition:opacity 240ms var(--acilis)}
+
+.metin{min-width:0}
+.adimlar{list-style:none;margin:0 0 22px;padding:0;display:flex;gap:10px}
+.adimlar svg{display:block;width:18px;height:18px;fill:none;stroke:var(--murekkep);stroke-width:2.6}
+.adimlar li{opacity:.32;transition:opacity 140ms var(--kapanis)}
+.adimlar li.simdi,.adimlar li.gecmis{opacity:1;transition:opacity 240ms var(--acilis)}
+.adimlar .o{display:none}
+.adimlar li.gecmis .o{display:inline}
+.adimlar li.gecmis .c{display:none}
+
+.paneller{display:grid}
+.panel{grid-area:1/1;opacity:0;transition:opacity 140ms var(--kapanis)}
+.panel.etkin{opacity:1;transition:opacity 420ms var(--acilis)}
+.panel .no{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;color:var(--ikincil);letter-spacing:.06em}
+.panel h2{font-family:"Council Halka","DM Sans",sans-serif;font-weight:400;font-size:clamp(28px,3.4vw,42px);
+  letter-spacing:.06em;line-height:1;margin:10px 0 14px}
+.panel p{margin:0;font-size:clamp(17px,1.7vw,21px);line-height:1.45;max-width:32ch}
+.panel .durum{display:inline-block;margin-top:14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12px;
+  color:var(--ikincil);letter-spacing:.04em}
+
+/* --- svg sahne renkleri --- */
+.kor{stroke:var(--kor)}
+.mur{stroke:var(--murekkep)}
+.bit{stroke:var(--zemin)}
+.cer{stroke:var(--ikincil);stroke-width:3;stroke-linejoin:miter;fill:none}
+.yer{stroke:var(--ikincil);fill:none}
+.etiketler{font-family:"DM Mono",ui-monospace,monospace;fill:var(--murekkep);stroke:none}
+.etiketler .ikincil{fill:var(--ikincil)}
+
+/* --- son --- */
+.son{max-width:1200px;margin:0 auto;padding:56px clamp(16px,5vw,64px) 72px}
+.son p{margin:0 0 20px;max-width:60ch;color:var(--ikincil)}
+.dugme{--k:13px;display:inline-flex;align-items:center;height:46px;padding:0 26px 0 20px;border:0;
+  font:500 15px/1 "DM Sans",system-ui,sans-serif;color:var(--zemin);background:var(--murekkep);cursor:pointer;
+  border-radius:0;clip-path:polygon(0 0,calc(100% - var(--k)) 0,100% var(--k),100% 100%,0 100%);
+  transition:clip-path 140ms var(--kapanis)}
+.dugme:hover{clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%);transition:clip-path 140ms var(--acilis)}
+.dugme:focus-visible{outline:2px solid var(--murekkep);outline-offset:4px}
+
+/* --- JS yoksa: amblem son hâliyle, bütün paneller alt alta --- */
+html:not(.js) .hikaye{height:auto}
+html:not(.js) .sahne{position:static;height:auto;padding-top:32px;padding-bottom:32px}
+html:not(.js) .paneller{display:block}
+html:not(.js) .panel{opacity:1;margin-bottom:28px}
+html:not(.js) .kayit,html:not(.js) .ipucu,html:not(.js) #basa{display:none}
+
+/* --- azaltılmış hareket: duran kareler --- */
+.durgun-liste{display:none;max-width:1200px;margin:0 auto;padding:24px clamp(16px,5vw,64px) 0}
+.durgun .hikaye{display:none}
+.durgun .durgun-liste{display:block}
+.kare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,4vw,48px);
+  align-items:center;padding:28px 0;border-top:1px solid color-mix(in srgb,var(--murekkep) 14%,transparent)}
+.kare .gorsel svg{height:min(48vh,380px)}
+.kare .panel{opacity:1;grid-area:auto}
+
+@media (max-width:760px){
+  .bas{padding-top:28px}
+  .sahne{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;align-content:center;gap:12px}
+  .gorsel svg{height:42vh;height:42svh}
+  .yazi-imi{font-size:26px;margin-top:6px}
+  .kayit{margin-top:6px;font-size:11px}
+  .adimlar{margin-bottom:12px}
+  .panel h2{font-size:26px;margin:6px 0 8px}
+  .panel p{font-size:17px;max-width:none}
+  .panel .durum{margin-top:8px;font-size:11px}
+  .kare{grid-template-columns:minmax(0,1fr)}
+  .kare .gorsel svg{height:300px}
+}
+/* Kısa telefon ekranları (568-700 px): sahne 100svh içine sığsın */
+@media (max-width:760px) and (max-height:700px){
+  .gorsel svg{height:34vh;height:34svh}
+  .yazi-imi{font-size:22px}
+  .panel h2{font-size:22px;margin:4px 0 6px}
+  .panel p{font-size:15px;line-height:1.4}
+  .panel .durum{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .kayit span,.adimlar li,.panel,.dugme,.dugme:hover{transition:none}
+}
+</style>
+</head>
+<body>
+
+<header class="bas">
+  <p class="ust">COUNCIL · HAREKET DENEMESİ</p>
+  <h1>Altı parça, altı özellik</h1>
+  <p>Aşağı kaydırdıkça amblemin dış halkası altı parçaya ayrılır. Her parça COUNCIL'in bir temel özelliği: dolu olan hazır, içi boş çerçeve olan yolda. Kaydırma sahnenin zamanıdır; durursan sahne de durur.</p>
+  <p class="ipucu">aşağı kaydır ↓</p>
+  <a class="atla" href="#son">Hikâyeyi atla</a>
+</header>
+
+<main>
+<section class="hikaye" id="hikaye" aria-label="COUNCIL'in altı temel özelliği">
+  <div class="sahne">
+    <figure class="gorsel">
+      <svg id="sahne-svg" role="img" viewBox="-120 -70 640 540" xmlns="http://www.w3.org/2000/svg"
+        aria-label="COUNCIL amblemi. Dış halkanın altı parçası altı temel özellik: hafıza dolu, kişisel gelişim denemede, dördü yolda.">
+        <!-- JS yoksa görünen son hâl: amblem -->
+        <defs><mask id="kesik-statik" maskUnits="userSpaceOnUse" x="-200" y="-200" width="800" height="800"><rect x="-200" y="-200" width="800" height="800" fill="#fff"/><path transform="translate(200 200)" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0" fill="none" stroke="#000" stroke-width="48"/></mask></defs>
+        <g fill="none" stroke-width="28"><circle cx="200" cy="200" r="112" class="kor" mask="url(#kesik-statik)"/><path class="mur" transform="translate(200 200) rotate(45)" d="M168 0A168 168 0 1 1 0 -168"/><path class="mur" transform="translate(200 200)" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0"/></g>
+      </svg>
+      <div class="yazi-imi" aria-hidden="true">COUNCIL</div>
+      <div class="kayit" aria-hidden="true">
+        <div class="satir"><span data-a=".37" data-b=".47">telefon → hafıza · “toplantı kararı” · yazıldı</span><span data-a=".58" data-b=".64">yardımcı öğrendi → beceri kaydedildi</span><span data-a=".68" data-b=".82">4 özellik yolda · adları henüz yazılmadı</span><span data-a=".86" data-b="1.01">altısı dolduğunda → sürüm 1.0.0</span></div>
+        <div class="satir"><span data-a=".44" data-b=".47">hafıza → bilgisayar · okundu</span><span data-a=".61" data-b=".64">tek satır haber · istersen geri alınır</span><span data-a=".74" data-b=".82">testi ve ölçümü geçen eklenir</span><span data-a=".92" data-b="1.01">henüz değil · bugün 1 dolu, 1 denemede</span></div>
+      </div>
+    </figure>
+    <div class="metin">
+      <ol class="adimlar" id="adimlar" aria-hidden="true"></ol>
+      <div class="paneller" id="paneller">
+        <article class="panel etkin"><span class="no">01 / 06</span><h2>AMBLEM</h2><p>COUNCIL, bütün yardımcıların paylaştığı tek bir hafıza. Amblemi aynı zamanda bir yol haritası.</p></article>
+        <article class="panel"><span class="no">02 / 06</span><h2>ALTI ÖZELLİK</h2><p>Dış halka COUNCIL'in altı temel özelliğidir. Dolu parça hazır demek; içi boş çerçeve yolda.</p></article>
+        <article class="panel"><span class="no">03 / 06</span><h2>HAFIZA</h2><p>İlki hafızanın kendisi ve dolu. Notlar düz dosyalarda durur, her değişiklik geçmişe işlenir, kelimeyle aranır; telefon, bilgisayar ve sunucu aynı hafızayı paylaşır.</p><span class="durum">durum: tamam</span></article>
+        <article class="panel"><span class="no">04 / 06</span><h2>KİŞİSEL GELİŞİM</h2><p>İkincisi denemede. Yardımcı sohbetten öğrendiğini kendiliğinden kaydeder, sana tek satırla haber verir; istersen geri alınır.</p><span class="durum">durum: denemede</span></article>
+        <article class="panel"><span class="no">05 / 06</span><h2>YOLDA</h2><p>Öteki dördünün adı henüz yazılmadı; yerlerinde kıpırdayan çizgiler durur. Bir özellik testlerini ve ölçümlerini geçince eklenir, parçası dolar.</p><span class="durum">durum: yolda</span></article>
+        <article class="panel"><span class="no">06 / 06</span><h2>1.0.0</h2><p>Altısı da dolduğunda parçalar yeniden tek bir C olur ve sürüm 1.0.0 çıkar. Henüz değil: amblem, varılacak yerin resmi.</p></article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="durgun-liste" id="durgun-liste" aria-label="COUNCIL'in altı temel özelliği, altı kare"></section>
+
+<section class="son" id="son" tabindex="-1">
+  <p>Bu bir deneme sayfası. Sahne yalnız kaydırırken çizilir; ekrandan çıkınca kaydırmayı dinlemeyi bırakır. Hareketi azaltmayı seçtiysen aynı hikâye altı duran kare olarak görünür.</p>
+  <button class="dugme" type="button" id="basa">Başa sar</button>
+</section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var NS = 'http://www.w3.org/2000/svg';
+  // Logodaki dalga: iki yarım daire (r=56), merkezden C'nin ağzına.
+  var WAVE = 'M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0';
+  var L = 2 * Math.PI * 56;   // dalganın boyu
+  var D = 30;                 // taşınan "kesik"in boyu
+  var BIT_YOL = L - D - 64;   // parçanın içine girmeden dursun
+  // C, 45°'den 315°'ye 270° sürer: 45° genişliğinde altı parça = altı temel özellik.
+  // Sıra, dalganın dönüş yönünde: alttaki uçtan başlar, üstteki uçta biter.
+  // durum: 1 dolu (tamam), 0.5 denemede, 0 yolda (adı henüz yazılmadı: yerinde çizgiler).
+  var PARTS = [
+    { ad: 'Hafıza',          durum: 'tamam',    a: 67.5 },
+    { ad: 'Kişisel gelişim', durum: 'denemede', a: 112.5 },
+    { ad: null,              durum: 'yolda',    a: 157.5 },
+    { ad: null,              durum: 'yolda',    a: 202.5 },
+    { ad: null,              durum: 'yolda',    a: 247.5 },
+    { ad: null,              durum: 'yolda',    a: 292.5 }
+  ];
+  var KG_TABAN = 0.3, KG_SON = 0.5;           // kişisel gelişim: boşaldıktan sonra kalan ve denemede ulaştığı doluluk
+  var VB = [-120, -70, 640, 540];             // görüş alanı sabit: yakınlaşma yok, etiketlere baştan yer var
+  var GAP_MAX = 4;                            // parça aralığı (derece)
+  var KEYS = [0.05, 0.26, 0.46, 0.63, 0.80, 1];   // duran kareler
+  var DASH = [1.1, 0.45, 0.5, 0.45, 1.6, 0.45, 0.8, 0.45];   // "henüz yazılmamış ad" çizgileri (yazı boyu cinsinden)
+  var YER_W = 5.4;
+
+  function clamp(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+  function sm(a, b, p) { var t = clamp((p - a) / (b - a)); return t * t * (3 - 2 * t); }
+  function rad(a) { return a * Math.PI / 180; }
+  function pt(r, a) { return [200 + r * Math.cos(rad(a)), 200 + r * Math.sin(rad(a))]; }
+  function f(n) { return Math.round(n * 100) / 100; }
+  function el(name, attrs, parent) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function arcD(r, a0, a1, sweep) {
+    var p1 = pt(r, a1);
+    return 'A' + r + ' ' + r + ' 0 0 ' + sweep + ' ' + f(p1[0]) + ' ' + f(p1[1]);
+  }
+  function seatD(a0, a1) {
+    var p0 = pt(168, a0);
+    return 'M' + f(p0[0]) + ' ' + f(p0[1]) + arcD(168, a0, a1, 1);
+  }
+  // Boş parçanın çerçevesi: dolu hâlinin (r 154–182) tam içinde kalır, dolunca altında kaybolur.
+  function frameD(a0, a1) {
+    var d = 0.55, o0 = pt(180.5, a0 + d), i1 = pt(155.5, a1 - d);
+    return 'M' + f(o0[0]) + ' ' + f(o0[1]) + arcD(180.5, a0 + d, a1 - d, 1) +
+           'L' + f(i1[0]) + ' ' + f(i1[1]) + arcD(155.5, a1 - d, a0 + d, 0) + 'Z';
+  }
+  function sectionOf(p) { return p < 0.10 ? 0 : p < 0.27 ? 1 : p < 0.47 ? 2 : p < 0.64 ? 3 : p < 0.82 ? 4 : 5; }
+
+  // Her parçanın o andaki doluluğu.
+  function fillOf(i, p) {
+    if (i === 0) return 1;
+    var base = i === 1 ? KG_TABAN : 0;
+    var v = 1 - sm(0.16 + 0.008 * i, 0.21 + 0.008 * i, p) * (1 - base);    // bugünkü hâline boşalır
+    if (i === 1) v += (KG_SON - KG_TABAN) * sm(0.57, 0.62, p);             // denemede: öğrendikçe dolar
+    var c = sm(0.86 + 0.012 * (i - 1), 0.90 + 0.012 * (i - 1), p);         // kapanış: altısı da dolar (gelecek)
+    return v + (1 - v) * c;
+  }
+
+  var uid = 0;
+  function Scene(svg, refs) {
+    var id = 'kesik-' + (uid++);
+    this.svg = svg; this.refs = refs || {}; this.w = 400; this.h = 400; this.px = 13;
+    this.gap = -1; this.fs = -1;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.setAttribute('viewBox', VB.join(' '));
+    var defs = el('defs', {}, svg);
+    var mask = el('mask', { id: id, maskUnits: 'userSpaceOnUse', x: '-200', y: '-200', width: '800', height: '800' }, defs);
+    el('rect', { x: '-200', y: '-200', width: '800', height: '800', fill: '#fff' }, mask);
+    this.maskWave = el('path', { d: WAVE, fill: 'none', stroke: '#000', 'stroke-width': '48', transform: 'translate(200 200)' }, mask);
+
+    var g = el('g', { fill: 'none', 'stroke-width': '28' }, svg);
+    el('circle', { cx: '200', cy: '200', r: '112', 'class': 'kor', mask: 'url(#' + id + ')' }, g);
+    this.c = el('path', { 'class': 'mur', transform: 'translate(200 200) rotate(45)', d: 'M168 0A168 168 0 1 1 0 -168' }, g);
+    this.frames = PARTS.map(function () { var s = el('path', { 'class': 'cer' }, g); s.style.display = 'none'; return s; });
+    this.seats = PARTS.map(function () { var s = el('path', { 'class': 'mur' }, g); s.style.display = 'none'; return s; });
+    this.wave = el('path', { 'class': 'mur', d: WAVE, transform: 'translate(200 200)' }, g);
+    this.bit = el('path', { 'class': 'bit', d: WAVE, transform: 'translate(200 200)', 'stroke-width': '32', 'stroke-dasharray': D + ' ' + f(L) }, g);
+    this.bit.style.display = 'none';
+
+    var lg = this.lg = el('g', { 'class': 'etiketler', 'dominant-baseline': 'middle' }, svg);
+    this.labels = PARTS.map(function (pp) {
+      var grp = el('g', { opacity: '0' }, lg), name;
+      if (pp.ad) { name = el('text', {}, grp); name.textContent = pp.ad; }
+      else { name = el('path', { 'class': 'yer' }, grp); }       // adın yerinde kıpırdayan çizgiler
+      var st = el('text', { 'class': 'ikincil' }, grp);
+      st.textContent = pp.durum;
+      return { g: grp, name: name, st: st, yer: !pp.ad };
+    });
+    this.door = el('text', { 'class': 'ikincil', 'text-anchor': 'start', opacity: '0' }, lg);
+    this.door.textContent = 'cihazlar';
+  }
+
+  Scene.prototype.size = function () {
+    var r = this.svg.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) { this.w = r.width; this.h = r.height; }
+    this.px = window.innerWidth < 761 ? 12 : 13;
+  };
+
+  // Etiket yerleri yalnız yazı boyuna bağlı: boyut değişince bir kez hesaplanır.
+  Scene.prototype.layout = function (fs) {
+    this.lg.setAttribute('font-size', f(fs));
+    var lh = 1.3 * fs;
+    for (var i = 0; i < PARTS.length; i++) {
+      var a = PARTS[i].a, c = Math.cos(rad(a)), s = Math.sin(rad(a));
+      var q = pt(190 + fs * (0.45 + 0.6 * Math.abs(s)), a);
+      var anchor = c > 0.25 ? 'start' : c < -0.25 ? 'end' : 'middle';
+      // İki satır (ad, durum) halkadan dışarı doğru dizilir.
+      var y1 = s >= 0 ? q[1] : q[1] - lh, y2 = s >= 0 ? q[1] + lh : q[1];
+      var lb = this.labels[i];
+      if (lb.yer) {
+        var W = YER_W * fs, x0 = anchor === 'start' ? q[0] : anchor === 'end' ? q[0] - W : q[0] - W / 2;
+        lb.name.setAttribute('d', 'M' + f(x0) + ' ' + f(y1 + 0.05 * fs) + 'h' + f(W));
+        lb.name.setAttribute('stroke-width', f(0.36 * fs));
+        lb.name.setAttribute('stroke-dasharray', DASH.map(function (v) { return f(v * fs); }).join(' '));
+      } else {
+        lb.name.setAttribute('x', f(q[0])); lb.name.setAttribute('y', f(y1));
+        lb.name.setAttribute('text-anchor', anchor);
+      }
+      lb.st.setAttribute('x', f(q[0])); lb.st.setAttribute('y', f(y2));
+      lb.st.setAttribute('text-anchor', anchor);
+    }
+    var dq = pt(190 + fs * 0.45, 0);
+    this.door.setAttribute('x', f(dq[0]));
+    this.door.setAttribute('y', f(dq[1]));
+  };
+
+  Scene.prototype.render = function (p) {
+    var i, z = sm(0.10, 0.16, p) - sm(0.92, 0.97, p);
+
+    var scale = Math.min(this.w / VB[2], this.h / VB[3]);
+    var fs = f(this.px / scale);
+    if (fs !== this.fs) { this.layout(fs); this.fs = fs; }
+
+    // C'de ince yarıklar açılır (düz kesik uçlar korunur); yollar yalnız aralık değişince yazılır.
+    var gap = f(GAP_MAX * z), open = gap >= 0.04;
+    if (gap !== this.gap) {
+      this.c.style.display = open ? 'none' : '';
+      for (i = 0; i < 6; i++) {
+        var a0 = 45 + 45 * i + gap / 2, a1 = 90 + 45 * i - gap / 2;
+        if (open) {
+          this.seats[i].setAttribute('d', seatD(a0, a1));
+          this.frames[i].setAttribute('d', frameD(a0, a1));
+          this.seats[i].len = 168 * rad(a1 - a0);
+        }
+        this.seats[i].style.display = open ? '' : 'none';
+      }
+      this.gap = gap;
+    }
+
+    // Dalga bir tam tur atar: ağız → kişisel gelişim → yoldaki dört parçanın üstünden → ağız.
+    var th = 125 * sm(0.48, 0.54, p) + 167.5 * sm(0.65, 0.78, p) + 67.5 * sm(0.83, 0.90, p);   // 125°: uç parçanın boş yarısında durur, dolu yarısı görünür kalsın
+    var tr = 'translate(200 200) rotate(' + f(th) + ')';
+    this.wave.setAttribute('transform', tr);
+    this.maskWave.setAttribute('transform', tr);
+    this.bit.setAttribute('transform', tr);
+
+    // Sırası gelen özellik öne çıkar, ötekiler geri çekilir.
+    var f3 = sm(0.28, 0.31, p) - sm(0.46, 0.49, p);
+    var f4 = sm(0.47, 0.50, p) - sm(0.63, 0.66, p);
+    var f5 = sm(0.64, 0.67, p) - sm(0.81, 0.84, p);
+    var dim = clamp(f3 + f4 + f5);
+    var labOut = 1 - sm(0.83, 0.86, p);   // etiketler, parçalar dolmadan çekilir: kapanıştaki dolum bugünü değil 1.0.0ı gösterir
+    var wig = fs * (p * 20 + 9 * sm(0.64, 0.82, p));      // çizgiler yalnız kaydırınca kıpırdar
+    for (i = 0; i < 6; i++) {
+      var w = i === 0 ? f3 : i === 1 ? f4 : f5;
+      var op = f(1 - 0.55 * dim * (1 - w));
+      var fl = fillOf(i, p), s = this.seats[i];
+      if (open) {
+        s.setAttribute('opacity', op);
+        if (fl > 0.999) s.removeAttribute('stroke-dasharray');
+        else s.setAttribute('stroke-dasharray', f(s.len * fl) + ' ' + f(s.len + 40));
+        this.frames[i].style.display = fl > 0.999 ? 'none' : '';
+        this.frames[i].setAttribute('opacity', f(op * clamp((1 - fl) * 6)));
+      } else {
+        this.frames[i].style.display = 'none';
+      }
+      var lb = this.labels[i];
+      lb.g.setAttribute('opacity', f(sm(0.13 + 0.01 * i, 0.18 + 0.01 * i, p) * labOut * op));
+      if (lb.yer) lb.name.setAttribute('stroke-dashoffset', f(-(wig + i * 1.7 * fs)));
+    }
+    this.door.setAttribute('opacity', f(f3));
+
+    // Taşınan not: dalga boyunca kayan tek bir kesik.
+    var bs = -1, bt = 0;
+    if (p >= 0.31 && p <= 0.38) { bt = sm(0.31, 0.38, p); bs = BIT_YOL * (1 - bt); }        // telefondan hafızaya: yazma
+    else if (p >= 0.39 && p <= 0.45) { bt = sm(0.39, 0.45, p); bs = BIT_YOL * bt; }        // hafızadan bilgisayara: okuma
+    else if (p >= 0.54 && p <= 0.59) { bt = sm(0.54, 0.59, p); bs = BIT_YOL * bt; }        // öğrenilen, parçaya kaydedilir
+    if (bs >= 0) {
+      this.bit.style.display = '';
+      this.bit.setAttribute('stroke-dashoffset', f(-bs));
+      this.bit.setAttribute('opacity', f(Math.min(1, bt * 6, (1 - bt) * 6)));
+    } else {
+      this.bit.style.display = 'none';
+    }
+
+    var r = this.refs;
+    if (r.log) for (i = 0; i < r.log.length; i++) r.log[i].el.classList.toggle('acik', p >= r.log[i].a && p < r.log[i].b);
+    if (r.wm) r.wm.style.opacity = f(clamp(1 - sm(0.08, 0.14, p) + sm(0.94, 0.99, p)));
+  };
+
+  function logOf(root) {
+    return Array.prototype.map.call(root.querySelectorAll('span[data-a]'), function (s) {
+      return { el: s, a: parseFloat(s.getAttribute('data-a')), b: parseFloat(s.getAttribute('data-b')) };
+    });
+  }
+
+  // Adım halkaları: açık C bekliyor, tam O bitti.
+  var steps = document.getElementById('adimlar');
+  var panels = document.getElementById('paneller').children;
+  var N = panels.length;
+  var C_D = 'M14.95 14.95A7 7 0 1 1 14.95 5.05';
+  for (var n = 0; n < N; n++) {
+    var li = document.createElement('li');
+    li.innerHTML = '<svg viewBox="0 0 20 20"><path class="c" d="' + C_D + '"/><circle class="o" cx="10" cy="10" r="7"/></svg>';
+    steps.appendChild(li);
+  }
+  var stepItems = steps.children;
+
+  function showSection(idx) {
+    for (var i = 0; i < N; i++) {
+      panels[i].classList.toggle('etkin', i === idx);
+      panels[i].setAttribute('aria-hidden', i === idx ? 'false' : 'true');
+      stepItems[i].className = i < idx ? 'gecmis' : i === idx ? 'simdi' : '';
+    }
+  }
+
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var story = document.getElementById('hikaye');
+  var kayit = document.querySelector('.hikaye .kayit');
+
+  if (reduce.matches) {
+    // Duran kareler: aynı sahne, altı anahtar anda.
+    document.documentElement.classList.add('durgun');
+    var list = document.getElementById('durgun-liste');
+    var statics = [];
+    for (var k = 0; k < N; k++) {
+      var art = document.createElement('article');
+      art.className = 'kare';
+      var fig = document.createElement('figure');
+      fig.className = 'gorsel';
+      var svg = document.createElementNS(NS, 'svg');
+      svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', 'COUNCIL sahnesi, adım ' + (k + 1) + ' / ' + N);
+      fig.appendChild(svg);
+      var wm = document.createElement('div');
+      wm.className = 'yazi-imi'; wm.setAttribute('aria-hidden', 'true'); wm.textContent = 'COUNCIL';
+      fig.appendChild(wm);
+      var kay = kayit.cloneNode(true);
+      fig.appendChild(kay);
+      art.appendChild(fig);
+      var txt = panels[k].cloneNode(true);
+      txt.classList.add('etkin');
+      txt.removeAttribute('aria-hidden');
+      art.appendChild(txt);
+      list.appendChild(art);
+      statics.push(new Scene(svg, { log: logOf(kay), wm: wm }));
+    }
+    var drawStatics = function () {
+      for (var i = 0; i < statics.length; i++) { statics[i].size(); statics[i].fs = -1; statics[i].render(KEYS[i]); }
+    };
+    drawStatics();
+    var staticRaf = 0;
+    window.addEventListener('resize', function () {
+      if (staticRaf) return;
+      staticRaf = requestAnimationFrame(function () { staticRaf = 0; drawStatics(); });
+    });
+  } else {
+    var scene = new Scene(document.getElementById('sahne-svg'), {
+      log: logOf(kayit),
+      wm: document.querySelector('.hikaye .yazi-imi')
+    });
+    var cur = 0, tgt = 0, drawn = -1, lastIdx = -1, raf = 0, first = true, listening = false, total = 1;
+
+    var measureTotal = function () { total = Math.max(1, story.offsetHeight - window.innerHeight); };
+    var frame = function () {
+      raf = 0;
+      tgt = clamp(-story.getBoundingClientRect().top / total);
+      if (first) { cur = tgt; first = false; }
+      var d = tgt - cur;
+      cur = Math.abs(d) < 0.0008 ? tgt : cur + d * 0.2;
+      if (cur !== drawn) {
+        scene.render(cur);
+        drawn = cur;
+        var idx = sectionOf(cur);
+        if (idx !== lastIdx) { showSection(idx); lastIdx = idx; }
+      }
+      if (cur !== tgt && !document.hidden) raf = requestAnimationFrame(frame);   // yalnız yetişene kadar
+    };
+    var kick = function () { if (!raf) raf = requestAnimationFrame(frame); };
+
+    var io = new IntersectionObserver(function (entries) {
+      var vis = entries[entries.length - 1].isIntersecting;
+      if (vis && !listening) { listening = true; window.addEventListener('scroll', kick, { passive: true }); }
+      else if (!vis && listening) { listening = false; window.removeEventListener('scroll', kick); }
+      kick();
+    }, { rootMargin: '120px 0px' });
+    io.observe(story);
+
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) kick(); });
+
+    var resizeRaf = 0;
+    window.addEventListener('resize', function () {
+      if (resizeRaf) return;
+      resizeRaf = requestAnimationFrame(function () {
+        resizeRaf = 0; measureTotal(); scene.size(); drawn = -1; kick();
+      });
+    });
+
+    measureTotal(); scene.size(); showSection(0); lastIdx = 0; kick();
+  }
+
+  // Hareket tercihi değişirse sayfayı o tercihle yeniden kur.
+  if (reduce.addEventListener) reduce.addEventListener('change', function () { location.reload(); });
+
+  document.getElementById('basa').addEventListener('click', function () {
+    var top = reduce.matches ? 0 : story.getBoundingClientRect().top + window.pageYOffset;
+    window.scrollTo({ top: top, behavior: reduce.matches ? 'auto' : 'smooth' });
+  });
+})();
+</script>
+</body>
+</html>
