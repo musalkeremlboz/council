@@ -190,9 +190,16 @@ class Setup:
         return subprocess.list2cmdline(self._win_argv(*args))
 
     def _win_run_value(self, command: str | None) -> bool:
-        """Set (or with None, delete) the login entry. Returns whether an entry exists afterwards."""
+        """Set (or with None, delete) the login entry; with "" only look. Returns whether an entry exists afterwards."""
         import winreg
 
+        if command == "":  # only looking: read access is enough, and a sandbox (Codex) may allow no more
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, WIN_RUN_KEY, 0, winreg.KEY_QUERY_VALUE) as key:
+                    winreg.QueryValueEx(key, WIN_RUN_NAME)
+                return True
+            except FileNotFoundError:  # no Run key, or no entry in it
+                return False
         access = winreg.KEY_SET_VALUE | winreg.KEY_QUERY_VALUE
         with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, WIN_RUN_KEY, 0, access) as key:  # a new account may lack the key
             if command is None:
@@ -258,11 +265,15 @@ class Setup:
             return True
         return self.run(["systemctl", "--user", "restart", "council.service"]).returncode == 0
 
-    def service_installed(self) -> bool:
+    def service_installed(self) -> bool | None:
+        """None: it cannot be told here (Windows, a registry this process may not read)."""
         if self.system == "Darwin":
             return (self._agents() / f"{SERVICE}.plist").exists()
         if self.system == "Windows":
-            return self._win_run_value("")
+            try:
+                return self._win_run_value("")
+            except PermissionError:
+                return None
         return (self._units() / "council.service").exists()
 
     def updater_installed(self) -> bool:
@@ -482,9 +493,11 @@ def uninstall(s: Setup) -> int:
 def status(s: Setup) -> int:
     version = s.healthy()
     info = _update_state(s.data)
+    installed = s.service_installed()
     s.say(f"version      {__version__}")
     s.say(f"service      {'running on ' + s.url + (' (' + version + ')' if version else '') if version else 'not running'}"
-          + ("" if s.service_installed() else " · not installed as a background service"))
+          + ("" if installed else " · whether it starts at login could not be read here" if installed is None
+             else " · not installed as a background service"))
     s.say(f"hooks        {'installed' if s.hooks_installed() else 'not installed'}")
     mode = mode_of(s._read_json(s.config))
     s.say(f"delegation   {mode}" + (" · hook not registered" if mode == "enforce" and not s.tool_hooks_installed() else ""))
