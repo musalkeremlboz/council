@@ -106,3 +106,69 @@ def test_fonts_are_local():
         assert f'font-family: "{fam}"' in c
     assert "http" not in c
     assert all("../font/" in u for u in re.findall(r'url\("([^"]+)"\)', c))
+
+
+def all_bodies(prefix):
+    """Seçicisi prefix ile başlayan bütün kuralların gövdeleri (boşluksuz, birleşik)."""
+    return "".join(n(b) for s, b in rules(CSS) if n(s).startswith(n(prefix)))
+
+
+def test_field_has_no_cut():
+    assert all_bodies(".c-alan")
+    assert "clip-path" not in all_bodies(".c-alan")
+    assert "min-height:44px" in "".join(body_of(".c-alan__giris")) or "height:44px" in "".join(body_of(".c-alan__giris"))
+    focus = "".join(body_of(".c-alan__giris:focus-visible"))
+    assert "var(--kor-metin)" in focus
+    assert "var(--cizgi-guclu)" in "".join(body_of(".c-alan__giris"))
+    assert "var(--hata)" in all_bodies(".c-alan--hata")
+
+
+def test_card_cut_only_when_clickable():
+    assert "clip-path" not in "".join(body_of(".c-kart"))
+    assert "--k:24px" in "".join(body_of(".c-kart--tik"))
+    hover = n("".join(blocks(CSS, "(hover:hover)") + blocks(CSS, "(hover: hover)")))
+    assert ".c-kart--tik:hover{--k:32px" in hover
+    assert "clip-path" in all_bodies(".c-kart--tik::before")
+
+
+def test_status_vocabulary():
+    for d in ("bekliyor", "calisiyor", "tamam", "hafizada", "hata"):
+        assert body_of(f'.c-durum[data-durum="{d}"]'), d
+    assert "animation:" in "".join(body_of('.c-durum[data-durum="calisiyor"]'))
+    rm = n("".join(blocks(CSS, "(prefers-reduced-motion: reduce)") + blocks(CSS, "(prefers-reduced-motion:reduce)")))
+    assert '.c-durum[data-durum="calisiyor"]{animation:none' in rm
+    assert "border-right-color:currentColor" in rm.split('.c-durum[data-durum="calisiyor"]')[1]
+    assert "border-top-color:transparent" in rm.split('.c-durum[data-durum="calisiyor"]')[1]
+    assert "270" in CSS  # açıklama: 270° durağan C
+
+
+def test_badge_shape():
+    b = "".join(body_of(".c-rozet"))
+    assert "border-start-start-radius:var(--kose-tam)" in b
+    assert "border-end-start-radius:var(--kose-tam)" in b
+    assert "clip-path" not in b
+    for m in ("kor", "basari", "uyari", "hata"):
+        assert body_of(f".c-rozet--{m}")
+
+
+def test_progress_strip():
+    assert "block-size:6px" in "".join(body_of(".c-serit")) or "height:6px" in "".join(body_of(".c-serit"))
+    fill = "".join(body_of(".c-serit::before"))
+    assert "var(--deger)" in fill
+    assert "clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%)".replace(" ", "") in fill
+    caps = "".join(n(b) for sel, b in rules(CSS) if ".c-halka__iz" in sel and ".c-halka__dolu" in sel)
+    assert "stroke-linecap:butt" in caps
+
+
+def test_check_and_radio_and_link():
+    assert "border-radius:50%" in all_bodies(".c-radyo") or "border-radius:var(--kose-tam)" in all_bodies(".c-radyo")
+    assert "border-radius" not in "".join(body_of(".c-isaret::before"))
+    link = "".join(body_of(".c-baglanti"))
+    assert "text-decoration" in link and "var(--murekkep)" in link and "clip-path" not in link
+
+
+def test_hiding_only_under_js():
+    hide = re.compile(r"opacity:0(?![.\d])|visibility:hidden|display:none")
+    for s, b in rules(CSS):
+        if hide.search(n(b)):
+            assert all(p.strip().startswith(".js ") or p.strip() == "[hidden]" for p in s.split(",")), s
