@@ -56,6 +56,11 @@ jobs:
           $env:COUNCIL_SOURCE = $env:GITHUB_WORKSPACE
           & "$env:GITHUB_WORKSPACE\install.ps1" --port 8799
 
+      - name: Show the service log when the install failed
+        if: failure()
+        shell: bash
+        run: cat "$HOME/.council/service.log" || true
+
       - name: Check the installation, then uninstall
         working-directory: ${{ runner.temp }}
         shell: bash
