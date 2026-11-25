@@ -1,0 +1,207 @@
+/* COUNCIL 0.2: temel biçemler ve Tek Kesik düğmesi. Değerler tokens.css değişkenlerinden gelir. */
+
+/* Yazı tipleri: yerel dosyalar */
+@font-face {
+  font-family: "Council Halka";
+  src: url("../font/CouncilHalka.woff2") format("woff2"), url("../font/CouncilHalka.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "DM Sans";
+  src: url("../font/DMSans.ttf") format("truetype");
+  font-weight: 100 1000;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DM Mono";
+  src: url("../font/DMMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DM Mono";
+  src: url("../font/DMMono-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-display: swap;
+}
+
+/* Temel */
+body {
+  margin: 0;
+  background: var(--zemin);
+  color: var(--murekkep);
+  font-family: var(--font-sans);
+}
+
+/* Düğme: Tek Kesik. Kesik k = yükseklik x 2/7 */
+@property --k {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 12px;
+}
+@keyframes c-dugme-don {
+  to { transform: rotate(1turn); }
+}
+
+.c-dugme {
+  --h: 44px;
+  --k0: 12px;
+  --k: var(--k0);
+  --zem: var(--murekkep);
+  --yazi: var(--zemin);
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ara-3);
+  min-height: var(--h);
+  min-width: 96px;
+  padding-block: 0;
+  padding-inline: calc(var(--h) * .45) calc(var(--h) * .45 + var(--h) / 7);
+  border: 0;
+  background: none;
+  color: var(--yazi);
+  font: 500 15px/1.2 var(--font-sans);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: --k var(--sure-tepki) var(--egri-ac);
+}
+.c-dugme--k { --h: 32px; --k0: 9px; font-size: 14px; }
+.c-dugme--b { --h: 56px; --k0: 16px; font-size: 17px; }
+@media (pointer: coarse) {
+  .c-dugme--k { --h: 44px; --k0: 12px; }
+}
+
+/* Gövde: sağ üstü kesik */
+.c-dugme::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--zem);
+  clip-path: polygon(0 0, calc(100% - var(--k)) 0, 100% var(--k), 100% 100%, 0 100%);
+}
+
+/* Odak: sağ üstü açık C, 2px, 3px uzakta */
+.c-dugme:focus { outline: none; }
+.c-dugme::after {
+  --d: 3px;
+  --c: 2px;
+  --K: calc(var(--k) + 2 * var(--d));
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--d));
+  pointer-events: none;
+  background: var(--kor-metin);
+  opacity: 0;
+  clip-path: polygon(
+    calc(100% - var(--K)) 0, 0 0, 0 100%, 100% 100%, 100% var(--K),
+    calc(100% - var(--c)) calc(var(--K) - var(--c)),
+    calc(100% - var(--c)) calc(100% - var(--c)),
+    var(--c) calc(100% - var(--c)), var(--c) var(--c),
+    calc(100% - var(--K) + var(--c)) var(--c));
+}
+.c-dugme:focus-visible::after { opacity: 1; }
+
+/* Üzerine gelince ve basınca */
+@media (hover: hover) {
+  .c-dugme:hover { --k: calc(var(--k0) + 4px); }
+}
+.c-dugme:active {
+  --k: calc(var(--k0) - 4px);
+  --zem: var(--murekkep-bas);
+  transition-duration: var(--sure-bas);
+}
+
+/* Türler */
+.c-dugme--kor { --zem: var(--kor); --yazi: var(--kor-ustu); }
+.c-dugme--kor:active { --zem: var(--kor-bas); }
+
+.c-dugme--ikincil { --yazi: var(--murekkep); --b: 2px; }
+.c-dugme--ikincil::before {
+  clip-path: polygon(evenodd,
+    0 0, calc(100% - var(--k)) 0, 100% var(--k), 100% 100%, 0 100%, 0 0,
+    var(--b) var(--b),
+    calc(100% - var(--k) - var(--b) * .4142) var(--b),
+    calc(100% - var(--b)) calc(var(--k) + var(--b) * .4142),
+    calc(100% - var(--b)) calc(100% - var(--b)),
+    var(--b) calc(100% - var(--b)),
+    var(--b) var(--b));
+}
+
+.c-dugme--hayalet { --yazi: var(--murekkep); }
+.c-dugme--hayalet::before {
+  clip-path: polygon(
+    calc(100% - var(--k) - 4.25px) 0, calc(100% - var(--k)) 0,
+    100% var(--k), 100% calc(var(--k) + 4.25px));
+}
+@media (hover: hover) {
+  .c-dugme--hayalet:hover::before {
+    background: var(--ton);
+    clip-path: polygon(0 0, calc(100% - var(--k)) 0, 100% var(--k), 100% 100%, 0 100%);
+  }
+}
+.c-dugme--hayalet:is(:active, :focus-visible)::before {
+  background: var(--ton);
+  clip-path: polygon(0 0, calc(100% - var(--k)) 0, 100% var(--k), 100% 100%, 0 100%);
+}
+
+/* Yükleniyor: kesik sabit, dönen C */
+.c-dugme__halka {
+  display: none;
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+.c-dugme[aria-busy="true"] { --k: var(--k0); cursor: progress; }
+.c-dugme[aria-busy="true"] .c-dugme__halka {
+  display: block;
+  animation: c-dugme-don 900ms linear infinite;
+}
+
+/* Hafızaya yazıldı: küçük kor O */
+.c-dugme[data-durum="hafizada"] .c-dugme__halka {
+  display: block;
+  inline-size: 8px;
+  block-size: 8px;
+  border: 0;
+  background: var(--kor);
+  animation: none;
+}
+
+/* Devre dışı: düz kare */
+.c-dugme:is(:disabled, [aria-disabled="true"]) {
+  --k0: 0px;
+  --k: 0px;
+  --zem: var(--pasif-zemin);
+  --yazi: var(--pasif-yazi);
+  cursor: not-allowed;
+}
+.c-dugme--ikincil:is(:disabled, [aria-disabled="true"]) { --zem: var(--pasif-yazi); }
+.c-dugme--hayalet:is(:disabled, [aria-disabled="true"])::before { display: none; }
+
+/* Sağdan sola: kesik sol üste geçer */
+[dir="rtl"] .c-dugme::before,
+[dir="rtl"] .c-dugme::after { transform: scaleX(-1); }
+
+/* Hareket azaltılmış: durağan, eksiksiz karşılık */
+@media (prefers-reduced-motion: reduce) {
+  .c-dugme { transition: 0ms; }
+  .c-dugme:active { transition-duration: 0ms; }
+  .c-dugme[aria-busy="true"] .c-dugme__halka { animation: none; }
+}
+
+/* Yüksek karşıtlık: kesik yerine düz çerçeve */
+@media (forced-colors: active) {
+  .c-dugme { border: 2px solid ButtonText; forced-color-adjust: none; color: ButtonText; background: ButtonFace; }
+  .c-dugme::before { clip-path: none; background: transparent; }
+  .c-dugme::after { clip-path: none; background: transparent; }
+  .c-dugme:focus-visible { outline: 2px solid ButtonText; outline-offset: 3px; }
+  .c-dugme:is(:disabled, [aria-disabled="true"]) { border-color: GrayText; color: GrayText; }
+}
