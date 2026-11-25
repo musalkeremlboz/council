@@ -1,3 +1,4 @@
+import contextlib
 import json
 import re
 import subprocess
@@ -162,6 +163,49 @@ def test_windows_uses_login_entry_and_scheduled_task(home, monkeypatch):
     s.healthy = lambda wait=0: None
     local.uninstall(s)
     assert not registry and s.run.ran("taskkill", "4242") and s.run.ran("schtasks", "/Delete")
+
+
+class FakeWinreg:
+    """A Run key that allows reading only, as in a sandbox that refuses registry writes (Codex on Windows)."""
+
+    HKEY_CURRENT_USER, KEY_QUERY_VALUE, KEY_SET_VALUE, REG_SZ = object(), 1, 2, 1
+
+    def __init__(self, values=None, readable=True):
+        self.values, self.readable = dict(values or {}), readable
+
+    def _key(self, access):
+        if access & self.KEY_SET_VALUE or not self.readable:
+            raise PermissionError(5, "Access is denied")
+        return contextlib.nullcontext(self)
+
+    def OpenKey(self, root, path, reserved=0, access=1):
+        return self._key(access)
+
+    def CreateKeyEx(self, root, path, reserved=0, access=2):
+        return self._key(access)
+
+    def QueryValueEx(self, key, name):
+        if name not in self.values:
+            raise FileNotFoundError(2, "not found")
+        return self.values[name], self.REG_SZ
+
+
+@pytest.mark.parametrize("values, expected", [({local.WIN_RUN_NAME: "pythonw serve"}, True), ({}, False)])
+def test_windows_status_reads_the_login_entry_without_write_access(home, monkeypatch, values, expected):
+    monkeypatch.setitem(sys.modules, "winreg", FakeWinreg(values))
+    s = make(home, system="Windows")
+    assert s.service_installed() is expected
+    assert local.status(s) == 0
+
+
+def test_windows_status_survives_an_unreadable_registry(home, monkeypatch):
+    monkeypatch.setitem(sys.modules, "winreg", FakeWinreg(readable=False))
+    said = []
+    s = make(home, system="Windows")
+    s.say = said.append
+    assert s.service_installed() is None
+    assert local.status(s) == 0
+    assert any("could not be read" in line for line in said)
 
 
 def test_port_is_remembered(home):
