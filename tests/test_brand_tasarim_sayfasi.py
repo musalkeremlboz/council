@@ -42,7 +42,7 @@ def test_every_component_has_readme_and_preview(tmp_path):
         ilk = (d / "preview.html").read_text(encoding="utf-8").splitlines()[0]
         assert ilk.startswith("<!-- @dsCard group=\"") and " height=" in ilk and ilk.endswith("-->")
     css = (tmp_path / "project/components/bundle.css").read_text(encoding="utf-8")
-    assert "../../fonts/CouncilHalka.woff2" in css and "../font/" not in css
+    assert "../fonts/CouncilHalka.woff2" in css and "../../fonts" not in css and "../font/" not in css
     for f in ("CouncilHalka.woff2", "DMSans.ttf", "DMMono-Regular.ttf"):
         assert (tmp_path / "project/fonts" / f).is_file()
 
@@ -134,3 +134,16 @@ def test_alan_preview_is_the_field_component(tmp_path):
     html = (tmp_path / "project/components/Alan/preview.html").read_text(encoding="utf-8")
     assert '<div class="c-alan" ' in html and '<label class="c-alan__etiket" for="a1">' in html
     assert '<input id="a1" class="c-alan__giris"' in html
+
+
+def test_bundle_css_font_urls_resolve_to_written_files(tmp_path):
+    import re
+    yazilan = {p.resolve() for p in _yaz(tmp_path)}
+    kok = tmp_path / "project"
+    css = (kok / "components/bundle.css").read_text(encoding="utf-8")
+    adresler = re.findall(r'url\("?([^")]+)"?\)', css)
+    assert adresler
+    for a in adresler:
+        hedef = (kok / "components" / a).resolve()
+        assert hedef.is_relative_to((kok / "fonts").resolve()), a
+        assert hedef in yazilan and hedef.is_file(), a

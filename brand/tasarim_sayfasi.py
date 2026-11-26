@@ -17,7 +17,7 @@ YAZAR = "Clau" + "de"
 ARAC = YAZAR + " Code"
 NOT = "0.2 koddan üretildi"
 
-FONTLAR = ("CouncilHalka.woff2", "DMSans.ttf", "DMMono-Regular.ttf", "DMMono-Medium.ttf")
+FONTLAR = ("CouncilHalka.woff2", "CouncilHalka.ttf", "DMSans.ttf", "DMMono-Regular.ttf", "DMMono-Medium.ttf")
 
 D = '<span class="c-durum" data-durum="{}"></span>'
 
@@ -79,9 +79,9 @@ BILESENLER = {
 
 
 def _bundle_css() -> str:
-    """council.css, yazı tipi adresleri ../../fonts/ altına çevrilmiş olarak."""
+    """council.css, yazı tipi adresleri ../fonts/ altına çevrilmiş olarak."""
     metin = LISTE.read_text(encoding="utf-8")
-    return re.sub(r'url\("\.\./font/([^"]+)"\)', r'url("../../fonts/\1")', metin)
+    return re.sub(r'url\("\.\./font/([^"]+)"\)', r'url("../fonts/\1")', metin)
 
 
 def _onizleme(ad: str, grup: str, yukseklik: int, govde: str) -> str:
