@@ -1,6 +1,6 @@
 # COUNCIL tanıtım sitesi 1.0
 
-**Durum:** onaylandı (2026-11-26 10:56, Claude'un kararlarıyla birlikte). Yapımcı okumasından (üç bakış) çıkan sorular belgeye işlendi; Claude'un kararları "(Claude'un kararı)" diye işaretli.
+**Durum:** onaylandı (2026-11-26 10:56, Claude'un kararlarıyla birlikte), yapıldı (2026-11-26 13:10; `4af1d9c..b0cbe2b`, sahip önizlemeyi onayladı, main'e yerelde birleştirildi; GitHub'a gönderilmedi, sunucuya yayınlanmadı). Yapımcı okumasından (üç bakış) çıkan sorular belgeye işlendi; Claude'un kararları "(Claude'un kararı)" diye işaretli.
 **Kaynak:** proje sahibinin istekleri ve kararları (2026-11-26 00:56, 10:42–10:52). Görünüşün kuralları `docs/tasarim/2026-11-26-tasarim-sistemi.md` belgesindedir; bu belge o kuralları tekrar etmez, onlara uyar.
 
 ## Amaç ve neden
