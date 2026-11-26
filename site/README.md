@@ -45,7 +45,7 @@ Tarayıcı denetimi (`tests/test_site_tarayici.py`, Chrome yoksa atlanır): dör
 
 ## Yayın
 
-Betikler yalnız yayın hazırlığıdır; sunucuya bu görevde dokunulmadı. Yayın, `site/` temizken (commitli) yapılır.
+Yayın, `site/` temizken (commitli) yapılır. İlk yayından önce aşağıdaki Caddy bloğu eklenmiş olmalı.
 
 ```sh
 python site/build.py
@@ -56,13 +56,18 @@ site/dogrula.sh https://council.systems
 - `yayinla.sh <hedef>`: önce `site/cikti/` klasörünün taze bir `build.py` çıktısıyla aynı olduğunu denetler (farklıysa durur). Sonra `site/cikti/` klasörünü `<hedef>/surumler/<git kısa özeti>/` altına `rsync -a --delete` ile kopyalar, `<hedef>/guncel` bağını yeni sürüme çevirir (uzakta `ln -sfn` ve `mv -T` ile tek adımda; yerelde `ln -sfn`); yayından önce o an canlı sürümün `varlik/<özet>/` klasörlerinden yeni sürümde olmayanlar yeni sürüme taşınır (`rsync --ignore-existing`), böylece geçiş sırasında açık olan sayfaların istediği varlıklar 404 olmaz, `surumler/` içinde en yeni 3 klasörü tutar. `site/` kirliyse durur. `SURUM=ad` sürüm adını değiştirir (testler için).
 - `dogrula.sh <temel-adres>`: `/`, `/en/`, `/hafiza/`, `/en/memory/`, `/sitemap.xml` için 200; değişmeyen hizmet yolları için `/health`, `/icon.svg`, `/.well-known/oauth-authorization-server` 200, `/mcp`, `/panel/` ve `/login` 404 değil. `/` yanıtında yeni sitenin canonical bağı aranır (eski sunucu da 200 verir). Her denetim bir satır; biri başarısızsa çıkış kodu sıfırdan farklıdır. `DOGRULA_SAYFALAR_YALNIZ=1` hizmet yollarını atlar (yerel dosya sunucusu).
 
+### Uzak hedef
+
+- Hedefte kullanıcı adı yazılmalı (`kullanici@sunucu:/yol`): `yayinla.sh` uzak hedefi `@` ile tanır; `@` yoksa hedefi yerel klasör sanar.
+- Sunucuda `rsync` ve GNU `mv -T` gerekir. Caddy'nin kullanıcısı dosyaları okuyabilmeli; `site/cikti/` dosyaları herkese okunur.
+
 ### Caddy bloğu
 
-Canlı `council.systems` bloğunda, mevcut her şeyi yakalayan kuraldan önce:
+Canlı `council.systems` bloğunda, hizmete giden diğer `handle` kurallarının yanında ve her şeyi yakalayan `reverse_proxy` satırından önce (sırayı görmek için `caddy adapt`):
 
 ```caddy
 @varlik path /varlik/*
-@site path / /en /en/* /hafiza /hafiza/* /sitemap.xml /robots.txt /paylas-*.png
+@site path / /en /en/* /hafiza /hafiza/* /sitemap.xml /robots.txt /paylas-tr.png /paylas-en.png
 handle @varlik {
 	root * /var/www/council-site/guncel
 	header Cache-Control "public, max-age=31536000, immutable"
