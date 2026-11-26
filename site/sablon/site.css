@@ -147,3 +147,100 @@ img, svg { max-inline-size: 100%; }
 .s-urun__amblem img { inline-size: 64px; block-size: 64px; }
 .s-urun h3 { margin: 0 0 var(--ara-1); }
 .s-urun p { margin: 0; color: var(--murekkep-2); }
+
+/* Hafıza page: hero with the emblem (the identity moment draws it; the markup already holds the finished emblem) */
+.s-hf-acilis {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "amblem baslik" "amblem tanim";
+  gap: var(--ara-4) var(--ara-12);
+  align-items: center;
+  padding-block: var(--ara-16) var(--ara-8);
+}
+.s-hf-amblem { grid-area: amblem; color: var(--murekkep); }
+.s-hf-amblem svg { display: block; inline-size: 168px; block-size: 168px; }
+.s-sayfa .s-hf-acilis h1 { grid-area: baslik; margin: 0; align-self: end; }
+.s-hf-tanim { grid-area: tanim; margin: 0; max-inline-size: 52ch; color: var(--murekkep-2); align-self: start; }
+@media (max-width: 700px) {
+  .s-hf-acilis { grid-template-columns: minmax(0, 1fr); grid-template-areas: "amblem" "baslik" "tanim"; gap: var(--ara-6); padding-block-start: var(--ara-12); }
+  .s-hf-amblem svg { inline-size: 112px; block-size: 112px; }
+}
+
+/* Hafıza page: sections */
+.s-bolum__sonra { margin: var(--ara-6) 0 0; max-inline-size: 60ch; color: var(--murekkep-2); overflow-wrap: anywhere; }
+.s-bolum__sonra.yazi-kod { color: var(--murekkep); }
+.s-alt-baslik { margin: var(--ara-12) 0 var(--ara-2); font-weight: 600; }
+.s-bolum code { font-family: var(--font-mono); font-size: .9em; overflow-wrap: anywhere; }
+
+/* How it works: the drawing (three sessions, one memory) and its three steps */
+.s-akis__kap { margin: 0 0 var(--ara-8); max-inline-size: 560px; }
+.s-akis { display: block; inline-size: 100%; block-size: auto; color: var(--murekkep); overflow: visible; }
+.s-akis__yazi { fill: currentColor; stroke: none; font: 500 16px var(--font-mono); }
+.s-akis__kap figcaption { margin-block-start: var(--ara-3); color: var(--murekkep-2); }
+
+/* Ruled lists: heading / text rows without icons (steps, why different, docs) */
+.s-liste { list-style: none; margin: 0; padding: 0; border-block-start: 1px solid var(--cizgi-guclu); counter-reset: adim; }
+.s-liste li {
+  display: grid;
+  grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+  gap: var(--ara-2) var(--ara-6);
+  align-items: baseline;
+  padding-block: var(--ara-6);
+  border-block-end: 1px solid var(--cizgi);
+}
+.s-liste h3 { margin: 0; font-weight: 600; }
+.s-liste p { margin: 0; max-inline-size: 60ch; color: var(--murekkep-2); }
+.s-liste--sayili li { counter-increment: adim; }
+.s-liste--sayili h3::before { content: counter(adim) " / "; color: var(--murekkep-2); font-family: var(--font-mono); font-weight: 400; }
+.s-liste--adim li { grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) minmax(0, 1fr); }
+.s-liste--adim .yazi-etiket { display: block; margin-block-end: var(--ara-1); color: var(--murekkep-2); }
+.s-liste--adim .s-liste__yaz { color: var(--murekkep); }
+.s-liste--belge li { grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); }
+@media (max-width: 760px) {
+  .s-liste li, .s-liste--adim li, .s-liste--belge li { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Setup: three ways, each a code block with a ghost copy button (shown only when JS wires it) */
+.s-yollar { display: grid; gap: var(--ara-8); }
+.s-yol h3 { margin: 0 0 var(--ara-1); font-weight: 600; }
+.s-yol p { margin: 0 0 var(--ara-3); max-inline-size: 60ch; color: var(--murekkep-2); }
+.s-yol pre,
+.s-agac {
+  margin: 0 0 var(--ara-3);
+  padding: var(--ara-4);
+  background: var(--yuzey);
+  border: 1px solid var(--cizgi-guclu);
+  color: var(--murekkep);
+  font: 400 14px/22px var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.s-agac { white-space: pre; overflow-x: auto; margin-block-end: var(--ara-6); }
+.s-yol code, .s-agac code { font: inherit; }
+.s-yol [hidden] { display: none; }
+
+/* Tables: ruled, no boxes; on narrow screens each row stacks and every cell shows its column name */
+.s-tablo { inline-size: 100%; border-collapse: collapse; border-block-start: 1px solid var(--cizgi-guclu); }
+.s-tablo th { text-align: start; padding: var(--ara-3) var(--ara-4) var(--ara-3) 0; color: var(--murekkep-2); font: 600 12px/1.3 var(--font-sans); letter-spacing: .08em; border-block-end: 1px solid var(--cizgi); }
+.s-tablo td { padding: var(--ara-4) var(--ara-4) var(--ara-4) 0; vertical-align: top; border-block-end: 1px solid var(--cizgi); font: 400 16px/24px var(--font-sans); overflow-wrap: anywhere; }
+.s-tablo td:first-child { color: var(--murekkep); font-weight: 600; }
+.s-tablo td code { font-weight: 400; }
+.s-tablo--yardimci td:nth-child(2) { color: var(--murekkep-2); max-inline-size: 52ch; }
+@media (max-width: 640px) {
+  .s-tablo thead { position: absolute; clip-path: inset(50%); inline-size: 1px; block-size: 1px; overflow: hidden; }
+  .s-tablo, .s-tablo tbody, .s-tablo tr, .s-tablo td { display: block; }
+  .s-tablo tr { padding-block: var(--ara-3); border-block-end: 1px solid var(--cizgi); }
+  .s-tablo td { padding: var(--ara-1) 0; border: 0; }
+  .s-tablo td::before { content: attr(data-etiket); display: block; color: var(--murekkep-2); font: 600 12px/1.3 var(--font-sans); letter-spacing: .08em; }
+}
+
+/* Questions: ruled <details> rows (work without JS) */
+.s-sss { border-block-start: 1px solid var(--cizgi-guclu); }
+.s-sss details { border-block-end: 1px solid var(--cizgi); }
+.s-sss summary { list-style: none; display: flex; align-items: center; min-block-size: 56px; padding-block: var(--ara-2); cursor: pointer; font-weight: 600; justify-content: space-between; gap: var(--ara-4); }
+.s-sss summary::after { content: "+"; flex: none; font: 400 20px/1 var(--font-mono); color: var(--murekkep-2); }
+.s-sss details[open] summary::after { content: "−"; }
+.s-sss summary::-webkit-details-marker { display: none; }
+.s-sss summary:focus { outline: none; }
+.s-sss summary:focus-visible { outline: 2px solid var(--kor-metin); outline-offset: -2px; }
+.s-sss details p { margin: 0 0 var(--ara-6); max-inline-size: 64ch; color: var(--murekkep-2); }

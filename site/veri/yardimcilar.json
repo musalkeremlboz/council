@@ -1,0 +1,39 @@
+[
+  {
+    "ad": "Claude Code",
+    "destek": {
+      "tr": "Kurulum kendisi bağlar. Bağlam oturum olaylarıyla kendiliğinden gelir. Kurulum her değişiklikte macOS, Linux ve Windows'ta denenir.",
+      "en": "Setup connects it. Context arrives by itself through session events. Setup is tried on macOS, Linux and Windows with every change."
+    },
+    "durum": "tam"
+  },
+  {
+    "ad": "claude.ai (web, masaüstü, telefon)",
+    "destek": {
+      "tr": "Özel bağlayıcıyla. Hafızayı oturum başında bir araç çağrısıyla yükler. Sunucu kurulumu ister.",
+      "en": "As a custom connector. It loads the memory with a tool call at the start of a session. Needs a server setup."
+    },
+    "durum": "kullanımda"
+  },
+  {
+    "ad": "Hermes, Antigravity",
+    "destek": {"tr": "MCP araçlarıyla.", "en": "Through the MCP tools."},
+    "durum": "kullanımda"
+  },
+  {
+    "ad": "Codex, Gemini CLI",
+    "destek": {
+      "tr": "MCP araçlarıyla. Kurulum, tuttukları hafıza dosyalarını içeri alır. İçe aktarma çalışıyor. Bağlantı henüz denenmedi.",
+      "en": "Through the MCP tools. Setup brings in the memory files they keep. The import works. The connection has not been tried yet."
+    },
+    "durum": "denenmedi"
+  },
+  {
+    "ad": {"tr": "MCP konuşan diğer yardımcılar", "en": "Other agents that speak MCP"},
+    "destek": {
+      "tr": "Yardımcı, yönergedeki adımla kendini bağlar.",
+      "en": "The agent connects itself with the step in the instructions."
+    },
+    "durum": "denenmedi"
+  }
+]

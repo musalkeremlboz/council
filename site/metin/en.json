@@ -108,5 +108,263 @@
       }
     ],
     "son": "Today: version {surum} · {temel} core tools + {ogrenme} personal-development tools (in trial)"
+  },
+  "hafiza": {
+    "tanim": "The memory is not tied to one agent: every agent you use reads and writes the same memory. Your notes stay with you as plain Markdown files.",
+    "nasil": {
+      "id": "how-it-works",
+      "baslik": "How it works",
+      "onu": "COUNCIL runs on your computer as a small service and keeps your notes in a folder. Your agent visits the memory three times in every session:",
+      "gorsel": "Three sessions, one memory. Each session starts by reading the memory, gets the relevant notes with every message, and ends by writing to it. The next session starts where the last one left off.",
+      "oturum": "Session",
+      "hafiza": "Memory",
+      "adimlar": [
+        {
+          "baslik": "It starts by reading",
+          "govde": "When a session opens, the starting context is put in front of the agent: who you are, your corrections, your open threads and the cards of your last two sessions. All of it fits a budget of 9,000 characters. What does not fit is named, never dropped silently."
+        },
+        {
+          "baslik": "With every message it gets only the notes that matter",
+          "govde": "Your message is searched in the memory and at most the five most relevant sections are added to it (up to 3,500 characters). A section is sent only once per session."
+        },
+        {
+          "baslik": "It ends by writing",
+          "govde": "When a meaningful piece of work is done, the agent writes the session card: what was done, why, which decisions were made, what is still open, what comes next."
+        }
+      ],
+      "son": "The next session starts where the last one left off."
+    },
+    "kurulum": {
+      "id": "setup",
+      "baslik": "Setup",
+      "onu": "Pick one of three ways. All of them end the same.",
+      "kopyala": "Copy",
+      "kopyalandi": "Copied",
+      "secin": "Could not copy, select the text",
+      "yollar": [
+        {
+          "baslik": "Let your agent do it",
+          "not": "Paste this sentence to your AI agent. It reads the instructions, runs the installer, verifies the result and tells you in a few lines what it did."
+        },
+        {
+          "baslik": "macOS and Linux",
+          "not": "You need Python 3.11 or later and git."
+        },
+        {
+          "baslik": "Windows (PowerShell)",
+          "not": "The same needs: Python 3.11 or later and git."
+        }
+      ],
+      "sonra": "When setup finishes, open a new session with your agent. The memory is ready.",
+      "secenekler": {
+        "baslik": "Options",
+        "onu": "Added at the end of the command: `sh -s -- --no-auto-update`",
+        "sutunlar": {
+          "secenek": "Option",
+          "ne": "What it does"
+        },
+        "satirlar": [
+          {
+            "ad": "--no-auto-update",
+            "ne": "Turns the automatic update off"
+          },
+          {
+            "ad": "--no-import",
+            "ne": "Does not look for an existing memory"
+          },
+          {
+            "ad": "--from FOLDER",
+            "ne": "Imports this folder instead of what is found"
+          },
+          {
+            "ad": "--port 8765",
+            "ne": "Changes the port the service listens on"
+          }
+        ]
+      }
+    },
+    "ilk": {
+      "id": "first-five-minutes",
+      "baslik": "First 5 minutes",
+      "etiketler": {
+        "yaz": "Write to your agent",
+        "olur": "What happens"
+      },
+      "adimlar": [
+        {
+          "baslik": "Introduce yourself",
+          "yaz": "My name is Deniz, I am a developer, I like short answers. Write these to your memory.",
+          "olur": "It goes into `core.md` and loads in every session."
+        },
+        {
+          "baslik": "Make a decision",
+          "yaz": "We decided to use SQLite as the database in the blog project.",
+          "olur": "It is written to the project note with its date."
+        },
+        {
+          "baslik": "Ask again",
+          "yaz": "In a new session: What did we decide about the database in the blog project?",
+          "olur": "The answer comes without you explaining."
+        },
+        {
+          "baslik": "Correct once",
+          "yaz": "Explain technical terms the first time they appear.",
+          "olur": "A dated line is added to `rules.md`. You do not make the same correction again."
+        }
+      ]
+    },
+    "ic": {
+      "id": "inside-the-memory",
+      "baslik": "Inside the memory",
+      "agac": "vault/\n├── core.md            who you are and your lasting preferences\n├── rules.md           your corrections, one dated line each\n├── threads.md         open threads: where each stands and the next step\n├── sessions.md        the latest session cards\n├── projects/<name>/   project notes and project-specific rules\n├── knowledge/         single facts\n├── imported/          notes copied from other systems\n└── log/               what was done and which notes changed",
+      "son": "The first four files load at the start of every session. The rest arrives only when it is relevant. All of it is plain text: you can open it in any editor, read it and fix it by hand."
+    },
+    "olcumler": {
+      "id": "measurements",
+      "baslik": "Measurements",
+      "onu": "Measured on 2026-11-16 on a Linux server with a set of 44 questions. The sample is small. Results will differ with your notes.",
+      "sutunlar": {
+        "olcum": "Measurement",
+        "sonuc": "Result"
+      },
+      "satirlar": [
+        {
+          "olcum": "Building the session-start context",
+          "sonuc": "4.8 ms (median)"
+        },
+        {
+          "olcum": "The hook, end to end",
+          "sonuc": "about 250 ms, nearly all of it Python starting up"
+        },
+        {
+          "olcum": "Search in a 13,000-section test vault",
+          "sonuc": "12 ms (median)"
+        },
+        {
+          "olcum": "The answer already in context, without the agent searching",
+          "sonuc": "84% of 44 questions"
+        },
+        {
+          "olcum": "Effect of per-session deduplication on a 10-message chat",
+          "sonuc": "68% less injected context"
+        },
+        {
+          "olcum": "Memory used by the service",
+          "sonuc": "about 70 MB"
+        }
+      ],
+      "araclar": "Today: version {surum} · {temel} core tools + {ogrenme} personal-development tools (in trial)"
+    },
+    "fark": {
+      "id": "why-different",
+      "baslik": "Why it is different",
+      "maddeler": [
+        {
+          "baslik": "One sentence, nothing to configure",
+          "cumle": "You write one sentence to your agent; the service, the connection, the import and the updates set themselves up. No administrator rights needed."
+        },
+        {
+          "baslik": "It does not leave your old memory behind",
+          "cumle": "It copies the memory files your agents keep. If there is a system it does not recognise, your agent finds it and moves it in the first session."
+        },
+        {
+          "baslik": "It updates itself",
+          "cumle": "When a new release is published it reaches you within a day."
+        },
+        {
+          "baslik": "It is not tied to one agent",
+          "cumle": "The memory is in your files, not inside the agent. Any agent that speaks MCP can connect."
+        },
+        {
+          "baslik": "One memory across devices",
+          "cumle": "Move it to a server and all your devices share the same notes. There is no folder to sync."
+        },
+        {
+          "baslik": "It can be inspected",
+          "cumle": "Everything is plain text, every change stays in the history, and two agents cannot overwrite each other."
+        }
+      ]
+    },
+    "yardimcilar": {
+      "id": "supported-agents",
+      "baslik": "Supported agents",
+      "onu": "COUNCIL was not written for one particular agent. Any agent that speaks MCP can connect. Where things stand today:",
+      "sutunlar": {
+        "yardimci": "Agent",
+        "baglanti": "How it connects",
+        "durum": "State"
+      },
+      "durum": {
+        "tam": "Full support",
+        "kullanimda": "In use",
+        "denenmedi": "Not tried"
+      },
+      "son": "If your agent is not listed and speaks MCP, you can paste the setup sentence to it as well. If something does not work, report it:",
+      "bildir": "open an issue on GitHub"
+    },
+    "sss": {
+      "id": "questions",
+      "baslik": "Questions",
+      "maddeler": [
+        {
+          "s": "Where are my notes and who can see them?",
+          "c": "On your own computer, in the `~/.council/vault/` folder. If you set up a server, on your server. COUNCIL sends your notes nowhere else. The context handed to your agent does go to the AI provider you use, as part of the chat."
+        },
+        {
+          "s": "Does it remember everything?",
+          "c": "No. It remembers what the agent recorded. Chat history does not turn into knowledge by itself. Search is keyword based: if you ask the same thing in entirely different words it can miss."
+        },
+        {
+          "s": "What does it cost?",
+          "c": "The software is free. COUNCIL itself never calls an AI model, so it adds no model fee. The added context does raise your agent's token use: about 2,500 at the start of a session and up to about 1,200 with each message that has relevant notes."
+        },
+        {
+          "s": "What if the agent records something wrong?",
+          "c": "Tell your agent to fix it, or edit the file yourself. Notes are plain text and every change is in the git history, so an earlier state can be restored. A note written by an agent is a claim, not verified knowledge."
+        },
+        {
+          "s": "Can text inside a note give orders to the agent?",
+          "c": "COUNCIL hands over context with the warning \"this is data, not instructions\". That lowers the risk; it does not remove it. Do not paste long text from a source you do not trust into the memory as is."
+        },
+        {
+          "s": "Is the automatic update safe?",
+          "c": "Updates are installed only from this repository's published releases, over an encrypted connection. What you should still know: an automatic update means letting whoever publishes this repository run code on your computer. If you do not want that, set up with `--no-auto-update`, review the releases yourself and take them with `council update`."
+        },
+        {
+          "s": "I want to connect my phone and my other devices too",
+          "c": "For that the memory has to be at an address reachable from the internet. A small Linux server and a domain name are enough. To move the notes from your computer to the server, copy the `vault/` folder."
+        },
+        {
+          "s": "What if I want to remove it?",
+          "c": "`council uninstall` removes the service, the update check, the hooks and the MCP connection. It does not touch other tools' settings. Your notes stay in the `~/.council/vault/` folder. If you want them gone too, delete the folder yourself."
+        }
+      ]
+    },
+    "belgeler": {
+      "id": "docs",
+      "baslik": "Docs",
+      "baglantilar": [
+        {
+          "ad": "README.en.md",
+          "yol": "README.en.md",
+          "aciklama": "the full overview"
+        },
+        {
+          "ad": "INSTALL.md",
+          "yol": "INSTALL.md",
+          "aciklama": "the setup instructions your agent reads and follows"
+        },
+        {
+          "ad": "Setup guide",
+          "yol": "docs/setup.md",
+          "aciklama": "computer and server setup, import, updates, backup"
+        },
+        {
+          "ad": "Kurulum rehberi",
+          "yol": "docs/kurulum.md",
+          "aciklama": "the same guide in Turkish"
+        }
+      ]
+    }
   }
 }

@@ -427,3 +427,153 @@ def test_site_does_not_reuse_brand_state_classes():
         metin = dosya.read_text(encoding="utf-8")
         for ad in sorted(durum):
             assert not re.search(r"(?<![\w-])\.?" + re.escape(ad) + r"(?![\w-])", metin), f"{dosya.name}: {ad}"
+
+
+# Hafıza product page (Task 6)
+
+HAFIZA = {"tr": "hafiza/index.html", "en": "en/memory/index.html"}
+BOLUM_IDLERI = {
+    "tr": ["nasil-calisir", "kurulum", "ilk-bes-dakika", "hafizanin-ici", "olcumler", "neden-farkli", "yardimcilar", "sss",
+           "belgeler"],
+    "en": ["how-it-works", "setup", "first-five-minutes", "inside-the-memory", "measurements", "why-different",
+           "supported-agents", "questions", "docs"],
+}
+ARAC_BLOK = re.compile(r"<!-- yardimcilar:bas -->(.*?)<!-- yardimcilar:son -->", re.S)
+
+
+def _icerik():
+    return _yukle("brand_icerik_t6", KOK / "brand" / "icerik.py")
+
+
+def test_hafiza_section_order(cikti):
+    for dil, dosya in HAFIZA.items():
+        html = _oku(cikti, dosya)
+        assert re.findall(r'<section id="([^"]+)"', html) == BOLUM_IDLERI[dil], dosya
+        for k in BOLUM_IDLERI[dil]:
+            assert f'aria-labelledby="{k}-b"' in html and f'<h2 id="{k}-b"' in html, (dosya, k)
+
+
+def test_assistants_only_in_block(cikti):
+    icerik = _icerik()
+    veri = json.loads((KOK / "site" / "veri" / "yardimcilar.json").read_text(encoding="utf-8"))
+    for dil, dosya in HAFIZA.items():
+        html = _oku(cikti, dosya)
+        bloklar = ARAC_BLOK.findall(html)
+        assert len(bloklar) == 1 and bloklar[0].strip(), dosya
+        assert html.count("<!-- yardimcilar:bas -->") == 1 and html.count("<!-- yardimcilar:son -->") == 1
+        assert icerik.arac_adlari_bul(ARAC_BLOK.sub("", html)) == [], dosya
+        assert {"claude", "hermes", "antigravity", "codex", "gemini"} <= set(icerik.arac_adlari_bul(bloklar[0])), dosya
+        satirlar = re.findall(r"<tr>.*?</tr>", bloklar[0], re.S)[1:]   # the first row is the header
+        assert len(satirlar) == len(veri), dosya
+        for satir, o in zip(satirlar, veri, strict=True):
+            ad = o["ad"] if isinstance(o["ad"], str) else o["ad"][dil]
+            assert html_lib.escape(ad, quote=True) in satir and html_lib.escape(o["destek"][dil], quote=True) in satir
+            assert f'data-durum="{o["durum"].replace("ı", "i")}"' in satir
+
+
+def test_assistants_data_shape():
+    veri = json.loads((KOK / "site" / "veri" / "yardimcilar.json").read_text(encoding="utf-8"))
+    assert len(veri) == 5
+    for o in veri:
+        assert set(o) == {"ad", "destek", "durum"} and set(o["destek"]) == {"tr", "en"}
+        assert o["durum"] in ("tam", "kullanımda", "denenmedi")
+
+
+def test_tool_count_copy(cikti):
+    temel, ogrenme = build.arac_sayilari()
+    beklenen = {"tr": f"{temel} temel araç + {ogrenme} kişisel gelişim aracı (denemede)",
+                "en": f"{temel} core tools + {ogrenme} personal-development tools (in trial)"}
+    for dil, dosya in HAFIZA.items():
+        bolum = _bolum(_oku(cikti, dosya), '<section id="' + BOLUM_IDLERI[dil][4] + '"')
+        assert beklenen[dil] in html_lib.unescape(bolum), dosya
+        assert build.surum() in bolum, dosya
+
+
+def test_hafiza_has_no_scene(cikti):
+    for dosya in HAFIZA.values():
+        html = _oku(cikti, dosya)
+        assert not re.search(r'class="[^"]*\bs-(?:cs|tur)\b', html), dosya
+        assert "data-denetim-sahne" not in html, dosya
+        assert "data-bicim" not in html, dosya
+
+
+def test_copy_buttons_are_not_kor(cikti):
+    for dil, dosya in HAFIZA.items():
+        html = _oku(cikti, dosya)
+        assert "c-dugme--kor" not in html, dosya
+        dugmeler = re.findall(r'<button type="button" class="c-dugme c-dugme--k c-dugme--hayalet"([^>]*)>', html)
+        assert len(dugmeler) == 3, dosya
+        for oz in dugmeler:
+            hedef = re.search(r'data-kopyala="([^"]+)"', oz).group(1)
+            assert re.search(rf'<pre><code id="{hedef}">', html), (dosya, hedef)
+            assert re.search(r'data-tamam="[^"]+"', oz) and re.search(r'data-hata="[^"]+"', oz) and " hidden" in oz
+
+
+def test_install_ways_verbatim(cikti):
+    yollar = {"kur-cumlesi": KUR_CUMLESI,
+              "kur-unix": "curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/install.sh | sh",
+              "kur-windows": "irm https://raw.githubusercontent.com/musalkeremlboz/council/main/install.ps1 | iex"}
+    for dil, dosya in HAFIZA.items():
+        html = _oku(cikti, dosya)
+        bolum = _bolum(html, f'<section id="{BOLUM_IDLERI[dil][1]}"')
+        kodlar = dict(re.findall(r'<pre><code id="([^"]+)">(.*?)</code></pre>', bolum, re.S))
+        for ad, beklenen in yollar.items():
+            beklenen = beklenen[dil] if isinstance(beklenen, dict) else beklenen
+            assert html_lib.unescape(kodlar[ad]) == beklenen, (dosya, ad)
+        for secenek in ("--no-auto-update", "--no-import", "--from", "--port"):
+            assert f"<code>{secenek}" in bolum, (dosya, secenek)
+
+
+def test_hafiza_hero_emblem(cikti):
+    for dil, dosya in HAFIZA.items():
+        html = _oku(cikti, dosya)
+        (emblem,) = re.findall(r'<div class="s-hf-amblem" data-yazi-kur>(<svg .*?</svg>)</div>', html, re.S)
+        assert 'viewBox="0 0 400 400"' in emblem
+        assert [r for r in re.findall(r'data-kur="([^"]+)"', emblem)] == ["isaret", "kor", "c", "isaret"]
+        assert 'data-kur="yazi"' not in emblem and "data-metin" not in emblem
+        kaynak = (KOK / "brand" / "logo" / "council-logo-kur.html").read_text(encoding="utf-8")
+        for parca in re.findall(r'<(?:circle|path)[^>]*data-kur="(?:kor|c)"[^>]*/?>', kaynak):
+            assert parca.replace("ust-kesik", "amblem-kesik") in emblem, parca   # derived from the logo fragment, not copied by hand
+        ids = re.findall(r'\bid="([^"]+)"', html)
+        assert len(ids) == len(set(ids)), [i for i in ids if ids.count(i) > 1]
+        assert re.search(r'<h1 class="yazi-baslik-xl" data-yazi-kur data-glifler="[^"]+">' +
+                         re.escape(build.metin_yukle()[dil]["sayfalar"]["hafiza"]["h1"]) + "</h1>", html), dosya
+        assert html.index('class="s-hf-amblem"') < html.index("<h1")
+
+
+def test_how_it_works_drawing(cikti):
+    for dil, dosya in HAFIZA.items():
+        bolum = _bolum(_oku(cikti, dosya), f'<section id="{BOLUM_IDLERI[dil][0]}"')
+        (svg,) = re.findall(r'<svg class="s-akis".*?</svg>', bolum, re.S)
+        assert svg.count("s-kor") == 1
+        assert svg.count("Oturum" if dil == "tr" else "Session") == 3
+        assert "currentColor" in svg
+        assert not re.search(r"#[0-9a-fA-F]{3,8}\b|rgb\(|hsl\(|filter|<linearGradient|<radialGradient", svg)
+        assert len(re.findall(r"<li\b", bolum)) == 3
+
+
+def test_measurements_dated(cikti):
+    from_readme = {"tr": ("4,8 ms", "44 sorunun %84'ü", "yaklaşık 70 MB", "Örnek küçüktür"),
+                   "en": ("4.8 ms", "84% of 44 questions", "about 70 MB", "The sample is small")}
+    for dil, dosya in HAFIZA.items():
+        bolum = _bolum(_oku(cikti, dosya), f'<section id="{BOLUM_IDLERI[dil][4]}"')
+        assert "2026-11-16" in bolum, dosya
+        for parca in from_readme[dil]:
+            assert html_lib.escape(parca, quote=True) in bolum or parca in bolum, (dosya, parca)
+        assert len(re.findall(r"<tr>", bolum)) == 7, dosya   # header + six measurements
+
+
+def test_hafiza_misc_sections(cikti):
+    for dil, dosya in HAFIZA.items():
+        html = _oku(cikti, dosya)
+        ilk = _bolum(html, f'<section id="{BOLUM_IDLERI[dil][2]}"')
+        assert len(re.findall(r"<li\b", ilk)) == 4, dosya
+        ic = _bolum(html, f'<section id="{BOLUM_IDLERI[dil][3]}"')
+        for ad in ("core.md", "rules.md", "threads.md", "sessions.md", "projects/", "knowledge/", "imported/", "log/"):
+            assert ad in ic, (dosya, ad)
+        sss = _bolum(html, f'<section id="{BOLUM_IDLERI[dil][7]}"')
+        assert len(re.findall(r"<details>\s*<summary\b", sss)) >= 6, dosya
+        belge = _bolum(html, f'<section id="{BOLUM_IDLERI[dil][8]}"')
+        yollar = re.findall(r'href="(https://github\.com/musalkeremlboz/council/blob/main/[^"]+)"', belge)
+        assert any(y.endswith("/INSTALL.md") for y in yollar) and any(y.endswith("docs/setup.md") for y in yollar), dosya
+        assert len(re.findall(r"<li\b", _bolum(html, f'<section id="{BOLUM_IDLERI[dil][5]}"'))) == 6, dosya

@@ -38,6 +38,9 @@ GITHUB = "https://github.com/musalkeremlboz/council"
 OGRENME_ARACLARI = ("council_rule", "council_skill", "council_skill_feedback", "council_unlearn")
 OZET_YER = "__ozet__"   # stands for the asset hash until the assets are copied
 YARAR_SIMGELERI = ("hafiza", "ogrenme", "telefon", "not")   # one icon per "what it does" item, in order
+YARDIMCI_DURUMLARI = {"tam": "tam", "kullanımda": "kullanimda", "denenmedi": "denenmedi"}   # veri/yardimcilar.json -> data-durum, metin key
+KUR_UNIX = "curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/install.sh | sh"
+KUR_WINDOWS = "irm https://raw.githubusercontent.com/musalkeremlboz/council/main/install.ps1 | iex"
 TUR_OZELLIK = {2: 0, 3: 1, 4: 2}   # Kurul turu panel index -> feature index whose status its label shows
 
 
@@ -314,11 +317,132 @@ def ana_govde(dil: str, m: dict, ozet: str) -> str:
     ).rstrip("\n")
 
 
+def _kod(metin: str) -> str:
+    """Escaped text with `code` spans (backticks in the texts) as <code>."""
+    return re.sub(r"`([^`]+)`", r"<code>\1</code>", _e(metin))
+
+
+def amblem_svg() -> str:
+    """The Hafıza hero emblem (circle, C, wave; no wordmark) derived from brand/logo/council-logo-kur.html:
+    the wordmark group is dropped, the view box shrinks to the emblem and the mask id is renamed (the header logo
+    carries the same fragment, and an id must be unique in a page). Decorative: the h1 beside it names the page."""
+    svg, adet = re.subn(r'<g data-kur="yazi".*?</g>', "", LOGO_KUR.read_text(encoding="utf-8").strip(), flags=re.S)
+    if adet != 1:
+        raise SystemExit(f"amblem: {LOGO_KUR.name} içinde logo yazısı grubu bulunamadı")
+    for eski, yeni in (('viewBox="0 0 1762 400"', 'viewBox="0 0 400 400"'), ('role="img" aria-label="COUNCIL"', 'aria-hidden="true"'),
+                       ("ust-kesik", "amblem-kesik")):
+        if eski not in svg:
+            raise SystemExit(f"amblem: {LOGO_KUR.name} içinde {eski} yok")
+        svg = svg.replace(eski, yeni)
+    return svg
+
+
+def akis_cizimi(n: dict) -> str:
+    """How it works: three session boxes, each reading from and writing to one memory (the only s-kor element).
+    Strokes are currentColor; the arrows are 45-degree chevrons on straight lines."""
+    parca = []
+    for i in range(3):
+        x, cx = 20 + 155 * i, 85 + 155 * i
+        parca.append(f'<rect x="{x}" y="20" width="130" height="70"/>'
+                     f'<text class="s-akis__yazi" x="{cx}" y="61" text-anchor="middle">{_e(n["oturum"])} {i + 1}</text>')
+        parca.append(f'<path d="M{cx - 24} 90V210M{cx - 32} 198L{cx - 24} 210L{cx - 16} 198"/>')   # reads: memory -> session
+        parca.append(f'<path d="M{cx + 24} 210V90M{cx + 16} 102L{cx + 24} 90L{cx + 32} 102"/>')   # writes: session -> memory
+        if i < 2:
+            parca.append(f'<path d="M{x + 134} 55H{x + 151}M{x + 143} 47L{x + 151} 55L{x + 143} 63"/>')   # next session continues
+    parca.append('<rect class="s-kor" x="20" y="210" width="440" height="70" stroke-width="4"/>'
+                 f'<text class="s-akis__yazi" x="240" y="251" text-anchor="middle">{_e(n["hafiza"])}</text>')
+    return (f'    <svg class="s-akis" viewBox="0 0 480 300" role="img" aria-label="{_e(n["gorsel"])}" fill="none" '
+            f'stroke="currentColor" stroke-width="2" stroke-linejoin="miter">{"".join(parca)}</svg>')
+
+
+def _tablo(basliklar: list[str], satirlar: list[list[str]], sinif: str = "") -> str:
+    """A data table; cells are HTML. Each cell carries its column name (data-etiket) for the narrow layout."""
+    ust = "".join(f'<th scope="col">{_e(b)}</th>' for b in basliklar)
+    govde = "\n".join("    <tr>" + "".join(f'<td data-etiket="{_e(b)}">{h}</td>' for b, h in zip(basliklar, satir, strict=True))
+                      + "</tr>" for satir in satirlar)
+    return (f'  <table class="s-tablo{" " + sinif if sinif else ""}">\n    <thead><tr>{ust}</tr></thead>\n'
+            f'    <tbody>\n{govde}\n    </tbody>\n  </table>')
+
+
+def _yol_kutusu(kimlik: str, baslik_kimlik: str, baslik: str, notu: str, kod: str, kur: dict) -> str:
+    return (f'    <div class="s-yol"><h3 id="{baslik_kimlik}" class="yazi-govde-l">{_e(baslik)}</h3>'
+            f'<p class="yazi-govde">{_kod(notu)}</p>\n'
+            f'      <pre><code id="{kimlik}">{_e(kod)}</code></pre>\n'
+            f'      <button type="button" class="c-dugme c-dugme--k c-dugme--hayalet" data-kopyala="{kimlik}" '
+            f'data-tamam="{_e(kur["kopyalandi"])}" data-hata="{_e(kur["secin"])}" aria-describedby="{baslik_kimlik}" '
+            f'aria-live="polite" hidden>{_e(kur["kopyala"])}</button></div>')
+
+
+def yardimcilar(dil: str, yol: Path = VERI / "yardimcilar.json") -> list[dict]:
+    """The supported-assistant rows in one language as {"ad", "destek", "durum"} (veri/yardimcilar.json)."""
+    out = []
+    for o in _json(yol):
+        ad = o["ad"] if isinstance(o["ad"], str) else o["ad"][dil]
+        if o["durum"] not in YARDIMCI_DURUMLARI:
+            raise SystemExit(f"yardimcilar: {ad}: bilinmeyen durum {o['durum']!r}")
+        out.append({"ad": ad, "destek": o["destek"][dil], "durum": YARDIMCI_DURUMLARI[o["durum"]]})
+    return out
+
+
+def hafiza_govde(dil: str, m: dict, ozet: str) -> str:
+    """Hafıza page body (sablon/hafiza.html): hero with the emblem, then the nine sections."""
+    varlik = f"{_kok(SAYFALAR['hafiza'][dil])}varlik/{ozet}/"
+    h = m["hafiza"]
+    nasil, kur, ilk, ic, olc, fark, yar, sss, bel = (h[k] for k in (
+        "nasil", "kurulum", "ilk", "ic", "olcumler", "fark", "yardimcilar", "sss", "belgeler"))
+    sec = kur["secenekler"]
+    temel, ogrenme = arac_sayilari()
+
+    adimlar = "\n".join(f'    <li><h3 class="yazi-govde-l">{_e(a["baslik"])}</h3><p class="yazi-govde">{_e(a["govde"])}</p></li>'
+                        for a in nasil["adimlar"])
+    kodlar = (m["ana"]["kurulum"]["cumle"], KUR_UNIX, KUR_WINDOWS)
+    yollar = "\n".join(_yol_kutusu(k, f"{k}-b", y["baslik"], y["not"], kod, kur)
+                       for k, y, kod in zip(("kur-cumlesi", "kur-unix", "kur-windows"), kur["yollar"], kodlar, strict=True))
+    secenekler = _tablo([sec["sutunlar"]["secenek"], sec["sutunlar"]["ne"]],
+                        [[f'<code>{_e(s["ad"])}</code>', _e(s["ne"])] for s in sec["satirlar"]])
+    ilk_adimlar = "\n".join(
+        f'    <li><h3 class="yazi-govde-l">{_e(a["baslik"])}</h3>'
+        f'<p class="s-liste__yaz yazi-govde"><span class="yazi-etiket">{_e(ilk["etiketler"]["yaz"])}</span> “{_e(a["yaz"])}”</p>'
+        f'<p class="yazi-govde"><span class="yazi-etiket">{_e(ilk["etiketler"]["olur"])}</span> {_kod(a["olur"])}</p></li>'
+        for a in ilk["adimlar"])
+    olcumler = _tablo([olc["sutunlar"]["olcum"], olc["sutunlar"]["sonuc"]],
+                      [[_e(s["olcum"]), _e(s["sonuc"])] for s in olc["satirlar"]])
+    maddeler = "\n".join(f'    <li><h3 class="yazi-govde-l">{_e(a["baslik"])}</h3><p class="yazi-govde">{_e(a["cumle"])}</p></li>'
+                         for a in fark["maddeler"])
+    satirlar = [[_e(o["ad"]), _e(o["destek"]),
+                 f'<span class="c-rozet{" c-rozet--basari" if o["durum"] == "tam" else ""}" data-durum="{o["durum"]}">{_e(yar["durum"][o["durum"]])}</span>']
+                for o in yardimcilar(dil)]
+    ss = "\n".join(f'    <details>\n      <summary class="yazi-govde-l">{_e(q["s"])}</summary>\n'
+                   f'      <p class="yazi-govde">{_kod(q["c"])}</p>\n    </details>' for q in sss["maddeler"])
+    belgeler = "\n".join(
+        f'    <li><a class="c-baglanti yazi-govde-l" href="{GITHUB}/blob/main/{b["yol"]}">{_e(b["ad"])}</a>'
+        f'<p class="yazi-govde">{_e(b["aciklama"])}</p></li>' for b in bel["baglantilar"])
+
+    return Template((SABLON / "hafiza.html").read_text(encoding="utf-8")).substitute(
+        varlik=varlik, github=GITHUB, amblem=amblem_svg(),
+        h1=_e(m["sayfalar"]["hafiza"]["h1"]), tanim=_e(h["tanim"]),
+        nasil_id=nasil["id"], nasil_baslik=_e(nasil["baslik"]), nasil_onu=_e(nasil["onu"]), nasil_son=_e(nasil["son"]),
+        nasil_cizim=akis_cizimi(nasil), nasil_adimlar=adimlar,
+        kurulum_id=kur["id"], kurulum_baslik=_e(kur["baslik"]), kurulum_onu=_e(kur["onu"]), kurulum_yollar=yollar,
+        kurulum_sonra=_e(kur["sonra"]), secenekler_baslik=_e(sec["baslik"]), secenekler_onu=_kod(sec["onu"]),
+        secenekler_tablo=secenekler,
+        ilk_id=ilk["id"], ilk_baslik=_e(ilk["baslik"]), ilk_adimlar=ilk_adimlar,
+        ic_id=ic["id"], ic_baslik=_e(ic["baslik"]), ic_agac=_e(ic["agac"]), ic_son=_e(ic["son"]),
+        olcumler_id=olc["id"], olcumler_baslik=_e(olc["baslik"]), olcumler_onu=_e(olc["onu"]), olcumler_tablo=olcumler,
+        olcumler_araclar=_e(_doldur(olc["araclar"], {"surum": surum(), "temel": temel, "ogrenme": ogrenme})),
+        fark_id=fark["id"], fark_baslik=_e(fark["baslik"]), fark_maddeler=maddeler,
+        yardimcilar_id=yar["id"], yardimcilar_baslik=_e(yar["baslik"]), yardimcilar_onu=_e(yar["onu"]),
+        yardimcilar_tablo=_tablo([yar["sutunlar"]["yardimci"], yar["sutunlar"]["baglanti"], yar["sutunlar"]["durum"]],
+                                 satirlar, "s-tablo--yardimci"),
+        yardimcilar_son=_e(yar["son"]), yardimcilar_bildir=_e(yar["bildir"]),
+        sss_id=sss["id"], sss_baslik=_e(sss["baslik"]), sss_maddeler=ss,
+        belgeler_id=bel["id"], belgeler_baslik=_e(bel["baslik"]), belgeler_baglantilar=belgeler,
+    ).rstrip("\n")
+
+
 def govde_yap(ad: str, dil: str, m: dict, ozet: str) -> str:
-    """Page body: the home page from sablon/ana.html; a placeholder heading until the Hafıza body arrives."""
-    if ad == "ana":
-        return ana_govde(dil, m, ozet)
-    return f'<h1 class="yazi-baslik-xl" data-yazi-kur>{_e(m["sayfalar"][ad]["h1"])}</h1>'
+    """Page body: the home page (sablon/ana.html) or the Hafıza page (sablon/hafiza.html)."""
+    return (ana_govde if ad == "ana" else hafiza_govde)(dil, m, ozet)
 
 
 def _argumanlar(argv: list[str] | None) -> argparse.Namespace:

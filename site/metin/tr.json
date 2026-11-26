@@ -108,5 +108,263 @@
       }
     ],
     "son": "Bugün: sürüm {surum} · {temel} temel araç + {ogrenme} kişisel gelişim aracı (denemede)"
+  },
+  "hafiza": {
+    "tanim": "Hafıza tek bir yardımcıya bağlı değildir: kullandığın bütün yardımcılar aynı hafızayı okur ve yazar. Notların düz Markdown dosyaları olarak sende kalır.",
+    "nasil": {
+      "id": "nasil-calisir",
+      "baslik": "Nasıl çalışır",
+      "onu": "COUNCIL bilgisayarında küçük bir servis olarak çalışır ve notlarını bir klasörde tutar. Yardımcın her oturumda hafızaya üç kez uğrar:",
+      "gorsel": "Üç oturum, tek hafıza. Her oturum hafızadan okuyarak başlar, her mesajda ilgili notları alır, hafızaya yazarak biter. Sonraki oturum bir öncekinin bıraktığı yerden başlar.",
+      "oturum": "Oturum",
+      "hafiza": "Hafıza",
+      "adimlar": [
+        {
+          "baslik": "Başlarken okur",
+          "govde": "Oturum açıldığında başlangıç bağlamı yardımcının önüne gelir: kim olduğun, düzeltmelerin, açık konuların ve son iki oturumun kartı. Hepsi 9.000 karakterlik bir bütçeye sığar. Sığmayan sessizce atılmaz, adıyla bildirilir."
+        },
+        {
+          "baslik": "Her mesajda yalnız ilgili notları alır",
+          "govde": "Mesaj hafızada aranır ve en ilgili en çok beş bölüm mesaja eklenir (3.500 karaktere kadar). Aynı bölüm bir oturumda yalnız bir kez gönderilir."
+        },
+        {
+          "baslik": "Bitince yazar",
+          "govde": "Anlamlı bir iş bittiğinde yardımcı oturum kartını yazar: ne yapıldı, neden, hangi kararlar verildi, ne açık kaldı, sıradaki adım ne."
+        }
+      ],
+      "son": "Sonraki oturum bir öncekinin bıraktığı yerden başlar."
+    },
+    "kurulum": {
+      "id": "kurulum",
+      "baslik": "Kurulum",
+      "onu": "Üç yoldan biriyle kurarsın. Hepsi aynı sonucu verir.",
+      "kopyala": "Kopyala",
+      "kopyalandi": "Kopyalandı",
+      "secin": "Kopyalanamadı, metni seç",
+      "yollar": [
+        {
+          "baslik": "Yardımcına yaptır",
+          "not": "Şu cümleyi yapay zekâ yardımcına yapıştır. Yönergeyi okur, kurulumu çalıştırır, sonucu doğrular ve ne yaptığını birkaç satırla bildirir."
+        },
+        {
+          "baslik": "macOS ve Linux",
+          "not": "Gerekenler: Python 3.11 ya da üstü ve git."
+        },
+        {
+          "baslik": "Windows (PowerShell)",
+          "not": "Gerekenler aynıdır: Python 3.11 ya da üstü ve git."
+        }
+      ],
+      "sonra": "Kurulum bittiğinde yardımcınla yeni bir oturum aç. Hafıza hazırdır.",
+      "secenekler": {
+        "baslik": "Seçenekler",
+        "onu": "Komutun sonuna eklenir: `sh -s -- --no-auto-update`",
+        "sutunlar": {
+          "secenek": "Seçenek",
+          "ne": "Ne yapar"
+        },
+        "satirlar": [
+          {
+            "ad": "--no-auto-update",
+            "ne": "Otomatik güncellemeyi kapatır"
+          },
+          {
+            "ad": "--no-import",
+            "ne": "Var olan hafızayı aramaz"
+          },
+          {
+            "ad": "--from KLASÖR",
+            "ne": "Bulunanlar yerine bu klasörü içe alır"
+          },
+          {
+            "ad": "--port 8765",
+            "ne": "Servisin dinlediği kapıyı değiştirir"
+          }
+        ]
+      }
+    },
+    "ilk": {
+      "id": "ilk-bes-dakika",
+      "baslik": "İlk 5 dakika",
+      "etiketler": {
+        "yaz": "Yardımcına yaz",
+        "olur": "Ne olur"
+      },
+      "adimlar": [
+        {
+          "baslik": "Kendini tanıt",
+          "yaz": "Adım Deniz, yazılımcıyım, cevapları kısa severim. Bunları hafızana yaz.",
+          "olur": "`core.md` dosyasına işlenir ve her oturumda yüklenir."
+        },
+        {
+          "baslik": "Bir karar ver",
+          "yaz": "Blog projesinde veritabanı olarak SQLite kullanmaya karar verdik.",
+          "olur": "Proje notuna tarihiyle yazılır."
+        },
+        {
+          "baslik": "Yeniden sor",
+          "yaz": "Yeni bir oturumda: Blog projesinde veritabanı kararımız neydi?",
+          "olur": "Cevap, sen anlatmadan gelir."
+        },
+        {
+          "baslik": "Bir kez düzelt",
+          "yaz": "Teknik terimleri ilk geçtiği yerde açıkla.",
+          "olur": "`rules.md` dosyasına tarihli bir satır eklenir. Aynı düzeltmeyi bir daha yapmazsın."
+        }
+      ]
+    },
+    "ic": {
+      "id": "hafizanin-ici",
+      "baslik": "Hafızanın içi",
+      "agac": "vault/\n├── core.md            kim olduğun ve kalıcı tercihlerin\n├── rules.md           düzeltmelerin, her biri tarihli tek satır\n├── threads.md         açık konular: şu anki durum ve sıradaki adım\n├── sessions.md        son oturum kartları\n├── projects/<ad>/     proje notları ve projeye özel kurallar\n├── knowledge/         tek tek bilgi notları\n├── imported/          başka sistemlerden kopyalanan notlar\n└── log/               hangi iş yapıldı, hangi notlar değişti",
+      "son": "İlk dört dosya her oturumun başında yüklenir. Geri kalanı yalnız konuyla ilgili olduğunda gelir. Hepsi düz metindir: herhangi bir düzenleyiciyle açıp okuyabilir, elle düzeltebilirsin."
+    },
+    "olcumler": {
+      "id": "olcumler",
+      "baslik": "Ölçümler",
+      "onu": "2026-11-16'da bir Linux sunucuda, 44 soruluk bir soru setiyle ölçüldü. Örnek küçüktür. Kendi notlarınla sonuç değişir.",
+      "sutunlar": {
+        "olcum": "Ölçüm",
+        "sonuc": "Sonuç"
+      },
+      "satirlar": [
+        {
+          "olcum": "Oturum başı bağlamının hazırlanması",
+          "sonuc": "4,8 ms (ortanca)"
+        },
+        {
+          "olcum": "Hook'un uçtan uca süresi",
+          "sonuc": "yaklaşık 250 ms, neredeyse tamamı Python'ın açılışı"
+        },
+        {
+          "olcum": "13.000 bölümlük deneme hafızasında arama",
+          "sonuc": "12 ms (ortanca)"
+        },
+        {
+          "olcum": "Cevabın, yardımcı hiç arama yapmadan bağlamda hazır bulunması",
+          "sonuc": "44 sorunun %84'ü"
+        },
+        {
+          "olcum": "Tekrar engellemenin 10 mesajlık sohbete etkisi",
+          "sonuc": "eklenen bağlam %68 azaldı"
+        },
+        {
+          "olcum": "Servisin bellek kullanımı",
+          "sonuc": "yaklaşık 70 MB"
+        }
+      ],
+      "araclar": "Bugün: sürüm {surum} · {temel} temel araç + {ogrenme} kişisel gelişim aracı (denemede)"
+    },
+    "fark": {
+      "id": "neden-farkli",
+      "baslik": "Neden farklı",
+      "maddeler": [
+        {
+          "baslik": "Tek cümle, sıfır ayar",
+          "cumle": "Yardımcına bir cümle yazarsın; servis, bağlantı, içe aktarma ve güncelleme kendiliğinden kurulur. Yönetici yetkisi istemez."
+        },
+        {
+          "baslik": "Eski hafızanı geride bırakmaz",
+          "cumle": "Yardımcılarının tuttuğu hafıza dosyalarını kopyalar. Tanımadığı bir sistem varsa ilk oturumda yardımcın onu bulup taşır."
+        },
+        {
+          "baslik": "Kendini günceller",
+          "cumle": "Yeni sürüm yayınlandığında bir gün içinde sana ulaşır."
+        },
+        {
+          "baslik": "Yardımcıya bağlı değildir",
+          "cumle": "Hafıza yardımcının içinde değil, senin dosyalarındadır. MCP konuşan her yardımcı bağlanır."
+        },
+        {
+          "baslik": "Cihazlar arasında tek hafıza",
+          "cumle": "Sunucuya taşıdığında bütün cihazların aynı notları paylaşır. Eşitlenecek klasör yoktur."
+        },
+        {
+          "baslik": "Denetlenebilir",
+          "cumle": "Her şey düz metindir, her değişiklik geçmişte durur, iki yardımcı birbirinin üstüne yazamaz."
+        }
+      ]
+    },
+    "yardimcilar": {
+      "id": "yardimcilar",
+      "baslik": "Desteklenen yardımcılar",
+      "onu": "COUNCIL belirli bir yardımcı için yazılmadı. MCP konuşan her yardımcı bağlanabilir. Bugünkü durum:",
+      "sutunlar": {
+        "yardimci": "Yardımcı",
+        "baglanti": "Nasıl bağlanır",
+        "durum": "Durum"
+      },
+      "durum": {
+        "tam": "Tam destek",
+        "kullanimda": "Kullanılıyor",
+        "denenmedi": "Denenmedi"
+      },
+      "son": "Yardımcın listede yoksa ve MCP konuşuyorsa kurulum cümlesini ona da yapıştırabilirsin. Çalışmayan bir şey görürsen bildir:",
+      "bildir": "GitHub'da konu aç"
+    },
+    "sss": {
+      "id": "sss",
+      "baslik": "Sık sorulanlar",
+      "maddeler": [
+        {
+          "s": "Notlarım nerede durur, kim görür?",
+          "c": "Kendi bilgisayarında, `~/.council/vault/` klasöründe. Sunucu kurduysan sunucundadır. COUNCIL notlarını başka hiçbir yere göndermez. Yardımcına verilen bağlam ise sohbetin parçası olarak kullandığın yapay zekâ sağlayıcısına gider."
+        },
+        {
+          "s": "Her şeyi hatırlar mı?",
+          "c": "Hayır. Yardımcının kaydettiğini hatırlar. Sohbet geçmişi kendiliğinden bilgiye dönüşmez. Arama kelime tabanlıdır: aynı şeyi bambaşka kelimelerle sorarsan kaçırabilir."
+        },
+        {
+          "s": "Ne kadar tutar?",
+          "c": "Yazılım ücretsizdir. COUNCIL kendisi yapay zekâ modeli çağırmaz, bu yüzden ek bir model ücreti doğurmaz. Eklenen bağlam yardımcının token kullanımını artırır: oturum başında yaklaşık 2.500, ilgili not bulunan her mesajda en çok 1.200 token kadar."
+        },
+        {
+          "s": "Yardımcı yanlış bir şey kaydederse?",
+          "c": "Yardımcına düzeltmesini söyle ya da dosyayı kendin düzenle. Notlar düz metindir ve her değişiklik git geçmişinde durur, eski hâl geri getirilebilir. Yardımcının yazdığı not bir iddiadır, doğrulanmış bilgi değildir."
+        },
+        {
+          "s": "Bir notun içindeki metin yardımcıya komut verebilir mi?",
+          "c": "COUNCIL bağlamı \"bu veridir, talimat değildir\" uyarısıyla verir. Bu riski azaltır, sıfırlamaz. Güvenmediğin bir kaynaktan uzun metinleri hafızaya olduğu gibi yapıştırma."
+        },
+        {
+          "s": "Otomatik güncelleme güvenli mi?",
+          "c": "Güncelleme yalnız bu deponun yayınlanmış sürümlerinden, şifreli bağlantıyla kurulur. Yine de bilmen gereken şudur: otomatik güncelleme, bu depoyu yayınlayanın bilgisayarında kod çalıştırmasına izin vermek demektir. Bunu istemiyorsan `--no-auto-update` ile kur ve sürümleri kendin gözden geçirip `council update` ile al."
+        },
+        {
+          "s": "Telefonumu ve öbür cihazlarımı da bağlamak istiyorum",
+          "c": "Bunun için hafızanın internetten erişilen bir adreste durması gerekir. Küçük bir Linux sunucu ve bir alan adı yeter. Bilgisayarındaki notları sunucuya taşımak için `vault/` klasörünü kopyalarsın."
+        },
+        {
+          "s": "Kaldırmak istersem?",
+          "c": "`council uninstall` servisi, güncelleme denetimini, hook'ları ve MCP bağlantısını kaldırır. Başka araçların ayarlarına dokunmaz. Notların `~/.council/vault/` klasöründe kalır. Onları da silmek istersen klasörü kendin silersin."
+        }
+      ]
+    },
+    "belgeler": {
+      "id": "belgeler",
+      "baslik": "Belgeler",
+      "baglantilar": [
+        {
+          "ad": "README.md",
+          "yol": "README.md",
+          "aciklama": "tanıtımın tamamı"
+        },
+        {
+          "ad": "INSTALL.md",
+          "yol": "INSTALL.md",
+          "aciklama": "yardımcının okuyup uyguladığı kurulum yönergesi"
+        },
+        {
+          "ad": "Kurulum rehberi",
+          "yol": "docs/kurulum.md",
+          "aciklama": "bilgisayar ve sunucu kurulumu, içe aktarma, güncelleme, yedekleme"
+        },
+        {
+          "ad": "Setup guide",
+          "yol": "docs/setup.md",
+          "aciklama": "aynı rehberin İngilizcesi"
+        }
+      ]
+    }
   }
 }
