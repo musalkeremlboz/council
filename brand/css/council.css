@@ -195,6 +195,72 @@ body {
 [dir="rtl"] .c-dugme::before,
 [dir="rtl"] .c-dugme::after { transform: scaleX(-1); }
 
+/* ===== Gezinme: düz bağlantılar; bulunulan sayfanın solunda 6 px dolu daire ===== */
+.c-gezinme { display: flex; flex-wrap: wrap; gap: var(--ara-2) var(--ara-6); }
+.c-gezinme a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ara-2);
+  min-block-size: 44px;
+  color: var(--murekkep-2);
+  text-decoration: none;
+  transition: color var(--sure-tepki) var(--egri-ac);
+}
+@media (hover: hover) {
+  .c-gezinme a:hover { color: var(--murekkep); }
+}
+.c-gezinme a:focus { outline: none; }
+.c-gezinme a:focus-visible { outline: 2px solid var(--kor-metin); outline-offset: 2px; }
+.c-gezinme [aria-current="page"] { color: var(--murekkep); }
+.c-gezinme [aria-current="page"]::before {
+  content: "";
+  flex: none;
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: var(--kose-tam);
+  background: var(--murekkep);
+}
+
+/* ===== Sekmeler: seçili sekme sağ üstü kesik yüzey bloğu, diğerleri düz metin ===== */
+.c-sekmeler { display: flex; flex-wrap: wrap; gap: var(--ara-1); }
+.c-sekmeler [role="tab"] {
+  --k: 12px;
+  min-block-size: 44px;
+  padding: 0 var(--ara-4);
+  border: 0;
+  background: transparent;
+  color: var(--murekkep-2);
+  font: inherit;
+  cursor: pointer;
+  transition: color var(--sure-tepki) var(--egri-ac), background-color var(--sure-tepki) var(--egri-ac);
+}
+@media (hover: hover) {
+  .c-sekmeler [role="tab"]:hover { color: var(--murekkep); }
+}
+.c-sekmeler [role="tab"][aria-selected="true"] {
+  background: var(--yuzey);
+  color: var(--murekkep);
+  clip-path: polygon(0 0, calc(100% - var(--k)) 0, 100% var(--k), 100% 100%, 0 100%);
+}
+.c-sekmeler [role="tab"]:focus { outline: none; }
+.c-sekmeler [role="tab"]:focus-visible { outline: 2px solid var(--kor-metin); outline-offset: -2px; }
+
+/* ===== Menü ve panel: sağ üstten 45° çizgiyle açılır; JS yokken hep açık ===== */
+.c-menu, .c-panel {
+  background: var(--yuzey);
+  color: var(--murekkep);
+  transition: clip-path var(--sure-panel) var(--egri-kapa), visibility 0s linear var(--sure-panel);
+}
+.js .c-menu:not([data-acik]), .js .c-panel:not([data-acik]) {
+  clip-path: polygon(100% 0, 100% 0, 100% 0);
+  visibility: hidden;
+}
+.c-menu[data-acik], .c-panel[data-acik] {
+  clip-path: polygon(calc(100% - 200vmax) 0, 100% 0, 100% 200vmax);
+  visibility: visible;
+  transition: clip-path var(--sure-panel) var(--egri-ac), visibility 0s;
+}
+
 /* Hareket azaltılmış: durağan, eksiksiz karşılık */
 @media (prefers-reduced-motion: reduce) {
   .c-dugme { transition: 0ms; }
@@ -480,6 +546,8 @@ textarea.c-alan__giris { height: auto; min-height: 96px; padding-block: var(--ar
     border-top-color: transparent;
   }
   .c-kart--tik { transition: 0ms; }
+  .c-gezinme a, .c-sekmeler [role="tab"] { transition: 0ms; }
+  .c-menu, .c-panel, .c-menu[data-acik], .c-panel[data-acik] { transition: 0ms; }
   .c-halka__dolu, .c-serit::before, .c-alan__giris, .c-isaret::before, .c-radyo::before, .c-baglanti { transition: 0ms; }
 }
 
@@ -497,5 +565,8 @@ textarea.c-alan__giris { height: auto; min-height: 96px; padding-block: var(--ar
   .c-halka__iz { stroke: GrayText; }
   .c-halka__dolu { stroke: CanvasText; }
   .c-isaret::before, .c-radyo::before { border-color: CanvasText; }
+  .c-gezinme [aria-current="page"]::before { background: CanvasText; forced-color-adjust: none; }
+  .c-sekmeler [role="tab"][aria-selected="true"] { border: 1px solid CanvasText; clip-path: none; }
+  .c-menu, .c-panel { border: 1px solid CanvasText; }
   .c-radyo:checked::after { background: CanvasText; forced-color-adjust: none; }
 }

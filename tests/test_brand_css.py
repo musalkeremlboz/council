@@ -184,3 +184,26 @@ def test_idle_button_ring_takes_no_gap():
 def test_checked_radio_visible_in_forced_colors():
     fc = CSS[CSS.index("@media (forced-colors: active)", CSS.index(".c-radyo:checked::after")):]
     assert re.search(r"\.c-radyo:checked::after\s*\{[^}]*background:\s*CanvasText", fc)
+
+
+def test_current_page_dot():
+    dot = "".join(body_of('.c-gezinme [aria-current="page"]::before'))
+    assert "inline-size:6px" in dot and "block-size:6px" in dot
+    assert "border-radius:var(--kose-tam)" in dot or "border-radius:50%" in dot
+
+
+def test_selected_tab_has_cut():
+    sel = "".join(body_of('.c-sekmeler [role="tab"][aria-selected="true"]'))
+    assert "clip-path:polygon(0 0,calc(100% - var(--k)) 0,100% var(--k),100% 100%,0 100%)".replace(" ", "") in sel.replace(" ", "")
+    plain = "".join(body_of('.c-sekmeler [role="tab"]'))
+    assert "clip-path" not in plain and "min-block-size:44px" in plain
+
+
+def test_menu_opens_with_cut():
+    base = "".join(b for s, b in map(lambda r: (r[0], n(r[1])), rules(CSS)) if ".c-menu" in s and ".c-panel" in s and "data-acik" not in s and "@" not in s)
+    assert "transition:clip-pathvar(--sure-panel)var(--egri-kapa)" in base
+    opened = "".join(b for s, b in map(lambda r: (r[0], n(r[1])), rules(CSS)) if "[data-acik]" in s and ".c-menu" in s)
+    assert "transition:clip-pathvar(--sure-panel)var(--egri-ac)" in opened
+    assert "clip-path:polygon(" in opened
+    rm = "".join(n(b) for blk in blocks(CSS, "(prefers-reduced-motion") for s, b in rules(blk) if ".c-menu" in s)
+    assert "transition:0ms" in rm
