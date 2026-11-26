@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COUNCIL tasarım sistemi 0.2, canlı örnek</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/council.css">
+<style>
+.ia { display: inline-block; }
+.ik { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ia { display: none; }
+  :root:not([data-theme="light"]) .ik { display: inline-block; }
+}
+:root[data-theme="dark"] .ia { display: none; }
+:root[data-theme="dark"] .ik { display: inline-block; }
+img, svg { max-inline-size: 100%; }
+
+.o-ust { position: relative; z-index: 2; background: var(--zemin); border-block-end: 1px solid var(--cizgi); }
+.o-ust__ic { max-inline-size: 1200px; margin-inline: auto; padding: var(--ara-3) var(--ara-4); display: flex; flex-wrap: wrap; align-items: center; gap: var(--ara-3) var(--ara-6); box-sizing: border-box; }
+.o-ust img { block-size: 32px; inline-size: auto; }
+.o-tema { display: flex; flex-wrap: wrap; gap: var(--ara-2); margin-inline-start: auto; }
+.o-sayfa { max-inline-size: 1200px; margin-inline: auto; padding: 0 var(--ara-4); box-sizing: border-box; }
+.o-bolum { padding-block: var(--ara-12); border-block-end: 1px solid var(--cizgi); }
+.o-bolum > h2 { margin: 0 0 var(--ara-2); }
+.o-bolum > .o-not { margin: 0 0 var(--ara-8); max-inline-size: 64ch; color: var(--murekkep-2); }
+.o-bolum h3 { margin: var(--ara-8) 0 var(--ara-3); font: 600 14px/1.3 var(--font-sans); letter-spacing: .06em; color: var(--murekkep-2); }
+.o-kahraman h1 { margin: var(--ara-12) 0 var(--ara-4); overflow-wrap: anywhere; }
+.o-kahraman p { margin: 0 0 var(--ara-8); max-inline-size: 56ch; }
+
+.o-izgara { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: var(--ara-3); }
+.o-renk { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: var(--ara-1) var(--ara-3); align-items: start; padding: var(--ara-3); border: 1px solid var(--cizgi); background: var(--yuzey); }
+.o-renk__ornek { grid-row: 1 / 3; inline-size: 48px; block-size: 48px; border: 1px solid var(--cizgi-guclu); box-sizing: border-box; }
+.o-renk__sayi { color: var(--murekkep-2); font-size: 12px; line-height: 18px; }
+.o-satir { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ara-3); }
+.o-yigin { display: grid; gap: var(--ara-4); }
+.o-yazi-satir { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr); gap: var(--ara-3); align-items: baseline; padding-block: var(--ara-3); border-block-end: 1px solid var(--cizgi); }
+.o-yazi-satir > span:last-child { overflow-wrap: anywhere; }
+.o-halka { font-family: var(--font-display); font-size: 40px; line-height: 1.2; letter-spacing: .04em; overflow-wrap: anywhere; margin: 0; }
+.o-ara-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ara-2); }
+.o-ara-liste li { display: grid; grid-template-columns: 6rem 1fr 4rem; gap: var(--ara-3); align-items: center; }
+.o-ara { display: block; block-size: 12px; background: var(--murekkep); max-inline-size: 100%; }
+.o-kose { display: flex; gap: var(--ara-6); flex-wrap: wrap; }
+.o-kose span { display: block; inline-size: 96px; block-size: 64px; border: 2px solid var(--murekkep); box-sizing: border-box; }
+.o-kose span:first-child { border-radius: var(--kose-0); }
+.o-kose span:last-child { border-radius: var(--kose-tam); }
+.o-kutu { padding: var(--ara-4); border: 1px dashed var(--cizgi-guclu); }
+.o-kutu > p { margin: 0 0 var(--ara-3); color: var(--murekkep-2); }
+.o-iki { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--ara-6); align-items: start; }
+.o-menu-kap { position: relative; display: inline-block; }
+.o-menu-kap .c-menu { position: absolute; inset-block-start: calc(100% + var(--ara-2)); inset-inline-start: 0; z-index: 3; min-inline-size: 200px; border: 1px solid var(--cizgi-guclu); padding: var(--ara-2); display: grid; }
+.o-menu-kap .c-menu a { display: flex; align-items: center; min-block-size: 44px; padding-inline: var(--ara-3); color: var(--murekkep); text-decoration: none; }
+.o-menu-kap .c-menu a:focus-visible { outline: 2px solid var(--kor-metin); outline-offset: -2px; }
+.o-sekme-govde { padding: var(--ara-4); background: var(--yuzey); }
+.o-sekme-govde[hidden] { display: none; }
+.o-simgeler { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--ara-3); }
+.o-simgeler li { display: grid; justify-items: center; gap: var(--ara-2); padding: var(--ara-3) var(--ara-2); border: 1px solid var(--cizgi); background: var(--yuzey); text-align: center; overflow-wrap: anywhere; }
+.o-simge { display: inline-block; color: var(--murekkep); }
+.o-simge svg { display: block; inline-size: 100%; block-size: 100%; }
+.o-simge--24 { inline-size: 24px; block-size: 24px; }
+.o-simge--48 { inline-size: 48px; block-size: 48px; }
+.o-amblemler { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--ara-8); }
+.o-amblemler figure { margin: 0; display: grid; gap: var(--ara-3); justify-items: start; }
+.o-amblemler img { inline-size: 100%; max-inline-size: 240px; block-size: auto; }
+.o-sahne-bas { padding-block: var(--ara-8) var(--ara-4); }
+.o-sahne-bas h3 { margin-block: 0 var(--ara-2); }
+</style>
+</head>
+<body>
+<header class="o-ust">
+  <div class="o-ust__ic">
+    <img class="ia" src="../logo/council-logo.svg" alt="COUNCIL" height="32">
+    <img class="ik" src="../logo/council-logo-koyu.svg" alt="COUNCIL" height="32">
+    <nav class="c-gezinme" aria-label="Bölümler">
+      <a href="#renk">Renk</a><a href="#yazi">Yazı</a><a href="#aralik">Boşluk</a><a href="#bilesenler">Bileşenler</a><a href="#simgeler">Simgeler</a><a href="#amblemler">Amblemler</a><a href="#sahneler">Sahneler</a>
+    </nav>
+    <div class="o-tema" role="group" aria-label="Tema">
+      <button type="button" class="c-dugme c-dugme--k c-dugme--ikincil" data-tema="" aria-pressed="true">Sistem</button>
+      <button type="button" class="c-dugme c-dugme--k c-dugme--ikincil" data-tema="light" aria-pressed="false">Açık</button>
+      <button type="button" class="c-dugme c-dugme--k c-dugme--ikincil" data-tema="dark" aria-pressed="false">Koyu</button>
+    </div>
+  </div>
+</header>
+
+<main class="o-sayfa">
+<section class="o-kahraman" aria-labelledby="bas">
+  <h1 id="bas" class="yazi-baslik-xl" data-yazi-kur data-glifler="../font/glifler.json">Birçok üye, tek hafıza</h1>
+  <p class="yazi-govde-l">COUNCIL tasarım sistemi 0.2. Bu sayfa sistemin kendisiyle yazılmıştır: her renk, ölçü ve bileşen <code class="yazi-kod">brand/</code> altındaki dosyalardan gelir.</p>
+</section>
+
+<section class="o-bolum" id="renk" aria-labelledby="renk-b">
+  <h2 id="renk-b" class="yazi-baslik-l">Renk</h2>
+  <p class="o-not yazi-govde">Her renk bir belirteçtir. Sayılar, rengin sayfa zemini üstündeki karşıtlık oranıdır; metin için en az 4,5:1, kontrol çizgisi ve odak halkası için en az 3:1. Kor ekran başına tek şeydir.</p>
+  <ul class="o-izgara">
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--zemin)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--zemin</b><br>Sayfa zemini</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 1.0:1 · koyu 1.0:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--yuzey)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--yuzey</b><br>Kart ve alan yüzeyi</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 1.1:1 · koyu 1.1:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--yuzey-2)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--yuzey-2</b><br>İkinci düzey yüzey, seçili sekme ve girintili bloklar</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 1.1:1 · koyu 1.2:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--murekkep)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--murekkep</b><br>Ana metin ve birincil düğme gövdesi</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 16.9:1 · koyu 16.9:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--murekkep-2)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--murekkep-2</b><br>İkincil metin</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 7.4:1 · koyu 9.5:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--murekkep-3)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--murekkep-3</b><br>Üçüncül metin, ipucu ve alt bilgi</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 4.8:1 · koyu 5.9:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--cizgi)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--cizgi</b><br>İnce ayırıcı çizgi</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 1.3:1 · koyu 1.5:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--cizgi-guclu)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--cizgi-guclu</b><br>Kontrol kenarı: alan çerçevesi ve işaret kutusu</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 3.2:1 · koyu 3.8:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--kor)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--kor</b><br>Vurgu. Ekranda tek bir şey: hafıza, en önemli eylem ya da odaktaki öğe</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 3.7:1 · koyu 4.6:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--kor-metin)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--kor-metin</b><br>Kor renkli metin ve odak çizgisi</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 5.1:1 · koyu 7.2:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--kor-zemin)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--kor-zemin</b><br>Kor ile ilgili hafif zemin</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 1.1:1 · koyu 1.2:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--kor-ustu)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--kor-ustu</b><br>Kor dolgunun üstündeki yazı; beyaz değil, her zaman koyu</span>
+<span class="o-renk__sayi yazi-kod">kor üstünde<br>açık 4.6:1 · koyu 4.6:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--basari)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--basari</b><br>Başarı durumu; her zaman bir sözcükle birlikte</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 4.9:1 · koyu 8.3:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--uyari)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--uyari</b><br>Uyarı durumu; her zaman bir sözcükle birlikte</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 5.4:1 · koyu 9.5:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--hata)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--hata</b><br>Hata durumu; kor ile karışmasın diye pembeye çekik</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 6.2:1 · koyu 6.8:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--murekkep-bas)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--murekkep-bas</b><br>Basılan birincil düğmenin gövdesi</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 11.5:1 · koyu 12.7:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--kor-bas)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--kor-bas</b><br>Basılan kor düğmenin gövdesi; kor yalnız açılır, koyulaşmaz</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 3.1:1 · koyu 5.5:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--pasif-zemin)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--pasif-zemin</b><br>Devre dışı düğmenin gövdesi</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 1.2:1 · koyu 1.2:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--pasif-yazi)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--pasif-yazi</b><br>Devre dışı düğmenin yazısı</span>
+<span class="o-renk__sayi yazi-kod">zemin üstünde<br>açık 5.7:1 · koyu 7.0:1</span></li>
+<li class="o-renk"><span class="o-renk__ornek" style="background:var(--ton)"></span>
+<span class="o-renk__ad yazi-govde-k"><b>--ton</b><br>İkincil ve hayalet düğmelerde üzerine gelince, basınca ve odakta beliren hafif dolgu</span>
+<span class="o-renk__sayi yazi-kod">saydam ton</span></li>
+  </ul>
+</section>
+
+<section class="o-bolum" id="yazi" aria-labelledby="yazi-b">
+  <h2 id="yazi-b" class="yazi-baslik-l">Yazı</h2>
+  <p class="o-not yazi-govde">Council Halka başlıklarda, DM Sans metinde, DM Mono kodda. Üç yazı tipi de yerel dosyadır.</p>
+  <div>
+    <div class="o-yazi-satir"><span class="yazi-kod">yazi-baslik-xl</span><span class="yazi-baslik-xl">Ortak hafıza</span></div>
+    <div class="o-yazi-satir"><span class="yazi-kod">yazi-baslik-l</span><span class="yazi-baslik-l">Toplantı kararı</span></div>
+    <div class="o-yazi-satir"><span class="yazi-kod">yazi-baslik-m</span><span class="yazi-baslik-m">Proje notu</span></div>
+    <div class="o-yazi-satir"><span class="yazi-kod">yazi-etiket</span><span class="yazi-etiket">ETİKET · DURUM</span></div>
+    <div class="o-yazi-satir"><span class="yazi-kod">yazi-govde-l</span><span class="yazi-govde-l">Hafıza, bir notu yazan cihazdan okuyan cihaza taşır.</span></div>
+    <div class="o-yazi-satir"><span class="yazi-kod">yazi-govde</span><span class="yazi-govde">Telefon, bilgisayar ve sunucu aynı hafızayı paylaşır.</span></div>
+    <div class="o-yazi-satir"><span class="yazi-kod">yazi-govde-k</span><span class="yazi-govde-k">Yardımcı öğrendiğini kaydeder, tek satırla haber verir.</span></div>
+    <div class="o-yazi-satir"><span class="yazi-kod">yazi-kod</span><span class="yazi-kod">telefon → hafıza · yazıldı</span></div>
+  </div>
+  <h3>COUNCIL HALKA, BÜYÜK HARF</h3>
+  <p class="o-halka">ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ 0123456789 &amp; @ # % + = ( ) . , : ; ! ? / - → …</p>
+  <h3>COUNCIL HALKA, KÜÇÜK HARF</h3>
+  <p class="o-halka">abcçdefgğhıijklmnoöprsştuüvyz</p>
+  <p class="o-halka">ışık, öğrenme, çağ, şimdi · Toplantı kararı · Proje notu</p>
+</section>
+
+<section class="o-bolum" id="aralik" aria-labelledby="aralik-b">
+  <h2 id="aralik-b" class="yazi-baslik-l">Boşluk, köşe ve süre</h2>
+  <p class="o-not yazi-govde">Köşe yalnız üç biçimdedir: sıfır, tam daire ve 45° kesik. Gölge ve geçişli dolgu yoktur.</p>
+  <ul class="o-ara-liste">
+<li><span class="yazi-kod">--ara-1</span><span class="o-ara" style="inline-size:var(--ara-1)"></span><span class="yazi-kod">4px</span></li>
+<li><span class="yazi-kod">--ara-2</span><span class="o-ara" style="inline-size:var(--ara-2)"></span><span class="yazi-kod">8px</span></li>
+<li><span class="yazi-kod">--ara-3</span><span class="o-ara" style="inline-size:var(--ara-3)"></span><span class="yazi-kod">12px</span></li>
+<li><span class="yazi-kod">--ara-4</span><span class="o-ara" style="inline-size:var(--ara-4)"></span><span class="yazi-kod">16px</span></li>
+<li><span class="yazi-kod">--ara-6</span><span class="o-ara" style="inline-size:var(--ara-6)"></span><span class="yazi-kod">24px</span></li>
+<li><span class="yazi-kod">--ara-8</span><span class="o-ara" style="inline-size:var(--ara-8)"></span><span class="yazi-kod">32px</span></li>
+<li><span class="yazi-kod">--ara-12</span><span class="o-ara" style="inline-size:var(--ara-12)"></span><span class="yazi-kod">48px</span></li>
+<li><span class="yazi-kod">--ara-16</span><span class="o-ara" style="inline-size:var(--ara-16)"></span><span class="yazi-kod">64px</span></li>
+  </ul>
+  <h3>KÖŞE</h3>
+  <div class="o-kose"><span title="kose-0"></span><span title="kose-tam"></span></div>
+  <h3>SÜRE</h3>
+  <p class="yazi-kod">70 ms basma · 140 ms tepki · 240 ms panel ve menü · 420 ms sahne · geçiş en çok 840 ms</p>
+</section>
+
+<section class="o-bolum" id="bilesenler" aria-labelledby="bil-b">
+  <h2 id="bil-b" class="yazi-baslik-l">Bileşenler</h2>
+  <p class="o-not yazi-govde">Tıklanan her şeyde 45° kesik vardır, tıklanmayanda yoktur. Üzerine gelme, basma ve odak hâllerini canlı dene: fareyle üzerine gel, sekmeyle odakla.</p>
+
+  <h3>DÜĞME, ÜÇ BOY (56 / 44 / 32 PX, KESİK 16 / 12 / 9 PX)</h3>
+  <div class="o-satir">
+    <button type="button" class="c-dugme c-dugme--b">Büyük</button>
+    <button type="button" class="c-dugme">Orta</button>
+    <button type="button" class="c-dugme c-dugme--k">Küçük</button>
+  </div>
+  <h3>DÜĞME, TÜRLER</h3>
+  <div class="o-satir">
+    <button type="button" class="c-dugme">Birincil</button>
+    <button type="button" class="c-dugme c-dugme--kor">Kor</button>
+    <button type="button" class="c-dugme c-dugme--ikincil">İkincil</button>
+    <button type="button" class="c-dugme c-dugme--hayalet">Hayalet</button>
+  </div>
+  <h3>DÜĞME, DURUMLAR</h3>
+  <div class="o-satir">
+    <button type="button" class="c-dugme">Beklemede</button>
+    <button type="button" class="c-dugme" aria-busy="true"><span class="c-dugme__halka"></span>Yazılıyor</button>
+    <button type="button" class="c-dugme" data-durum="hafizada"><span class="c-dugme__halka"></span>Hafızada</button>
+    <button type="button" class="c-dugme" disabled>Devre dışı</button>
+    <button type="button" class="c-dugme c-dugme--ikincil" disabled>Devre dışı</button>
+  </div>
+  <h3>DÜĞME, UZUN ETİKET</h3>
+  <div class="o-satir">
+    <button type="button" class="c-dugme">Hafızayı bu cihaza bağla</button>
+    <button type="button" class="c-dugme c-dugme--ikincil c-dugme--k">Hafızayı bu cihaza bağla</button>
+    <button type="button" class="c-dugme c-dugme--b">Hafızayı bu cihaza bağla</button>
+  </div>
+
+  <h3>ALAN</h3>
+  <div class="o-iki">
+    <div class="c-alan"><label class="c-alan__etiket" for="a1">Not başlığı</label><input class="c-alan__giris" id="a1" placeholder="Toplantı kararı"><span class="c-alan__not">Boş bırakılabilir.</span></div>
+    <div class="c-alan"><label class="c-alan__etiket" for="a2">Dolu alan</label><input class="c-alan__giris" id="a2" value="Proje notu"></div>
+    <div class="c-alan c-alan--hata"><label class="c-alan__etiket" for="a3">Hatalı alan</label><input class="c-alan__giris" id="a3" value="proje" aria-invalid="true" aria-describedby="a3n"><span class="c-alan__not" id="a3n">Başlık en az altı harf olmalı.</span></div>
+    <div class="c-alan"><label class="c-alan__etiket" for="a4">Devre dışı alan</label><input class="c-alan__giris" id="a4" value="Salt okunur" disabled></div>
+    <div class="c-alan"><label class="c-alan__etiket" for="a5">Uzun not</label><textarea class="c-alan__giris" id="a5" placeholder="Kararın gerekçesi"></textarea></div>
+  </div>
+
+  <h3>KART, DÜZ VE TIKLANAN</h3>
+  <div class="o-iki">
+    <div class="c-kart"><p class="yazi-etiket" style="margin:0 0 var(--ara-2)">DÜZ KART · KESİK YOK</p><p class="yazi-govde" style="margin:0">Bilgi gösterir, eylem yapmaz.</p></div>
+    <a class="c-kart c-kart--tik" href="#bilesenler"><p class="yazi-etiket" style="margin:0 0 var(--ara-2)">TIKLANAN KART · KESİKLİ</p><p class="yazi-govde" style="margin:0">Üzerine gelince kesik büyür.</p></a>
+  </div>
+
+  <h3>ROZET VE DURUM İŞARETİ</h3>
+  <div class="o-satir">
+    <span class="c-rozet"><span class="c-durum" data-durum="bekliyor"></span>Bekliyor</span>
+    <span class="c-rozet"><span class="c-durum" data-durum="calisiyor"></span>Çalışıyor</span>
+    <span class="c-rozet c-rozet--basari"><span class="c-durum" data-durum="tamam"></span>Tamam</span>
+    <span class="c-rozet c-rozet--uyari"><span class="c-durum" data-durum="bekliyor"></span>Dikkat</span>
+    <span class="c-rozet c-rozet--hata"><span class="c-durum" data-durum="hata"></span>Hata</span>
+    <span class="c-rozet c-rozet--kor"><span class="c-durum" data-durum="hafizada"></span>Hafızada</span>
+  </div>
+  <div class="o-satir" style="margin-block-start:var(--ara-3)">
+    <span class="c-durum" data-durum="bekliyor"></span><span class="yazi-kod">bekliyor</span>
+    <span class="c-durum" data-durum="calisiyor"></span><span class="yazi-kod">calisiyor</span>
+    <span class="c-durum" data-durum="tamam"></span><span class="yazi-kod">tamam</span>
+    <span class="c-durum" data-durum="hafizada"></span><span class="yazi-kod">hafizada</span>
+    <span class="c-durum" data-durum="hata"></span><span class="yazi-kod">hata</span>
+  </div>
+
+  <h3>İLERLEME, HALKA VE ŞERİT</h3>
+  <div class="o-satir">
+    <svg class="c-halka" style="--deger:0" viewBox="0 0 48 48" role="img" aria-label="Yüzde 0"><circle class="c-halka__iz" cx="24" cy="24" r="20" pathLength="100"/><circle class="c-halka__dolu" cx="24" cy="24" r="20" pathLength="100"/></svg>
+    <svg class="c-halka" style="--deger:.4" viewBox="0 0 48 48" role="img" aria-label="Yüzde 40"><circle class="c-halka__iz" cx="24" cy="24" r="20" pathLength="100"/><circle class="c-halka__dolu" cx="24" cy="24" r="20" pathLength="100"/></svg>
+    <svg class="c-halka" style="--deger:1" viewBox="0 0 48 48" role="img" aria-label="Yüzde 100"><circle class="c-halka__iz" cx="24" cy="24" r="20" pathLength="100"/><circle class="c-halka__dolu" cx="24" cy="24" r="20" pathLength="100"/></svg>
+  </div>
+  <div class="o-yigin" style="margin-block-start:var(--ara-4);max-inline-size:480px">
+    <div class="c-serit" style="--deger:.15" role="progressbar" aria-label="Yüzde 15" aria-valuenow="15" aria-valuemin="0" aria-valuemax="100"></div>
+    <div class="c-serit" style="--deger:.6" role="progressbar" aria-label="Yüzde 60" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+    <div class="c-serit" style="--deger:1" role="progressbar" aria-label="Yüzde 100" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+  </div>
+
+  <h3>İŞARET KUTUSU VE RADYO</h3>
+  <div class="o-satir">
+    <label class="o-satir"><input type="checkbox" class="c-isaret"><span class="yazi-govde">Boş</span></label>
+    <label class="o-satir"><input type="checkbox" class="c-isaret" checked><span class="yazi-govde">İşaretli</span></label>
+    <label class="o-satir"><input type="checkbox" class="c-isaret" disabled><span class="yazi-govde">Devre dışı</span></label>
+    <label class="o-satir"><input type="radio" name="r" class="c-radyo"><span class="yazi-govde">Boş</span></label>
+    <label class="o-satir"><input type="radio" name="r" class="c-radyo" checked><span class="yazi-govde">Seçili</span></label>
+    <label class="o-satir"><input type="radio" name="r" class="c-radyo" disabled><span class="yazi-govde">Devre dışı</span></label>
+  </div>
+
+  <h3>BAĞLANTI, GEZİNME, SEKMELER</h3>
+  <p class="yazi-govde"><a class="c-baglanti" href="#bilesenler">Satır içi bağlantı</a> metnin içinde altı çizili durur.</p>
+  <nav class="c-gezinme" aria-label="Örnek gezinme"><a href="#bilesenler" aria-current="page">Hafıza</a><a href="#bilesenler">Cihazlar</a><a href="#bilesenler">Geçmiş</a></nav>
+  <div style="margin-block-start:var(--ara-4)">
+    <div class="c-sekmeler" role="tablist" aria-label="Örnek sekmeler">
+      <button type="button" role="tab" id="t1" aria-selected="true" aria-controls="p1">Notlar</button>
+      <button type="button" role="tab" id="t2" aria-selected="false" aria-controls="p2" tabindex="-1">Kararlar</button>
+      <button type="button" role="tab" id="t3" aria-selected="false" aria-controls="p3" tabindex="-1">Görevler</button>
+    </div>
+    <div class="o-sekme-govde yazi-govde" role="tabpanel" id="p1" aria-labelledby="t1">Proje notu: haftalık toplantı özeti.</div>
+    <div class="o-sekme-govde yazi-govde" role="tabpanel" id="p2" aria-labelledby="t2" hidden>Toplantı kararı: sürüm planı onaylandı.</div>
+    <div class="o-sekme-govde yazi-govde" role="tabpanel" id="p3" aria-labelledby="t3" hidden>Görev listesi: üç madde açık.</div>
+  </div>
+
+  <h3>MENÜ</h3>
+  <div class="o-menu-kap">
+    <button type="button" class="c-dugme c-dugme--ikincil" id="menu-dugme" aria-haspopup="true" aria-expanded="false" aria-controls="menu">Menüyü aç</button>
+    <div class="c-menu" id="menu" role="menu" aria-labelledby="menu-dugme">
+      <a href="#bilesenler" role="menuitem">Düzenle</a><a href="#bilesenler" role="menuitem">Kopyala</a><a href="#bilesenler" role="menuitem">Sil</a>
+    </div>
+  </div>
+  <div style="block-size:176px" aria-hidden="true"></div>
+</section>
+
+<section class="o-bolum" id="simgeler" aria-labelledby="sim-b">
+  <h2 id="sim-b" class="yazi-baslik-l">Simgeler</h2>
+  <p class="o-not yazi-govde">24 birimlik ızgara, 2 birim çizgi, düz uçlar. Her simge 24 ve 48 piksel boyunda gösterilir.</p>
+  <ul class="o-simgeler">
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><circle cx="7" cy="12" r="4"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="17" y1="12" x2="17" y2="16"/><line x1="21" y1="11" x2="21" y2="15"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><circle cx="7" cy="12" r="4"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="17" y1="12" x2="17" y2="16"/><line x1="21" y1="11" x2="21" y2="15"/></svg></span><span class="yazi-kod">anahtar</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="20" y2="20"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="20" y2="20"/></svg></span><span class="yazi-kod">ara</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="4" x2="12" y2="20"/><line x1="6" y1="14" x2="12" y2="20"/><line x1="18" y1="14" x2="12" y2="20"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="4" x2="12" y2="20"/><line x1="6" y1="14" x2="12" y2="20"/><line x1="18" y1="14" x2="12" y2="20"/></svg></span><span class="yazi-kod">asagi</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="3" y1="7" x2="9" y2="7"/><circle cx="12" cy="7" r="3"/><line x1="15" y1="7" x2="21" y2="7"/><line x1="3" y1="17" x2="6" y2="17"/><circle cx="9" cy="17" r="3"/><line x1="12" y1="17" x2="21" y2="17"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="3" y1="7" x2="9" y2="7"/><circle cx="12" cy="7" r="3"/><line x1="15" y1="7" x2="21" y2="7"/><line x1="3" y1="17" x2="6" y2="17"/><circle cx="9" cy="17" r="3"/><line x1="12" y1="17" x2="21" y2="17"/></svg></span><span class="yazi-kod">ayarlar</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><path d="M7 16A4 4 0 0 1 7 8"/><line x1="7" y1="8" x2="11" y2="8"/><line x1="7" y1="16" x2="11" y2="16"/><path d="M17 8A4 4 0 0 1 17 16"/><line x1="13" y1="8" x2="17" y2="8"/><line x1="13" y1="16" x2="17" y2="16"/><line x1="9" y1="12" x2="15" y2="12"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><path d="M7 16A4 4 0 0 1 7 8"/><line x1="7" y1="8" x2="11" y2="8"/><line x1="7" y1="16" x2="11" y2="16"/><path d="M17 8A4 4 0 0 1 17 16"/><line x1="13" y1="8" x2="17" y2="8"/><line x1="13" y1="16" x2="17" y2="16"/><line x1="9" y1="12" x2="15" y2="12"/></svg></span><span class="yazi-kod">baglanti</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="12" y1="7" x2="12" y2="8.5"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="12" y1="7" x2="12" y2="8.5"/></svg></span><span class="yazi-kod">bilgi</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="2" y1="4" x2="22" y2="4"/><line x1="2" y1="16" x2="22" y2="16"/><line x1="3" y1="4" x2="3" y2="16"/><line x1="21" y1="4" x2="21" y2="16"/><line x1="12" y1="16" x2="12" y2="20"/><line x1="8" y1="20" x2="16" y2="20"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="2" y1="4" x2="22" y2="4"/><line x1="2" y1="16" x2="22" y2="16"/><line x1="3" y1="4" x2="3" y2="16"/><line x1="21" y1="4" x2="21" y2="16"/><line x1="12" y1="16" x2="12" y2="20"/><line x1="8" y1="20" x2="16" y2="20"/></svg></span><span class="yazi-kod">bilgisayar</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="12" x2="20" y2="4"/><line x1="14" y1="4" x2="21" y2="4"/><line x1="20" y1="4" x2="20" y2="11"/><line x1="3" y1="6" x2="10" y2="6"/><line x1="4" y1="6" x2="4" y2="20"/><line x1="3" y1="20" x2="18" y2="20"/><line x1="18" y1="14" x2="18" y2="20"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="12" x2="20" y2="4"/><line x1="14" y1="4" x2="21" y2="4"/><line x1="20" y1="4" x2="20" y2="11"/><line x1="3" y1="6" x2="10" y2="6"/><line x1="4" y1="6" x2="4" y2="20"/><line x1="3" y1="20" x2="18" y2="20"/><line x1="18" y1="14" x2="18" y2="20"/></svg></span><span class="yazi-kod">disari</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="8" y1="16" x2="16" y2="8"/><line x1="12" y1="20" x2="20" y2="12"/><line x1="16" y1="8" x2="20" y2="12"/><line x1="8" y1="16" x2="4" y2="20"/><line x1="4" y1="20" x2="12" y2="20"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="8" y1="16" x2="16" y2="8"/><line x1="12" y1="20" x2="20" y2="12"/><line x1="16" y1="8" x2="20" y2="12"/><line x1="8" y1="16" x2="4" y2="20"/><line x1="4" y1="20" x2="12" y2="20"/></svg></span><span class="yazi-kod">duzenle</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg></span><span class="yazi-kod">ekle</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><path d="M5.87 6.86A8 8 0 1 1 4.12 13.39"/><line x1="2.5" y1="9" x2="8" y2="9"/><line x1="5" y1="4" x2="5" y2="9"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="16" y2="12"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><path d="M5.87 6.86A8 8 0 1 1 4.12 13.39"/><line x1="2.5" y1="9" x2="8" y2="9"/><line x1="5" y1="4" x2="5" y2="9"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="16" y2="12"/></svg></span><span class="yazi-kod">gecmis</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="20" y1="12" x2="4" y2="12"/><line x1="10" y1="6" x2="4" y2="12"/><line x1="10" y1="18" x2="4" y2="12"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="20" y1="12" x2="4" y2="12"/><line x1="10" y1="6" x2="4" y2="12"/><line x1="10" y1="18" x2="4" y2="12"/></svg></span><span class="yazi-kod">geri</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><path d="M3 12a4.5 4.5 0 0 1 9 0a4.5 4.5 0 0 0 9 0"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><path d="M3 12a4.5 4.5 0 0 1 9 0a4.5 4.5 0 0 0 9 0"/></svg></span><span class="yazi-kod">hafiza</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="4" y1="12" x2="20" y2="12"/><line x1="14" y1="6" x2="20" y2="12"/><line x1="14" y1="18" x2="20" y2="12"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="4" y1="12" x2="20" y2="12"/><line x1="14" y1="6" x2="20" y2="12"/><line x1="14" y1="18" x2="20" y2="12"/></svg></span><span class="yazi-kod">ileri</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="16"/><line x1="6" y1="10" x2="12" y2="16"/><line x1="18" y1="10" x2="12" y2="16"/><line x1="4" y1="20" x2="20" y2="20"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="16"/><line x1="6" y1="10" x2="12" y2="16"/><line x1="18" y1="10" x2="12" y2="16"/><line x1="4" y1="20" x2="20" y2="20"/></svg></span><span class="yazi-kod">indir</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></span><span class="yazi-kod">kapat</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><circle cx="12" cy="9" r="3"/><path d="M10.5 12h3v7h-3z"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><circle cx="12" cy="9" r="3"/><path d="M10.5 12h3v7h-3z"/></svg></span><span class="yazi-kod">kilit</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="8" y1="8" x2="21" y2="8"/><line x1="8" y1="21" x2="21" y2="21"/><line x1="9" y1="8" x2="9" y2="21"/><line x1="20" y1="8" x2="20" y2="21"/><line x1="4" y1="3" x2="4" y2="17"/><line x1="3" y1="3" x2="14" y2="3"/><line x1="3" y1="17" x2="8" y2="17"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="8" y1="8" x2="21" y2="8"/><line x1="8" y1="21" x2="21" y2="21"/><line x1="9" y1="8" x2="9" y2="21"/><line x1="20" y1="8" x2="20" y2="21"/><line x1="4" y1="3" x2="4" y2="17"/><line x1="3" y1="3" x2="14" y2="3"/><line x1="3" y1="17" x2="8" y2="17"/></svg></span><span class="yazi-kod">kopyala</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg></span><span class="yazi-kod">menu</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="4" y1="3" x2="20" y2="3"/><line x1="4" y1="21" x2="20" y2="21"/><line x1="5" y1="3" x2="5" y2="21"/><line x1="19" y1="3" x2="19" y2="21"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="4" y1="3" x2="20" y2="3"/><line x1="4" y1="21" x2="20" y2="21"/><line x1="5" y1="3" x2="5" y2="21"/><line x1="19" y1="3" x2="19" y2="21"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span><span class="yazi-kod">not</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="2" y1="5" x2="22" y2="5"/><line x1="2" y1="19" x2="22" y2="19"/><line x1="3" y1="5" x2="3" y2="19"/><line x1="21" y1="5" x2="21" y2="19"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="6" y1="9" x2="9" y2="9"/><line x1="15" y1="9" x2="18" y2="9"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="2" y1="5" x2="22" y2="5"/><line x1="2" y1="19" x2="22" y2="19"/><line x1="3" y1="5" x2="3" y2="19"/><line x1="21" y1="5" x2="21" y2="19"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="6" y1="9" x2="9" y2="9"/><line x1="15" y1="9" x2="18" y2="9"/></svg></span><span class="yazi-kod">ogrenme</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="4" y1="12" x2="9" y2="17"/><line x1="9" y1="17" x2="20" y2="6"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="4" y1="12" x2="9" y2="17"/><line x1="9" y1="17" x2="20" y2="6"/></svg></span><span class="yazi-kod">onay</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="7.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="16.5"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="7.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="16.5"/></svg></span><span class="yazi-kod">paylas</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="3" x2="15" y2="3"/><line x1="5" y1="21" x2="19" y2="21"/><line x1="6" y1="9" x2="6" y2="21"/><line x1="18" y1="9" x2="18" y2="21"/><line x1="10" y1="12" x2="10" y2="18"/><line x1="14" y1="12" x2="14" y2="18"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="3" x2="15" y2="3"/><line x1="5" y1="21" x2="19" y2="21"/><line x1="6" y1="9" x2="6" y2="21"/><line x1="18" y1="9" x2="18" y2="21"/><line x1="10" y1="12" x2="10" y2="18"/><line x1="14" y1="12" x2="14" y2="18"/></svg></span><span class="yazi-kod">sil</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="3" y1="3" x2="21" y2="3"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="4" y1="3" x2="4" y2="10"/><line x1="20" y1="3" x2="20" y2="10"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="3" y1="21" x2="21" y2="21"/><line x1="4" y1="14" x2="4" y2="21"/><line x1="20" y1="14" x2="20" y2="21"/><line x1="7" y1="6.5" x2="9" y2="6.5"/><line x1="7" y1="17.5" x2="9" y2="17.5"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="3" y1="3" x2="21" y2="3"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="4" y1="3" x2="4" y2="10"/><line x1="20" y1="3" x2="20" y2="10"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="3" y1="21" x2="21" y2="21"/><line x1="4" y1="14" x2="4" y2="21"/><line x1="20" y1="14" x2="20" y2="21"/><line x1="7" y1="6.5" x2="9" y2="6.5"/><line x1="7" y1="17.5" x2="9" y2="17.5"/></svg></span><span class="yazi-kod">sunucu</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="2" y1="5" x2="22" y2="5"/><line x1="2" y1="21" x2="22" y2="21"/><line x1="3" y1="5" x2="3" y2="21"/><line x1="21" y1="5" x2="21" y2="21"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="7"/><line x1="16" y1="2" x2="16" y2="7"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="2" y1="5" x2="22" y2="5"/><line x1="2" y1="21" x2="22" y2="21"/><line x1="3" y1="5" x2="3" y2="21"/><line x1="21" y1="5" x2="21" y2="21"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="7"/><line x1="16" y1="2" x2="16" y2="7"/></svg></span><span class="yazi-kod">takvim</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="6" y1="3" x2="18" y2="3"/><line x1="6" y1="21" x2="18" y2="21"/><line x1="7" y1="3" x2="7" y2="21"/><line x1="17" y1="3" x2="17" y2="21"/><line x1="10" y1="18" x2="14" y2="18"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="6" y1="3" x2="18" y2="3"/><line x1="6" y1="21" x2="18" y2="21"/><line x1="7" y1="3" x2="7" y2="21"/><line x1="17" y1="3" x2="17" y2="21"/><line x1="10" y1="18" x2="14" y2="18"/></svg></span><span class="yazi-kod">telefon</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="3" x2="22" y2="20"/><line x1="12" y1="3" x2="2" y2="20"/><line x1="1" y1="20" x2="23" y2="20"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="16.5" x2="12" y2="18"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="3" x2="22" y2="20"/><line x1="12" y1="3" x2="2" y2="20"/><line x1="1" y1="20" x2="23" y2="20"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="16.5" x2="12" y2="18"/></svg></span><span class="yazi-kod">uyari</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="2" y1="4" x2="22" y2="4"/><line x1="2" y1="16" x2="22" y2="16"/><line x1="3" y1="4" x2="3" y2="16"/><line x1="21" y1="4" x2="21" y2="16"/><line x1="7" y1="17" x2="7" y2="21"/><line x1="7" y1="21" x2="11" y2="17"/><line x1="8" y1="10" x2="16" y2="10"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="2" y1="4" x2="22" y2="4"/><line x1="2" y1="16" x2="22" y2="16"/><line x1="3" y1="4" x2="3" y2="16"/><line x1="21" y1="4" x2="21" y2="16"/><line x1="7" y1="17" x2="7" y2="21"/><line x1="7" y1="21" x2="11" y2="17"/><line x1="8" y1="10" x2="16" y2="10"/></svg></span><span class="yazi-kod">yardimci</span></li>
+<li><span class="o-simge o-simge--24"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="10" x2="12" y2="4"/><line x1="18" y1="10" x2="12" y2="4"/></svg></span><span class="o-simge o-simge--48"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="10" x2="12" y2="4"/><line x1="18" y1="10" x2="12" y2="4"/></svg></span><span class="yazi-kod">yukari</span></li>
+  </ul>
+</section>
+
+<section class="o-bolum" id="amblemler" aria-labelledby="amb-b">
+  <h2 id="amb-b" class="yazi-baslik-l">Amblemler</h2>
+  <p class="o-not yazi-govde">C ile kor O sabittir, yalnız içindeki işaret değişir. Hafıza ürünü dalgayı, Kasa anahtar deliğini taşır.</p>
+  <div class="o-amblemler">
+    <figure><img class="ia" src="../logo/council-amblem.svg" alt="" width="400" height="400"><img class="ik" src="../logo/council-amblem-koyu.svg" alt="" width="400" height="400"><figcaption class="yazi-govde-k">Hafıza: dalga</figcaption></figure>
+    <figure><img class="ia" src="../logo/council-amblem-kasa.svg" alt="" width="400" height="400"><img class="ik" src="../logo/council-amblem-kasa-koyu.svg" alt="" width="400" height="400"><figcaption class="yazi-govde-k">Kasa: anahtar deliği</figcaption></figure>
+  </div>
+</section>
+</main>
+
+<section id="sahneler" aria-labelledby="sah-b">
+  <div class="o-sayfa o-sahne-bas">
+    <h2 id="sah-b" class="yazi-baslik-l" style="margin:var(--ara-12) 0 var(--ara-2)">Sahneler</h2>
+    <p class="o-not yazi-govde" style="max-inline-size:64ch;color:var(--murekkep-2)">Üç sahne: kendini kuran yazı (sayfanın başlığı, oturum başına bir kez), çizgi ve söz, kurul turu. Hareket azaltılmışsa ya da betik çalışmıyorsa her biri duran, eksiksiz hâlini gösterir.</p>
+  </div>
+
+  <div class="o-sayfa o-sahne-bas"><h3 class="yazi-baslik-m">Çizgi ve söz</h3></div>
+  <div class="o-sayfa" id="cizgi-soz-bolum">
+    <div class="s-cs">
+      <figure class="s-cs__bicim" data-bicim="cizgi">
+        <div class="s-cs__amblem" role="img" aria-label="COUNCIL logosu, çizgi biçimi"><svg class="s-cs__kor" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><defs><mask id="cs-cizgi" maskUnits="userSpaceOnUse" x="0" y="0" width="400" height="400"><rect width="400" height="400" fill="white"/><path transform="translate(200 200)" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0" fill="none" stroke="black" stroke-width="48"/></mask></defs><circle class="s-kor" cx="200" cy="200" r="112" fill="none" stroke-width="28" mask="url(#cs-cizgi)"/></svg><svg class="s-cs__form" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="28"><path transform="translate(200 200) rotate(45)" d="M168 0A168 168 0 1 1 0 -168"/><path transform="translate(200 200)" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0"/></g></svg></div>
+        <figcaption class="yazi-govde-k">Çizgi: asıl çizim.</figcaption>
+      </figure>
+      <figure class="s-cs__bicim" data-bicim="soz">
+        <div class="s-cs__amblem" role="img" aria-label="COUNCIL logosu, söz biçimi"><svg class="s-cs__kor" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><defs><mask id="cs-soz" maskUnits="userSpaceOnUse" x="0" y="0" width="400" height="400"><rect width="400" height="400" fill="white"/><path transform="translate(200 200)" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0" fill="none" stroke="black" stroke-width="48"/></mask></defs><circle class="s-kor" cx="200" cy="200" r="112" fill="none" stroke-width="28" mask="url(#cs-soz)"/></svg><svg class="s-cs__form" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><defs><path id="cs-soz-cd" d="M319.5 319.5A169 169 0 1 1 319.5 80.5"/><path id="cs-soz-ci" d="M308.19 308.19A153 153 0 1 1 308.19 91.81"/><path id="cs-soz-da" d="M159 200A41 41 0 0 1 241 200A71 71 0 0 0 383 200"/><path id="cs-soz-db" d="M143 200A57 57 0 0 1 257 200A55 55 0 0 0 367 200"/></defs><g class="s-cs__soz"><text style="letter-spacing:1.08px"><textPath href="#cs-soz-cd">BİRÇOK ÜYE · TEK HAFIZA · BİRÇOK ÜYE · TEK HAFIZA · BİRÇOK ÜYE · TEK HAFIZA</textPath></text><text style="letter-spacing:0.08px"><textPath href="#cs-soz-ci">TEK HAFIZA · BİRÇOK ÜYE · TEK HAFIZA · BİRÇOK ÜYE · TEK HAFIZA · BİRÇOK ÜYE</textPath></text><text style="letter-spacing:2.49px"><textPath href="#cs-soz-da">ORTAK HAFIZA · ORTAK HAFIZA</textPath></text><text style="letter-spacing:2.49px"><textPath href="#cs-soz-db">ORTAK HAFIZA · ORTAK HAFIZA</textPath></text></g></svg></div>
+        <figcaption class="yazi-govde-k">Söz: aynı geometri, Council Halka harfleriyle.</figcaption>
+      </figure>
+    </div>
+    <div class="s-cs__secici" role="group" aria-label="Logonun biçimi" hidden>
+      <button type="button" class="c-dugme c-dugme--k" data-bicim="cizgi" aria-pressed="true">Çizgi</button>
+      <button type="button" class="c-dugme c-dugme--k c-dugme--ikincil" data-bicim="soz" aria-pressed="false">Söz</button>
+    </div>
+  </div>
+
+  <div class="o-sayfa o-sahne-bas"><h3 class="yazi-baslik-m">Kurul turu</h3></div>
+  <section class="s-tur" id="kurul-turu" aria-label="Kurul turu">
+    <div class="s-tur__sahne">
+      <figure class="s-tur__gorsel">
+        <svg class="s-tur__svg" viewBox="-120 -70 640 540" role="img" aria-label="COUNCIL amblemi, altı parçalı kurul">
+          <image class="ia" href="../logo/council-amblem.svg" x="0" y="0" width="400" height="400"/>
+          <image class="ik" href="../logo/council-amblem-koyu.svg" x="0" y="0" width="400" height="400"/>
+        </svg>
+      </figure>
+      <div class="s-tur__metin"><div class="s-tur__paneller">
+<article class="s-tur__panel"><p class="yazi-etiket">1 / 6 · TAMAM</p><h3 class="yazi-baslik-m">Hafıza</h3><p class="yazi-govde-l">Dalga bir notu hafızaya yazar, sonra başka bir cihaz okur. Telefon, bilgisayar ve sunucu aynı hafızayı paylaşır.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">2 / 6 · DENEMEDE</p><h3 class="yazi-baslik-m">Kişisel gelişim</h3><p class="yazi-govde-l">Yardımcı öğrendiğini kaydeder, tek satırla haber verir; istersen geri alınır.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">3 / 6 · YOLDA</p><h3 class="yazi-baslik-m">Adı henüz yazılmadı</h3><p class="yazi-govde-l">Bu parça yolda. Testi ve ölçümü geçince eklenir.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">4 / 6 · YOLDA</p><h3 class="yazi-baslik-m">Adı henüz yazılmadı</h3><p class="yazi-govde-l">Bu parça yolda. Testi ve ölçümü geçince eklenir.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">5 / 6 · YOLDA</p><h3 class="yazi-baslik-m">Adı henüz yazılmadı</h3><p class="yazi-govde-l">Bu parça yolda. Testi ve ölçümü geçince eklenir.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">6 / 6 · YOLDA</p><h3 class="yazi-baslik-m">Adı henüz yazılmadı</h3><p class="yazi-govde-l">Bu parça yolda. Testi ve ölçümü geçince eklenir.</p></article>
+      </div></div>
+    </div>
+  </section>
+  <div id="kurul-sonu" class="o-sayfa"><p class="yazi-govde-k" style="margin-block:var(--ara-12)">Kurul turunun sonu. Altı parçanın dolması bir gelecek önizlemesidir: henüz değil.</p></div>
+</section>
+
+<script type="module" src="sahneler.js"></script>
+<script type="module">
+const kok = document.documentElement;
+
+// Tema düğmeleri
+const temaDugmeleri = [...document.querySelectorAll("[data-tema]")];
+for (const d of temaDugmeleri) d.addEventListener("click", () => {
+  if (d.dataset.tema) kok.dataset.theme = d.dataset.tema; else delete kok.dataset.theme;
+  for (const x of temaDugmeleri) x.setAttribute("aria-pressed", String(x === d));
+});
+
+// Sekmeler
+const sekmeler = [...document.querySelectorAll('[role="tab"]')];
+const sec = (s) => {
+  for (const x of sekmeler) {
+    const acik = x === s;
+    x.setAttribute("aria-selected", String(acik));
+    x.tabIndex = acik ? 0 : -1;
+    document.getElementById(x.getAttribute("aria-controls")).hidden = !acik;
+  }
+};
+sekmeler.forEach((s, i) => {
+  s.addEventListener("click", () => sec(s));
+  s.addEventListener("keydown", (e) => {
+    const git = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (!git) return;
+    const y = sekmeler[(i + git + sekmeler.length) % sekmeler.length];
+    sec(y); y.focus(); e.preventDefault();
+  });
+});
+
+// Menü
+const menu = document.getElementById("menu"), menuD = document.getElementById("menu-dugme");
+const menuAyarla = (acik) => {
+  menu.toggleAttribute("data-acik", acik);
+  menuD.setAttribute("aria-expanded", String(acik));
+  menuD.textContent = acik ? "Menüyü kapat" : "Menüyü aç";
+};
+menuD.addEventListener("click", () => menuAyarla(!menu.hasAttribute("data-acik")));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && menu.hasAttribute("data-acik")) { menuAyarla(false); menuD.focus(); } });
+
+// Denetim: yatay taşma var mı
+if (new URLSearchParams(location.search).get("denetim") === "1") {
+  addEventListener("load", () => {
+    const olc = () => { kok.dataset.tasma = String(kok.scrollWidth > innerWidth); kok.dataset.yukseklik = String(kok.scrollHeight); kok.dataset.sahney = String(document.getElementById("sahneler").offsetTop); };
+    (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => setTimeout(olc, 600));
+  });
+}
+</script>
+</body>
+</html>

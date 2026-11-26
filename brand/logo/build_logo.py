@@ -49,6 +49,8 @@ def main(out=HERE):
         (out / f"council-amblem{suffix}.svg").write_text(svg(400, emblem(ink, accent, "kesik"), "COUNCIL"))
         word = (f'<g fill="{ink}" transform="translate({400 + GAP} 298) scale({SCALE} -{SCALE})">{letters}</g>')
         (out / f"council-logo{suffix}.svg").write_text(svg(total, emblem(ink, accent, "kesik") + word, "COUNCIL"))
+    for suffix, ink, accent in (("", INK, KOR), ("-koyu", PAPER, KOR)):
+        (out / f"council-amblem-kasa{suffix}.svg").write_text(svg(400, amblem_svg("kasa", ink, accent, "kesik"), "COUNCIL Kasa"))
     favicon = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="14 14 372 372">'
         f'<style>.i{{stroke:{INK}}}@media (prefers-color-scheme:dark){{.i{{stroke:{PAPER}}}}}</style>'
