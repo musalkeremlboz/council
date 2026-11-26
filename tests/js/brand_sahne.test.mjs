@@ -4,6 +4,12 @@ import assert from "node:assert/strict";
 import {
   hareketAzaltildi, azaltmaIzle, yaklas, cizimDongusu, gorunurlukBekcisi, kokuIsaretle,
 } from "../../brand/js/sahne/ortak.js";
+import { glifYollari, zamanla, SURE } from "../../brand/js/sahne/yazi-kur.js";
+import { TUR, GECIS, amblemSvg } from "../../brand/js/sahne/cizgi-soz.js";
+import { bolumBul, koltukAcilari, doluluk } from "../../brand/js/sahne/kurul-turu.js";
+import { readFileSync } from "node:fs";
+
+const GLIFLER = JSON.parse(readFileSync(new URL("../../brand/font/glifler.json", import.meta.url), "utf8"));
 
 function sahteMq(matches) {
   const mq = {
@@ -129,4 +135,105 @@ test("kokuIsaretle adds js and removes it on the first error", () => {
   assert.equal(dinleyiciler[0].o.once, true);
   dinleyiciler[0].f();
   assert.ok(!siniflar.has("js"));
+});
+
+test("glifYollari orders bars, rings, slanted bars", () => {
+  const glif = {
+    genislik: 700, sol: 0, ilkeller: [
+      { t: "p", noktalar: [[0, 0], [100, 0], [400, 700], [300, 700]] },
+      { t: "r", cx: 350, cy: 350, r: 350, a0: 0, a1: 180, s: 100 },
+      { t: "b", x: 0, y: 0, w: 100, h: 700 },
+      { t: "r", cx: 350, cy: 350, r: 200, a0: 180, a1: 360, s: 100 },
+    ],
+  };
+  const yol = glifYollari(glif, 0);
+  assert.deepEqual(yol.map((y) => y.t), ["b", "r", "r", "p"]);
+  assert.deepEqual(yol.map((y) => y.sira), [0, 1, 2, 3]);
+  for (const y of yol) assert.ok(y.d.startsWith("M") && y.uzunluk > 0);
+  assert.ok(yol[3].kirp, "slanted bar is clipped to its own quadrilateral");
+  const iki = glifYollari(GLIFLER.glifler.two, 0);
+  assert.deepEqual(iki.map((y) => y.t), ["b", "r", "p"]);
+});
+
+test("glifYollari flips y (font y=700 becomes svg y=0)", () => {
+  const [cubuk] = glifYollari({ genislik: 210, sol: 55, ilkeller: [{ t: "b", x: 0, y: 0, w: 100, h: 700 }] }, 10);
+  assert.equal(cubuk.d, "M115 700L115 0");
+  assert.equal(cubuk.uzunluk, 700);
+  assert.equal(cubuk.kalinlik, 100);
+  const [halka] = glifYollari(GLIFLER.glifler.O, 0);
+  const uclar = [...halka.d.matchAll(/(?:M|A[-\d.]+ [-\d.]+ 0 0 [01] )(-?[\d.]+) (-?[\d.]+)/g)];
+  const ys = uclar.map((m) => Number(m[2]));
+  assert.equal(ys[0], 50, "the full ring starts at its top: font y=650 is svg y=50");
+  assert.ok(Math.min(...ys) >= 50 - 0.1 && Math.max(...ys) <= 650 + 0.1);
+  assert.ok(Math.abs(halka.uzunluk - 2 * Math.PI * 300) < 1);
+});
+
+test("zamanla builds the heading within the readable limit", () => {
+  const ilkeller = Array.from({ length: 32 }, (_, i) => 1 + (i % 6));
+  for (const gecikme of [0, 360]) {
+    const z = zamanla(ilkeller, gecikme);
+    assert.equal(z.length, 32);
+    const son = Math.max(...z.flat()) + SURE.ciz;
+    assert.ok(son <= SURE.okunur, `ends at ${son}`);
+    assert.ok(z[0][0] === gecikme);
+  }
+  assert.ok(SURE.okunur <= 1200 && SURE.en <= 1800);
+});
+
+test("bolumBul boundaries", () => {
+  assert.equal(bolumBul(0), 0);
+  assert.equal(bolumBul(0.099), 0);
+  assert.equal(bolumBul(0.10), 1);
+  assert.equal(bolumBul(0.27), 2);
+  assert.equal(bolumBul(0.47), 3);
+  assert.equal(bolumBul(0.64), 4);
+  assert.equal(bolumBul(0.82), 5);
+  assert.equal(bolumBul(1), 5);
+});
+
+test("koltukAcilari covers 45..315 in six 45° parts", () => {
+  const a = [0, 1, 2, 3, 4, 5].map(koltukAcilari);
+  assert.deepEqual(a[0], [45, 90]);
+  assert.deepEqual(a[5], [270, 315]);
+  for (let i = 0; i < 6; i++) {
+    assert.equal(a[i][1] - a[i][0], 45);
+    if (i) assert.equal(a[i][0], a[i - 1][1]);
+  }
+});
+
+test("doluluk: tamam is always 1, denemede is 0.5 before 0.82, yolda is 0 before 0.82 and 1 at p=1", () => {
+  const ps = [0, 0.05, 0.12, 0.3, 0.5, 0.7, 0.819];
+  for (const p of [...ps, 0.9, 1]) assert.equal(doluluk({ durum: "tamam" }, 0, p), 1);
+  for (const p of ps) {
+    assert.equal(doluluk({ durum: "denemede" }, 1, p), 0.5);
+    for (let i = 2; i < 6; i++) assert.equal(doluluk({ durum: "yolda" }, i, p), 0);
+  }
+  for (let i = 1; i < 6; i++) {
+    assert.equal(doluluk({ durum: i === 1 ? "denemede" : "yolda" }, i, 1), 1);
+  }
+  const ara = [2, 3, 4, 5].map((i) => doluluk({ durum: "yolda" }, i, 0.89));
+  for (let k = 1; k < ara.length; k++) assert.ok(ara[k] <= ara[k - 1], "fills in order");
+  for (const p of [0.85, 0.9, 0.95]) {
+    const v = doluluk({ durum: "yolda" }, 3, p);
+    assert.ok(v >= 0 && v <= 1);
+  }
+});
+
+test("TUR total ≤ 9000 ms and GECIS.duration ≤ 840", () => {
+  assert.deepEqual(TUR, [{ id: "soz", bekle: 1200 }, { id: "cizgi", bekle: 6800 }]);
+  assert.deepEqual(GECIS, { duration: 840, easing: "cubic-bezier(.2,0,0,1)", fill: "forwards" });
+  const toplam = TUR.reduce((a, t) => a + t.bekle, 0) + GECIS.duration;
+  assert.ok(toplam <= 9000, `${toplam}`);
+  assert.ok(GECIS.duration <= 840);
+});
+
+test("amblemSvg: söz carries the words, the kor O is the same in both forms", () => {
+  const cizgi = amblemSvg("cizgi", "a");
+  const soz = amblemSvg("soz", "b");
+  assert.ok(soz.includes("BİRÇOK ÜYE · TEK HAFIZA") && soz.includes("ORTAK HAFIZA"));
+  assert.ok(soz.includes("<textPath"));
+  assert.ok(!cizgi.includes("<text"));
+  const kor = (s) => s.match(/<circle[^>]*s-kor[^>]*>/)[0].replace(/url\(#[^)]+\)/, "");
+  assert.equal(kor(cizgi), kor(soz));
+  assert.ok(!/#[0-9a-fA-F]{3,8}\b/.test(cizgi + soz.replace(/href="#[^"]+"|url\(#[^)]+\)/g, "")));
 });

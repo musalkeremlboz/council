@@ -168,10 +168,19 @@ def test_check_and_radio_and_link():
 
 
 def test_hiding_only_under_js():
-    hide = re.compile(r"opacity:0(?![.\d])|visibility:hidden|display:none")
+    hide = re.compile(r"opacity:0(?![.\d])|visibility:hidden|display:none|stroke-dashoffset:var\(|height:450vh")
     for s, b in rules(CSS):
         if hide.search(n(b)):
             assert all(p.strip().startswith(".js ") or p.strip() == "[hidden]" for p in s.split(",")), s
+    # Sahneler (Review Focus 5): bölüm var, gizleyen kuralları var ve hepsi .js altında; JS yoksa son hâl görünür.
+    assert "/* sahneler */" in CSS
+    scenes = CSS[CSS.index("/* sahneler */"):]
+    hiding = [(s, b) for s, b in rules(scenes) if hide.search(n(b))]
+    assert {".s-ciz", ".s-cs__bicim", ".s-tur__panel"} <= {m for s, _ in hiding for m in re.findall(r"\.s-[\w-]+", s)}
+    assert any("height:450vh" in n(b) for _, b in hiding)
+    for s, _ in hiding:
+        assert all(p.strip().startswith(".js ") for p in s.split(",")), s
+    assert all(int(v) <= 450 for v in re.findall(r"(\d+)s?vh", strip_comments(scenes)))
 
 
 def test_idle_button_ring_takes_no_gap():

@@ -575,3 +575,128 @@ textarea.c-alan__giris { height: auto; min-height: 96px; padding-block: var(--ar
   .c-menu, .c-panel { border: 1px solid CanvasText; }
   .c-radyo:checked::after { background: CanvasText; forced-color-adjust: none; }
 }
+
+/* sahneler */
+/* Üç sahne (brand/js/sahne/). JS yoksa ya da bir hata olursa her şey son hâliyle görünür: gizleyen her kural .js altındadır. */
+.s-kor { stroke: var(--kor); }
+.s-mur { stroke: var(--murekkep); }
+.s-gizli {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Kendini kuran yazı: çizgiler kurulurken uçtan uca açılır; bitince öğenin asıl içeriği geri gelir */
+.s-yazi { display: flex; flex-wrap: wrap; }
+.s-yazi > svg { display: block; flex: none; overflow: visible; }
+@media (prefers-reduced-motion: no-preference) {
+  .js .s-kurulum:not(.s-kur) .s-ciz { stroke-dashoffset: var(--u); }
+  .js .s-kur .s-ciz {
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset calc(var(--s) * 1ms) var(--egri-ac) calc(var(--d) * 1ms);
+  }
+}
+
+/* Çizgi ve söz: JS yoksa ya da hareket azaltılmışsa iki biçim yan yana, telefonda alt alta */
+.s-cs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ara-6);
+  inline-size: min(720px, 100%);
+  margin-inline: auto;
+}
+.s-cs__bicim { margin: 0; display: grid; grid-template-rows: auto 1fr; justify-items: center; gap: var(--ara-3); min-inline-size: 0; }
+.s-cs__bicim figcaption { text-align: center; max-inline-size: 36ch; }
+.s-cs__amblem { position: relative; inline-size: 100%; aspect-ratio: 1 / 1; overflow: hidden; color: var(--murekkep); }
+.s-cs__amblem svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; display: block; }
+.s-cs__soz { font-family: var(--font-display); font-size: 20px; fill: currentColor; }
+.s-cs__secici:not([hidden]) { display: flex; justify-content: center; gap: var(--ara-2); margin-block-start: var(--ara-6); }
+.js .s-cs__kesik { display: none; }
+@media (max-width: 560px) {
+  .s-cs { grid-template-columns: minmax(0, 1fr); gap: var(--ara-8); inline-size: min(320px, 100%); }
+}
+/* Hareketli: iki biçim üst üste, tek logo. Kor O yalnız ilk biçimden çizilir ve hiç kesilmez. */
+@media (prefers-reduced-motion: no-preference) {
+  .js .s-cs.s-canli { grid-template-columns: minmax(0, 1fr); inline-size: min(440px, 80vw); }
+  .js .s-cs.s-canli > * { grid-area: 1 / 1; }
+  .js .s-cs.s-canli .s-cs__bicim:not(.s-etkin) { visibility: hidden; }
+  .js .s-cs.s-canli .s-cs__form { visibility: hidden; }
+  .js .s-cs.s-canli .s-acik .s-cs__form { visibility: visible; }
+  .js .s-cs.s-canli .s-cs__bicim:first-child .s-cs__kor { visibility: visible; }
+  .js .s-cs.s-canli .s-cs__bicim + .s-cs__bicim .s-cs__kor { visibility: hidden; }
+  .js .s-cs.s-canli .s-cs__kesik {
+    display: block;
+    align-self: start;
+    position: relative;
+    inline-size: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    pointer-events: none;
+    color: var(--murekkep);
+  }
+  .js .s-cs.s-canli .s-cs__kesik svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; opacity: 0; }
+  .js .s-cs.s-canli .s-cs__kesik line { stroke: currentColor; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+}
+
+/* Kurul turu: JS yoksa duran amblem ve altı açıklama alt alta; hareket azaltılmışsa altı duran kare */
+.s-tur { position: relative; }
+.s-tur__atla { display: inline-flex; align-items: center; min-block-size: 44px; margin-inline: var(--ara-4); font: 400 12px/1.6 var(--font-mono); }
+.s-tur__sahne,
+.s-tur__kare {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ara-8);
+  max-inline-size: 1200px;
+  margin-inline: auto;
+  padding: var(--ara-8) var(--ara-4);
+  box-sizing: border-box;
+}
+.s-tur__kare { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding-block: var(--ara-6); border-block-start: 1px solid var(--cizgi); }
+.s-tur__gorsel { margin: 0; display: flex; flex-direction: column; align-items: center; min-inline-size: 0; }
+.s-tur__gorsel svg { display: block; inline-size: 100%; block-size: min(62vh, 560px); overflow: visible; }
+.s-tur__kare .s-tur__gorsel svg { block-size: min(48vh, 380px); }
+.s-tur__metin { min-inline-size: 0; }
+.s-tur__paneller { display: grid; gap: var(--ara-6); }
+.s-tur__kayit { margin-block-start: var(--ara-3); font: 400 12px/1.6 var(--font-mono); color: var(--murekkep-2); text-align: center; max-inline-size: 100%; }
+.s-tur__satir { display: grid; min-block-size: 1.6em; }
+.s-tur__satir span { grid-area: 1 / 1; }
+.js .s-tur__satir span:not(.s-acik) { visibility: hidden; }
+.s-tur__adimlar { list-style: none; margin: 0 0 var(--ara-6); padding: 0; display: flex; gap: var(--ara-3); }
+.s-tur__adimlar svg { display: block; inline-size: 18px; block-size: 18px; fill: none; stroke: var(--murekkep); stroke-width: 2.6; }
+.s-tur__adimlar li { opacity: .32; }
+.s-tur__adimlar li:is(.s-simdi, .s-gecmis) { opacity: 1; }
+.js .s-tur__adimlar li:not(.s-gecmis) .s-tur__o,
+.js .s-tur__adimlar li.s-gecmis .s-tur__c { display: none; }
+.s-tur__cer { stroke: var(--murekkep-2); stroke-width: 3; stroke-linejoin: miter; }
+.s-tur__yer { stroke: var(--murekkep-2); }
+.s-tur__bit { stroke: var(--zemin); }
+.s-tur__etiketler { font-family: var(--font-mono); fill: var(--murekkep); }
+.s-tur__ikincil { fill: var(--murekkep-2); }
+.js .s-tur.s-canli { height: 450vh; }
+.js .s-tur.s-canli .s-tur__sahne { position: sticky; top: 0; block-size: 100vh; block-size: 100svh; padding-block: 0; }
+.js .s-tur.s-canli .s-tur__paneller { gap: 0; }
+.js .s-tur.s-canli .s-tur__panel { grid-area: 1 / 1; }
+.js .s-tur.s-canli .s-tur__panel:not(.s-etkin) { visibility: hidden; }
+.js .s-tur.s-durgun .s-tur__sahne { display: none; }
+@media (max-width: 760px) {
+  .s-tur__sahne,
+  .s-tur__kare { grid-template-columns: minmax(0, 1fr); gap: var(--ara-3); }
+  .js .s-tur.s-canli .s-tur__sahne { align-content: center; }
+  .s-tur__gorsel svg { block-size: 42vh; block-size: 42svh; }
+  .s-tur__kare .s-tur__gorsel svg { block-size: 300px; }
+  .s-tur__adimlar { margin-block-end: var(--ara-3); }
+}
+@media (max-width: 760px) and (max-height: 700px) {
+  .s-tur__gorsel svg { block-size: 34vh; block-size: 34svh; }
+}
+
+/* Yüksek karşıtlık: sahne çizgileri düz metin rengiyle */
+@media (forced-colors: active) {
+  .s-kor, .s-mur, .s-tur__cer, .s-tur__yer { stroke: CanvasText; }
+  .s-tur__bit { stroke: Canvas; }
+  .s-tur__etiketler, .s-tur__ikincil { fill: CanvasText; }
+}

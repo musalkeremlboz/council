@@ -1,0 +1,8 @@
+[
+ {"ad": "Hafıza", "durum": "tamam", "aciklama": "Dalga bir notu hafızaya yazar, sonra başka bir cihaz okur. Telefon, bilgisayar ve sunucu aynı hafızayı paylaşır."},
+ {"ad": "Kişisel gelişim", "durum": "denemede", "aciklama": "Yardımcı öğrendiğini kaydeder, tek satırla haber verir; istersen geri alınır."},
+ {"ad": null, "durum": "yolda"},
+ {"ad": null, "durum": "yolda"},
+ {"ad": null, "durum": "yolda"},
+ {"ad": null, "durum": "yolda"}
+]
