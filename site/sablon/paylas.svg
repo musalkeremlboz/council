@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" lang="$lang">
+<defs>
+<style>@font-face { font-family: "Council Halka"; src: url("$yazi_tipi") format("woff2"); }</style>
+</defs>
+<rect width="1200" height="630" fill="$zemin"/>
+<g transform="translate(96 96) scale(.55)">$amblem</g>
+<text x="96" y="470" font-family="Council Halka" font-size="88" fill="$murekkep">$slogan</text>
+<text x="100" y="540" font-family="Council Halka" font-size="36" letter-spacing="6" fill="$murekkep2">$ad</text>
+</svg>

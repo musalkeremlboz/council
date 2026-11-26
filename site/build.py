@@ -6,6 +6,7 @@ Stdlib only. The output is reproducible (no dates, sorted walks) and committed.
 """
 import argparse
 import ast
+import base64
 import hashlib
 import html
 import importlib.util
@@ -14,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import tomllib
 from pathlib import Path
 from string import Template
@@ -42,6 +44,14 @@ YARDIMCI_DURUMLARI = {"tam": "tam", "kullanımda": "kullanimda", "denenmedi": "d
 KUR_UNIX = "curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/install.sh | sh"
 KUR_WINDOWS = "irm https://raw.githubusercontent.com/musalkeremlboz/council/main/install.ps1 | iex"
 TUR_OZELLIK = {2: 0, 3: 1, 4: 2}   # Kurul turu panel index -> feature index whose status its label shows
+
+
+def _brand_denetle():
+    """brand/denetle.py by path."""
+    spec = importlib.util.spec_from_file_location("brand_denetle", BRAND / "denetle.py")
+    modul = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modul)
+    return modul
 
 
 def _brand_build():
@@ -445,14 +455,64 @@ def govde_yap(ad: str, dil: str, m: dict, ozet: str) -> str:
     return (ana_govde if ad == "ana" else hafiza_govde)(dil, m, ozet)
 
 
+def sitemap() -> str:
+    """sitemap.xml: the four pages, each with its language alternates."""
+    def bag(ad: str, dil: str) -> str:
+        return f"{SITE_URL}/{SAYFALAR[ad][dil]}"
+
+    satirlar = ['<?xml version="1.0" encoding="UTF-8"?>',
+                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">']
+    for ad in SAYFALAR:
+        for dil in DILLER:
+            satirlar += ["  <url>", f"    <loc>{bag(ad, dil)}</loc>"]
+            satirlar += [f'    <xhtml:link rel="alternate" hreflang="{d}" href="{bag(ad, d)}"/>' for d in DILLER]
+            satirlar += [f'    <xhtml:link rel="alternate" hreflang="x-default" href="{bag(ad, DILLER[0])}"/>', "  </url>"]
+    return "\n".join([*satirlar, "</urlset>", ""])
+
+
+def robots() -> str:
+    return f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n"
+
+
+def _yazi_tipi_adresi() -> str:
+    """The Council Halka woff2 as a data: URL, so an SVG drawn as an image still has the face."""
+    return "data:font/woff2;base64," + base64.b64encode((BRAND / "font" / "CouncilHalka.woff2").read_bytes()).decode("ascii")
+
+
+def paylas_svg(dil: str, m: dict) -> str:
+    """sablon/paylas.svg for one language: dark theme colors from brand/tokens.json, the emblem, the tagline."""
+    jetonlar = {t["name"]: t["value"]["dark"] for t in _json(BRAND / "tokens.json")["color"]["tokens"]}
+    amblem = (BRAND / "logo" / "council-amblem-koyu.svg").read_text(encoding="utf-8")
+    ic = re.search(r"<svg[^>]*>(.*)</svg>", amblem, re.S).group(1)
+    return Template((SABLON / "paylas.svg").read_text(encoding="utf-8")).substitute(
+        lang=dil, zemin=jetonlar["zemin"], murekkep=jetonlar["murekkep"], murekkep2=jetonlar["murekkep-2"],
+        yazi_tipi=_yazi_tipi_adresi(), amblem=ic, slogan=_e(m["site"]["slogan"]), ad=_e(m["site"]["ad"]))
+
+
+def paylas_gorselleri(hedef: Path, metin: dict[str, dict], yeniden: bool) -> None:
+    """paylas-<dil>.png in hedef: rendered from paylas.svg with Chrome (--gorsel), else the committed files copied."""
+    for dil in DILLER:
+        png = hedef / f"paylas-{dil}.png"
+        if yeniden:
+            denetle = _brand_denetle()
+            with tempfile.TemporaryDirectory() as gecici:
+                svg = Path(gecici) / f"paylas-{dil}.svg"
+                svg.write_text(paylas_svg(dil, metin[dil]), encoding="utf-8")
+                denetle.png_yap(svg, png, 1200, 630)
+        elif png != CIKTI / png.name:
+            png.write_bytes((CIKTI / png.name).read_bytes())
+
+
 def _argumanlar(argv: list[str] | None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(prog="build.py", description="Build the COUNCIL promo site.")
     ap.add_argument("--cikti", type=Path, default=CIKTI, help="output folder (default: site/cikti)")
+    ap.add_argument("--gorsel", action="store_true", help="render the share images again (needs Chrome)")
     return ap.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
-    hedef = _argumanlar(argv).cikti.resolve()
+    arg = _argumanlar(argv)
+    hedef = arg.cikti.resolve()
     metin = metin_yukle()
     for dil in DILLER:
         ozellikler(dil)   # a named feature without this language stops the build
@@ -464,6 +524,9 @@ def main(argv: list[str] | None = None) -> int:
         yol = hedef / SAYFALAR[ad][dil] / "index.html"
         yol.parent.mkdir(parents=True, exist_ok=True)
         yol.write_bytes(icerik.replace(OZET_YER, ozet).encode("utf-8"))   # same bytes on every system
+    (hedef / "sitemap.xml").write_text(sitemap(), encoding="utf-8", newline="\n")
+    (hedef / "robots.txt").write_text(robots(), encoding="utf-8", newline="\n")
+    paylas_gorselleri(hedef, metin, arg.gorsel)
     return 0
 
 

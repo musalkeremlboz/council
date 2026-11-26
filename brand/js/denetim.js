@@ -1,6 +1,22 @@
 // Sayfa denetim kancası: yalnız ?denetim=1 ile çalışır, sonuçları <html> üzerine data-* olarak yazar.
 // data-tasma (yatay taşma), data-yukseklik, data-sahney, data-kurulum (logo parçalarının kurulum sırası),
-// data-ayni (kimlik anı sonunda kaynak işaretleme geri geldi mi).
+// data-ayni (kimlik anı sonunda kaynak işaretleme geri geldi mi), data-gizli (<main> içinde yazı taşıyıp
+// visibility:hidden ya da opacity:0 olan, yani yerini tutup görünmeyen öğe sayısı; azaltılmış harekette ve betiksiz 0 olmalı).
+// display:none sayılmaz. Kurul turu karelerinin çizimi (.s-tur__gorsel) sayılmaz: her kare yalnız kendi adımını
+// gösterir, öteki adımların yazıları o karede bilerek görünmez; kare metinleri (paneller) sayılır.
+const CIZIM = ".s-tur__gorsel";
+const yaziVar = (e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim() !== "");
+
+export function gizliSay(doc = document) {
+  const pencere = doc.defaultView;
+  const gizli = (e) => {
+    if (pencere.getComputedStyle(e).visibility === "hidden") return true;
+    for (let o = e; o && o !== doc.body; o = o.parentElement) if (pencere.getComputedStyle(o).opacity === "0") return true;
+    return false;
+  };
+  return [...doc.querySelectorAll("main *")].filter((e) => yaziVar(e) && e.checkVisibility() && !e.closest(CIZIM) && gizli(e)).length;
+}
+
 export function denetimKur(doc = document) {
   const pencere = doc.defaultView;
   if (new URLSearchParams(pencere.location.search).get("denetim") !== "1") return;
@@ -21,6 +37,7 @@ export function denetimKur(doc = document) {
     const olc = () => {
       kok.dataset.tasma = String(kok.scrollWidth > pencere.innerWidth);
       kok.dataset.yukseklik = String(kok.scrollHeight);
+      kok.dataset.gizli = String(gizliSay(doc));
       kok.dataset.sahney = String(doc.querySelector("[data-denetim-sahne]")?.offsetTop ?? 0);
     };
     (doc.fonts ? doc.fonts.ready : Promise.resolve()).then(() => setTimeout(olc, 600));

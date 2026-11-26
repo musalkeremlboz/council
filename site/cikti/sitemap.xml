@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://council.systems/</loc>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://council.systems/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://council.systems/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://council.systems/"/>
+  </url>
+  <url>
+    <loc>https://council.systems/en/</loc>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://council.systems/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://council.systems/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://council.systems/"/>
+  </url>
+  <url>
+    <loc>https://council.systems/hafiza/</loc>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://council.systems/hafiza/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://council.systems/en/memory/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://council.systems/hafiza/"/>
+  </url>
+  <url>
+    <loc>https://council.systems/en/memory/</loc>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://council.systems/hafiza/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://council.systems/en/memory/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://council.systems/hafiza/"/>
+  </url>
+</urlset>

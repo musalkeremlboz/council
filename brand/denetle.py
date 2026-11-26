@@ -45,18 +45,18 @@ def _sarmal(adres: str, genislik: int, yukseklik: int, klasor: Path, kaydir: int
         f'<iframe id="f" width="{genislik}" height="{yukseklik}" src="{adres}"></iframe>'
         f'<script>f.onload=()=>f.contentWindow.scrollTo(0,{kaydir});'
         'setInterval(()=>{try{const d=f.contentDocument.documentElement.dataset;'
-        'if(d.tasma){document.documentElement.dataset.tasma=d.tasma;document.documentElement.dataset.yukseklik=d.yukseklik;document.documentElement.dataset.sahney=d.sahney}}catch(e){}},100)</script>', encoding="utf-8")
+        'if(d.tasma){document.documentElement.dataset.tasma=d.tasma;document.documentElement.dataset.yukseklik=d.yukseklik;document.documentElement.dataset.sahney=d.sahney;document.documentElement.dataset.gizli=d.gizli}}catch(e){}},100)</script>', encoding="utf-8")
     return yol.as_uri()
 
 
-def _olc(sayfa: Path, genislik: int) -> dict[str, str]:
+def _olc(sayfa: Path, genislik: int, azalt: bool = False) -> dict[str, str]:
     adres = f"{sayfa.resolve().as_uri()}?denetim=1"
     with tempfile.TemporaryDirectory() as profil, tempfile.TemporaryDirectory() as gecici:
         if genislik < ASGARI:
             adres = _sarmal(adres, genislik, 900, Path(gecici))
-        r = _calistir([f"--window-size={max(genislik, ASGARI)},900", "--virtual-time-budget=4000", "--dump-dom", adres],
-                      Path(profil))
-    olcum = dict(re.findall(r'data-(tasma|yukseklik|sahney|kurulum|ayni)="([\w-]+)"', r.stdout))
+        r = _calistir([f"--window-size={max(genislik, ASGARI)},900", "--virtual-time-budget=4000", "--dump-dom", adres,
+                       *(["--force-prefers-reduced-motion"] if azalt else [])], Path(profil))
+    olcum = dict(re.findall(r'data-(tasma|yukseklik|sahney|kurulum|ayni|gizli)="([\w-]+)"', r.stdout))
     if "tasma" not in olcum:
         raise RuntimeError(f"data-tasma not found (exit {r.returncode}): {r.stderr[-400:]}")
     return olcum
@@ -64,6 +64,27 @@ def _olc(sayfa: Path, genislik: int) -> dict[str, str]:
 
 def tasma_var_mi(sayfa: Path, genislik: int) -> bool:
     return _olc(sayfa, genislik)["tasma"] == "true"
+
+
+def gizli_say(sayfa: Path, genislik: int = 1280, azalt: bool = False, js: bool = True) -> int:
+    """How many elements with text inside <main> are computed visibility:hidden or opacity:0 (brand/js/denetim.js).
+    js=False measures the page as without scripts: a copy whose site script is swapped for a bare measurement,
+    so the page never gets its .js root class and only its CSS decides what shows."""
+    if js:
+        return int(_olc(sayfa, genislik, azalt)["gizli"])
+    metin = sayfa.read_text(encoding="utf-8")
+    bulunan = re.search(r'<script type="module" src="([^"]*)/site\.js"></script>', metin)
+    if not bulunan:
+        raise RuntimeError(f"{sayfa}: no site script to swap")
+    olcum = (f'<script type="module">import {{ gizliSay }} from "./{bulunan.group(1)}/denetim.js";'
+             'addEventListener("load", () => setTimeout(() => { document.documentElement.dataset.tasma = "false";'
+             'document.documentElement.dataset.gizli = String(gizliSay(document)); }, 600));</script>')
+    kopya = sayfa.with_name(f".{sayfa.stem}-olcum.html")
+    kopya.write_text(metin.replace(bulunan.group(0), olcum), encoding="utf-8")
+    try:
+        return int(_olc(kopya, genislik, azalt)["gizli"])
+    finally:
+        kopya.unlink(missing_ok=True)
 
 
 def kimlik_ani(sayfa: Path, genislik: int = 1280) -> tuple[str, bool]:
