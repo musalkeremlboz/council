@@ -1,0 +1,26 @@
+{
+  "site": {
+    "ad": "COUNCIL",
+    "slogan": "One memory, every agent.",
+    "ogYerel": "en_US",
+    "atla": "Skip to content",
+    "digerDil": "Türkçe",
+    "gezinme": {"etiket": "Site", "hafiza": "Memory", "github": "GitHub"},
+    "altbilgi": {"etiket": "Footer", "lisans": "© 2026 COUNCIL · MIT license"}
+  },
+  "sayfalar": {
+    "ana": {
+      "baslik": "COUNCIL · One memory, every agent.",
+      "aciklama": "COUNCIL is an open-source system that gives AI agents a lasting memory. It runs on your computer, and your notes stay with you as plain Markdown files.",
+      "h1": "One memory, every agent."
+    },
+    "hafiza": {
+      "baslik": "Memory · COUNCIL",
+      "aciklama": "The memory is not tied to one agent: every agent you use reads and writes the same memory. Setup, how it works and the files.",
+      "h1": "Memory"
+    }
+  },
+  "urunler": {
+    "hafiza": {"ad": "Memory", "cumle": "Every agent you use reads and writes the same memory."}
+  }
+}

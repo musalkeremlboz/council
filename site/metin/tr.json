@@ -1,0 +1,26 @@
+{
+  "site": {
+    "ad": "COUNCIL",
+    "slogan": "Tek hafıza, her yardımcı.",
+    "ogYerel": "tr_TR",
+    "atla": "İçeriğe geç",
+    "digerDil": "English",
+    "gezinme": {"etiket": "Site", "hafiza": "Hafıza", "github": "GitHub"},
+    "altbilgi": {"etiket": "Alt bilgi", "lisans": "© 2026 COUNCIL · MIT lisansı"}
+  },
+  "sayfalar": {
+    "ana": {
+      "baslik": "COUNCIL · Tek hafıza, her yardımcı.",
+      "aciklama": "COUNCIL, yapay zekâ yardımcılarına kalıcı hafıza veren açık kaynak bir sistemdir. Bilgisayarında çalışır; notların düz Markdown dosyaları olarak sende kalır.",
+      "h1": "Tek hafıza, her yardımcı."
+    },
+    "hafiza": {
+      "baslik": "Hafıza · COUNCIL",
+      "aciklama": "Hafıza tek bir yardımcıya bağlı değildir: kullandığın bütün yardımcılar aynı hafızayı okur ve yazar. Kurulum, çalışma düzeni ve dosyalar.",
+      "h1": "Hafıza"
+    }
+  },
+  "urunler": {
+    "hafiza": {"ad": "Hafıza", "cumle": "Kullandığın bütün yardımcılar aynı hafızayı okur ve yazar."}
+  }
+}

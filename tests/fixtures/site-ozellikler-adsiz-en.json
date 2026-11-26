@@ -1,0 +1,10 @@
+[
+ {"ad": "Hafıza", "durum": "tamam", "aciklama": "Telefon, bilgisayar ve sunucu aynı hafızayı paylaşır.",
+  "en": {"ad": "Memory", "aciklama": "Phone, computer and server share the same memory."}},
+ {"ad": "Kişisel gelişim", "durum": "denemede", "aciklama": "Yardımcı öğrendiğini kaydeder.",
+  "en": {"ad": "Personal development", "aciklama": "The agent saves what it learned."}},
+ {"ad": "Yeni özellik", "durum": "yolda", "aciklama": "Adı yeni verildi, İngilizcesi henüz yok."},
+ {"ad": null, "durum": "yolda"},
+ {"ad": null, "durum": "yolda"},
+ {"ad": null, "durum": "yolda"}
+]
