@@ -195,24 +195,95 @@ def _bag(kimden: str, kime: str) -> str:
     return _kok(kimden) + kime or "./"
 
 
-def sayfa_yaz(ad: str, dil: str, govde: str, m: dict, ozet: str) -> str:
-    """Fill sablon/sayfa.html for page `ad` in language `dil`. m: that language's texts (metin_yukle()[dil])."""
+def _cizgi_sinirlari(d: str) -> tuple[float, float, float, float]:
+    """(x0, y0, x1, y1) of the points in an absolute M/L/H/V/Q/Z path (control points included)."""
+    xs, ys, komut, sayilar = [], [], "", []
+    for t in re.findall(r"[A-Za-z]|-?\d+(?:\.\d+)?", d):
+        if t.isalpha():
+            if t not in "MLHVQZ":
+                raise SystemExit(f"yazi_svg: desteklenmeyen yol komutu {t}")
+            komut, sayilar = t, []
+            continue
+        sayilar.append(float(t))
+        if komut in "MLQ" and len(sayilar) == 2:
+            xs.append(sayilar[0]); ys.append(sayilar[1]); sayilar = []
+        elif komut == "H":
+            xs.append(sayilar[0]); sayilar = []
+        elif komut == "V":
+            ys.append(sayilar[0]); sayilar = []
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def yazi_svg(ad: str) -> str:
+    """The header wordmark: the logo's text group (data-kur="yazi") from brand/logo/council-logo-kur.html as its own
+    inline SVG. The mark is dropped (amblem_svg() does the opposite) and the view box shrinks to the letters, measured
+    from the group's transform and glyph paths. Letters are outlines, so the 24 px floor of Council Halka text does not
+    apply; the identity moment can still build them (the group keeps data-metin and data-ara)."""
+    bulunan = re.search(r'<g data-kur="yazi"[^>]*transform="translate\(([\d.]+) ([\d.]+)\) scale\(([\d.]+) -([\d.]+)\)".*?</g>',
+                        LOGO_KUR.read_text(encoding="utf-8"), re.S)
+    if not bulunan:
+        raise SystemExit(f"yazi_svg: {LOGO_KUR.name} içinde logo yazısı grubu bulunamadı")
+    tx, ty, sx, sy = (float(v) for v in bulunan.groups())
+    kutular = []
+    for g in re.finditer(r'<path transform="translate\(([\d.]+) 0\)" d="([^"]+)"', bulunan.group(0)):
+        x0, y0, x1, y1 = _cizgi_sinirlari(g.group(2))
+        kutular.append((float(g.group(1)) + x0, y0, float(g.group(1)) + x1, y1))
+    if not kutular:
+        raise SystemExit(f"yazi_svg: {LOGO_KUR.name} içinde harf yolu yok")
+    sol, alt, sag, ust = (min(k[0] for k in kutular), min(k[1] for k in kutular),
+                          max(k[2] for k in kutular), max(k[3] for k in kutular))
+    kutu = [tx + sx * sol, ty - sy * ust, sx * (sag - sol), sy * (ust - alt)]
+    return (f'<svg focusable="false" viewBox="{" ".join(f"{v:.1f}" for v in kutu)}" role="img" aria-label="{_e(ad)}">'
+            f'{bulunan.group(0)}</svg>')
+
+
+def ust_yap(ad: str, dil: str, m: dict, ozet: str) -> str:
+    """The header of every page: products on the left (veri/urunler.json), the wordmark linking home in the middle,
+    GitHub and the same page in the other language on the right."""
     yol = SAYFALAR[ad][dil]
     diger = next(d for d in DILLER if d != dil)
-    kok = _kok(yol)
-    varlik = f"{kok}varlik/{ozet}/"
+    s = m["site"]
+    urunler = "".join(
+        f'<a href="{_bag(yol, SAYFALAR[u["sayfa"]][dil])}"{" aria-current=\"page\"" if u["sayfa"] == ad else ""}>'
+        f'{_e(m["urunler"][u["anahtar"]]["ad"])}</a>' for u in _json(VERI / "urunler.json"))
+    return (f'<header class="s-ust">\n  <div class="s-ust__ic">\n'
+            f'    <nav class="c-gezinme s-ust__sol" aria-label="{_e(s["gezinme"]["urunler"])}">{urunler}</nav>\n'
+            f'    <a class="s-logo" href="{_bag(yol, SAYFALAR["ana"][dil])}" data-yazi-kur data-denetim-logo '
+            f'data-glifler="{kok_varlik(yol, ozet)}glifler.json">{yazi_svg(s["ad"])}</a>\n'
+            f'    <nav class="c-gezinme s-ust__sag" aria-label="{_e(s["gezinme"]["etiket"])}">'
+            f'<a href="{GITHUB}" rel="external" lang="en">{_e(s["gezinme"]["github"])}</a>'
+            f'<a href="{_bag(yol, SAYFALAR[ad][diger])}" hreflang="{diger}" lang="{diger}">{_e(s["digerDil"])}</a></nav>\n'
+            f'  </div>\n</header>')
+
+
+def kok_varlik(yol: str, ozet: str) -> str:
+    return f"{_kok(yol)}varlik/{ozet}/"
+
+
+def sayfa_yaz(ad: str, dil: str, govde: str, m: dict, ozet: str, once: str = "") -> str:
+    """Fill sablon/sayfa.html for page `ad` in language `dil`. m: that language's texts (metin_yukle()[dil]).
+    once: markup between the header and <main> (the home page's canvas and seat row). The home page is dark and
+    has no footer (the licence line closes its last section); the Hafıza pages follow the system theme."""
+    yol = SAYFALAR[ad][dil]
+    diger = next(d for d in DILLER if d != dil)
+    varlik = kok_varlik(yol, ozet)
     s = m["site"]
     alternatifler = "\n".join(
         f'<link rel="alternate" hreflang="{d}" href="{SITE_URL}/{SAYFALAR[ad][d]}">' for d in DILLER
     ) + f'\n<link rel="alternate" hreflang="x-default" href="{SITE_URL}/{SAYFALAR[ad][DILLER[0]]}">'
-    dil_bag = f'<a href="{_bag(yol, SAYFALAR[ad][diger])}" hreflang="{diger}" lang="{diger}">{_e(s["digerDil"])}</a>'
     github = f'<a href="{GITHUB}">{_e(s["gezinme"]["github"])}</a>'
-    hafiza_simdi = ' aria-current="page"' if ad == "hafiza" else ""
-    gezinme = (f'<a href="{_bag(yol, SAYFALAR["hafiza"][dil])}"{hafiza_simdi}>{_e(s["gezinme"]["hafiza"])}</a>'
-               + github + dil_bag)
+    dil_bag = f'<a href="{_bag(yol, SAYFALAR[ad][diger])}" hreflang="{diger}" lang="{diger}">{_e(s["digerDil"])}</a>'
+    ana = False   # becomes `ad == "ana"` with the Kurul Masası home page
+    alt = "" if ana else (
+        '<footer class="s-alt">\n  <div class="s-alt__ic">\n'
+        f'    <a class="s-alt__logo" href="{_bag(yol, SAYFALAR["ana"][dil])}"><img class="ia" src="{varlik}logo/council-amblem.svg" alt="" width="24" height="24">'
+        f'<img class="ik" src="{varlik}logo/council-amblem-koyu.svg" alt="" width="24" height="24"><span>COUNCIL</span></a>\n'
+        f'    <nav class="c-gezinme" aria-label="{_e(s["altbilgi"]["etiket"])}">{github}{dil_bag}</nav>\n'
+        f'    <p class="s-alt__lisans">{_e(s["altbilgi"]["lisans"])}</p>\n  </div>\n</footer>\n')
     sayfa = m["sayfalar"][ad]
     return Template((SABLON / "sayfa.html").read_text(encoding="utf-8")).substitute(
         lang=dil,
+        tema=' data-theme="dark"' if ana else "",
         baslik=_e(sayfa["baslik"]),
         aciklama=_e(sayfa["aciklama"]),
         kanonik=f"{SITE_URL}/{yol}",
@@ -221,14 +292,11 @@ def sayfa_yaz(ad: str, dil: str, govde: str, m: dict, ozet: str) -> str:
         og_yerel=_e(s["ogYerel"]),
         varlik=varlik,
         atla=_e(s["atla"]),
-        ana=_bag(yol, SAYFALAR["ana"][dil]),
-        logo=LOGO_KUR.read_text(encoding="utf-8").strip(),
-        gezinme_etiket=_e(s["gezinme"]["etiket"]),
-        gezinme=gezinme,
+        ust=ust_yap(ad, dil, m, ozet),
+        once=once,
+        ana_sinif="s-masa" if ana else "s-sayfa",
         govde=govde,
-        altbilgi_etiket=_e(s["altbilgi"]["etiket"]),
-        altbilgi_gezinme=github + dil_bag,
-        lisans=_e(s["altbilgi"]["lisans"]),
+        alt=alt,
     )
 
 

@@ -83,10 +83,11 @@ def test_no_horizontal_overflow(cikti, sayfa, genislik):
 
 
 @chrome
-@pytest.mark.parametrize("sayfa", ANA)
-def test_identity_moment_on_home(cikti, sayfa):
+@pytest.mark.parametrize("sayfa", SAYFALAR)
+def test_identity_moment_builds_the_wordmark(cikti, sayfa):
+    """The header holds the wordmark only (no mark): the identity moment draws it, then the source markup returns."""
     sira, ayni = denetle.kimlik_ani(cikti / sayfa)
-    assert sira == "kor-c-yazi-isaret"
+    assert sira == "yazi"
     assert ayni is True
 
 

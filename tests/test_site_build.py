@@ -207,16 +207,54 @@ def test_relative_asset_links(cikti):
         assert sira == sorted(sira), dosya
 
 
+def _ust(html: str) -> str:
+    return re.search(r"<header class=\"s-ust\">.*?</header>", html, re.S).group(0)
+
+
+def test_header_layout(cikti):
+    """Products on the left, the wordmark linking home in the middle, GitHub and the other language on the right."""
+    urunler = json.loads((KOK / "site" / "veri" / "urunler.json").read_text(encoding="utf-8"))
+    for (ad, dil), dosya in SAYFA_DOSYALARI.items():
+        ust = _ust(_oku(cikti, dosya))
+        diger = "en" if dil == "tr" else "tr"
+        sol, logo, sag = re.search(
+            r'<nav class="c-gezinme s-ust__sol" aria-label="[^"]+">(.*?)</nav>\s*'
+            r'(<a class="s-logo" href="[^"]+" data-yazi-kur data-denetim-logo[^>]*>.*?</a>)\s*'
+            r'<nav class="c-gezinme s-ust__sag" aria-label="[^"]+">(.*?)</nav>', ust, re.S).groups()
+        ogeler = re.findall(r"<a\b([^>]*)>([^<]+)</a>", sol)
+        assert [t for _, t in ogeler] == [build.metin_yukle()[dil]["urunler"][u["anahtar"]]["ad"] for u in urunler], dosya
+        assert [t for _, t in ogeler] == [("Hafıza" if dil == "tr" else "Memory")]   # today only Memory
+        for oz, _ in ogeler:
+            assert ("aria-current" in oz) == (ad == "hafiza"), dosya
+            assert _cozumle(cikti, dosya, re.search(r'href="([^"]+)"', oz).group(1)) == (cikti / SAYFA_DOSYALARI[("hafiza", dil)]).resolve()
+        assert _cozumle(cikti, dosya, re.search(r'href="([^"]+)"', logo).group(1)) == (cikti / SAYFA_DOSYALARI[("ana", dil)]).resolve()
+        # the wordmark is inline SVG derived from the logo's text group, not Council Halka text
+        assert '<svg focusable="false" viewBox="' in logo and 'role="img" aria-label="COUNCIL"' in logo
+        assert 'data-kur="yazi"' in logo and 'data-metin="COUNCIL"' in logo and logo.count("<path") == 7
+        assert 'data-kur="kor"' not in logo and "<mask" not in logo
+        assert re.findall(r'<a href="https://github\.com/musalkeremlboz/council" rel="external" lang="en">GitHub</a>', sag), dosya
+        (dil_bag,) = re.findall(rf'<a href="([^"]+)" hreflang="{diger}" lang="{diger}">({diger.upper()})</a>', sag)
+        assert _cozumle(cikti, dosya, dil_bag[0]) == (cikti / SAYFA_DOSYALARI[(ad, diger)]).resolve(), dosya
+
+
+def test_wordmark_derived_from_logo_source():
+    """build.yazi_svg() keeps the source group verbatim (transform, glyph paths) and only crops the view box."""
+    kaynak = (KOK / "brand" / "logo" / "council-logo-kur.html").read_text(encoding="utf-8")
+    grup = re.search(r'<g data-kur="yazi".*?</g>', kaynak, re.S).group(0)
+    svg = build.yazi_svg("COUNCIL")
+    assert grup in svg
+    x, y, g, y2 = (float(v) for v in re.search(r'viewBox="([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+)"', svg).groups())
+    assert 1100 < g < 1400 and 150 < y2 < 250 and 0 < x < 600 and 0 < y < 200   # letters only, not the 1762x400 logo
+
+
 def test_shell_header_and_footer(cikti):
     for (ad, dil), dosya in SAYFA_DOSYALARI.items():
         html = _oku(cikti, dosya)
-        assert re.search(r'<a class="s-logo" href="[^"]+" data-yazi-kur data-denetim-logo[^>]*><svg ', html), dosya
-        assert html.count("data-yazi-kur") >= 2, dosya   # header logo + page heading
-        assert '<nav class="c-gezinme"' in html
+        assert html.count("data-yazi-kur") >= 2 or ad == "ana", dosya   # header wordmark + page heading
+        assert '<nav class="c-gezinme' in html
         assert 'href="https://github.com/musalkeremlboz/council"' in html
         alt = "© 2026 COUNCIL · MIT lisansı" if dil == "tr" else "© 2026 COUNCIL · MIT license"
         assert alt in html, dosya
-        assert ("Hafıza" if dil == "tr" else "Memory") in re.search(r"<nav class=\"c-gezinme\".*?</nav>", html, re.S).group(0)
         assert re.search(r'<meta name="description" content="[^"]{40,}">', html), dosya
         assert re.search(r"<title>[^<]+</title>", html), dosya
         for og in ("title", "description", "url", "image", "locale"):
@@ -225,6 +263,7 @@ def test_shell_header_and_footer(cikti):
         assert '<main id="icerik"' in html and 'href="#icerik"' in html
         if ad == "hafiza":
             assert re.search(r'<a href="[^"]+" aria-current="page">' + ("Hafıza" if dil == "tr" else "Memory"), html)
+            assert '<footer class="s-alt">' in html
 
 
 # Home page (Task 5)

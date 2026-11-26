@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="$lang">
+<html lang="$lang"$tema>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,21 +24,9 @@ $alternatifler
 </head>
 <body>
 <a class="s-atla" href="#icerik">$atla</a>
-<header class="s-ust">
-  <div class="s-ust__ic">
-    <a class="s-logo" href="$ana" data-yazi-kur data-denetim-logo data-glifler="${varlik}glifler.json">$logo</a>
-    <nav class="c-gezinme" aria-label="$gezinme_etiket">$gezinme</nav>
-  </div>
-</header>
-<main id="icerik" class="s-sayfa">
+$ust
+$once<main id="icerik" class="$ana_sinif">
 $govde
 </main>
-<footer class="s-alt">
-  <div class="s-alt__ic">
-    <a class="s-alt__logo" href="$ana"><img class="ia" src="${varlik}logo/council-amblem.svg" alt="" width="24" height="24"><img class="ik" src="${varlik}logo/council-amblem-koyu.svg" alt="" width="24" height="24"><span>COUNCIL</span></a>
-    <nav class="c-gezinme" aria-label="$altbilgi_etiket">$altbilgi_gezinme</nav>
-    <p class="s-alt__lisans">$lisans</p>
-  </div>
-</footer>
-</body>
+$alt</body>
 </html>

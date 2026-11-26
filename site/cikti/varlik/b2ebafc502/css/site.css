@@ -24,7 +24,7 @@ img, svg { max-inline-size: 100%; }
 .s-atla:not(:focus) { clip-path: inset(50%); inline-size: 1px; block-size: 1px; overflow: hidden; white-space: nowrap; padding: 0; }
 .s-atla:focus { outline: 2px solid var(--kor-metin); outline-offset: 2px; }
 
-/* Header */
+/* Header: products on the left, the wordmark in the middle, GitHub and the other language on the right */
 .s-ust { border-block-end: 1px solid var(--cizgi); background: var(--zemin); }
 .s-ust__ic,
 .s-alt__ic,
@@ -35,15 +35,17 @@ img, svg { max-inline-size: 100%; }
   padding-inline: var(--ara-4);
 }
 .s-ust__ic {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: var(--ara-2) var(--ara-6);
-  padding-block: var(--ara-3);
+  gap: var(--ara-2) var(--ara-4);
+  padding-block: var(--ara-2);
 }
-.s-logo { display: block; color: var(--murekkep); }
-.s-logo svg { display: block; block-size: 32px; inline-size: auto; }
+.s-ust__sag { justify-self: end; flex-wrap: nowrap; }
+.s-ust__sol, .s-ust__sag { gap: var(--ara-2) var(--ara-4); }
+.s-ust a[rel~="external"]::after { content: " ↗"; color: var(--murekkep-3); }
+.s-logo { display: flex; align-items: center; min-block-size: 44px; padding-inline: var(--ara-1); color: var(--murekkep); }
+.s-logo svg { display: block; block-size: 14px; inline-size: auto; }
 .s-logo:focus { outline: none; }
 .s-logo:focus-visible { outline: 2px solid var(--kor-metin); outline-offset: 3px; }
 
