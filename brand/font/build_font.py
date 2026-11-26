@@ -4,8 +4,9 @@ Every glyph is made of three primitives: straight bars, ring segments cut from
 perfect circles, and slanted bars. One stroke weight, flat cut ends.
 
 Run:  python build_font.py   (needs fonttools, skia-pathops, brotli)
-Writes CouncilHalka.ttf and CouncilHalka.woff2 next to this file.
+Writes CouncilHalka.ttf, CouncilHalka.woff2 and glifler.json next to this file.
 """
+import json
 import math
 import pathlib
 
@@ -31,13 +32,16 @@ class Glyph:
         self.width, self.lsb, self.rsb = width, lsb, rsb
         self.path = Path()
         self.pen = self.path.getPen()
+        self.ilkeller = []  # the primitives drawn so far, exported to glifler.json
 
     def bar(self, x, y, w, h):
+        self.ilkeller.append({"t": "b", "x": x, "y": y, "w": w, "h": h})
         p = self.pen
         p.moveTo((x, y)); p.lineTo((x, y + h)); p.lineTo((x + w, y + h)); p.lineTo((x + w, y)); p.closePath()
         return self
 
     def poly(self, pts):
+        self.ilkeller.append({"t": "p", "noktalar": [list(q) for q in pts]})
         area = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]))
         if area > 0:
             pts = pts[::-1]
@@ -65,6 +69,7 @@ class Glyph:
 
     def ring(self, cx, cy, ro, a0=0, a1=360, s=S):
         """Ring segment, outer radius ro, from a0 to a1 counter-clockwise."""
+        self.ilkeller.append({"t": "r", "cx": cx, "cy": cy, "r": ro, "a0": a0, "a1": a1, "s": s})
         ri = ro - s
         p = self.pen
         if a1 - a0 >= 360:
@@ -132,6 +137,7 @@ def glyphs():
         src = g[base]
         gl = Glyph(src.width, src.lsb, src.rsb)
         src.path.draw(gl.pen)
+        gl.ilkeller = [dict(i) for i in src.ilkeller]
         for m in marks:
             m(gl)
         return gl
@@ -303,6 +309,51 @@ def kern_feature():
     return "languagesystem DFLT dflt;\nlanguagesystem latn dflt;\nfeature kern {\n" + rules + "} kern;\n"
 
 
+def replay(ilkeller, width=0, lsb=0, rsb=0):
+    """A Glyph redrawn from exported primitives, through the same bar/ring/poly code path."""
+    gl = Glyph(width, lsb, rsb)
+    for i in ilkeller:
+        if i["t"] == "b":
+            gl.bar(i["x"], i["y"], i["w"], i["h"])
+        elif i["t"] == "r":
+            gl.ring(i["cx"], i["cy"], i["r"], i["a0"], i["a1"], i["s"])
+        else:
+            gl.poly([tuple(q) for q in i["noktalar"]])
+    return gl
+
+
+def ttglyph(gl):
+    """The TrueType glyph for a Glyph: merged outline, shifted by its left side bearing."""
+    from fontTools.pens.transformPen import TransformPen
+    path = Path()
+    gl.path.draw(path.getPen())
+    path.simplify(fix_winding=True)
+    shifted = Path()
+    path.draw(TransformPen(shifted.getPen(), (1, 0, 0, 1, gl.lsb, 0)))
+    tt = TTGlyphPen(None)
+    shifted.draw(Cu2QuPen(tt, max_err=0.6, reverse_direction=True))
+    return tt.glyph()
+
+
+def num(v):
+    return int(v) if float(v).is_integer() else v
+
+
+def geometry(src):
+    """glifler.json content: every glyph's primitives, for the web scenes that redraw the letters."""
+    def clean(i):
+        if i["t"] == "p":
+            return {"t": "p", "noktalar": [[num(x), num(y)] for x, y in i["noktalar"]]}
+        return {k: (v if k == "t" else num(v)) for k, v in i.items()}
+    return {
+        "surum": VERSION, "birim": UPM, "cizgi": S, "buyuk": H, "x": XH,
+        "harita": {chr(cp): name for cp, name in CMAP.items()},
+        "glifler": {name: {"genislik": round(gl.width + gl.lsb + gl.rsb), "sol": gl.lsb,
+                           "ilkeller": [clean(i) for i in gl.ilkeller]}
+                    for name, gl in src.items()},
+    }
+
+
 def build(out_dir):
     src = glyphs()
     order = [".notdef"] + list(src)
@@ -310,15 +361,7 @@ def build(out_dir):
     notdef = Glyph(500).bar(0, 0, 500, H)
     notdef.poly([(S, S), (500 - S, S), (500 - S, H - S), (S, H - S)][::-1])
     for name, gl in [(".notdef", notdef)] + list(src.items()):
-        path = Path()
-        gl.path.draw(path.getPen())
-        path.simplify(fix_winding=True)
-        shifted = Path()
-        from fontTools.pens.transformPen import TransformPen
-        path.draw(TransformPen(shifted.getPen(), (1, 0, 0, 1, gl.lsb, 0)))
-        tt = TTGlyphPen(None)
-        shifted.draw(Cu2QuPen(tt, max_err=0.6, reverse_direction=True))
-        glyf[name] = tt.glyph()
+        glyf[name] = ttglyph(gl)
         metrics[name] = (round(gl.width + gl.lsb + gl.rsb), gl.lsb)
 
     fb = FontBuilder(UPM, isTTF=True)
@@ -337,6 +380,8 @@ def build(out_dir):
     fb.font.save(out / "CouncilHalka.ttf")
     fb.font.flavor = "woff2"
     fb.font.save(out / "CouncilHalka.woff2")
+    (out / "glifler.json").write_text(
+        json.dumps(geometry(src), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     return len(order)
 
 

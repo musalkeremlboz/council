@@ -97,3 +97,28 @@ def test_lowercase_metrics():
     assert bounds("x")[3] == build_font.XH
     assert bounds("b")[3] == 700
     assert bounds("p")[1] == -200
+
+
+GEO = FONT_DIR / "glifler.json"
+
+
+def test_geometry_matches_font():
+    geo = json.loads(GEO.read_text(encoding="utf-8"))
+    assert geo["surum"] == build_font.VERSION and geo["birim"] == 1000
+    assert (geo["cizgi"], geo["buyuk"], geo["x"]) == (100, 700, 500)
+    glyf = FONT["glyf"]
+    assert set(geo["glifler"]) == set(FONT.getGlyphOrder()) - {".notdef"}
+    for name, g in geo["glifler"].items():
+        assert g["genislik"] == HMTX[name][0], name
+        assert g["sol"] == HMTX[name][1], name
+        gl = build_font.replay(g["ilkeller"], lsb=g["sol"])
+        redrawn = build_font.ttglyph(gl)
+        pen_a, pen_b = SVGPathPen(None), SVGPathPen(None)
+        redrawn.draw(pen_a, glyf)
+        glyf[name].draw(pen_b, glyf)
+        assert pen_a.getCommands() == pen_b.getCommands(), name
+
+
+def test_geometry_covers_cmap():
+    geo = json.loads(GEO.read_text(encoding="utf-8"))
+    assert geo["harita"] == {chr(cp): n for cp, n in CMAP.items()}
