@@ -37,3 +37,24 @@ def isaret_simgesi(isaret):
     """24x24 SVG of the marker alone."""
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
             f'stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" aria-hidden="true">{_SIMGE[isaret]}</svg>')
+
+
+def satir_ici_logo(kaynak: str) -> str:
+    """council-logo.svg as the page carries it: same geometry, colours from tokens, data-kur marks for yazi-kur.js."""
+    s = kaynak.strip()
+    for eski, yeni in (
+        ('<svg xmlns="http://www.w3.org/2000/svg" ', '<svg focusable="false" '),
+        ('id="kesik"', 'id="ust-kesik"'), ("url(#kesik)", "url(#ust-kesik)"),
+        ('fill="#fff"', 'fill="white"'),
+        (f'<path transform="translate(200 200)" d="{WAVE}" fill="none" stroke="#000"',
+         f'<path data-kur="isaret" transform="translate(200 200)" d="{WAVE}" fill="none" stroke="black"'),
+        ('<circle cx="200" cy="200" r="112" stroke="#E8421F"', '<circle data-kur="kor" class="s-kor" cx="200" cy="200" r="112"'),
+        ('<path transform="translate(200 200) rotate(45)" stroke="#111416"',
+         '<path data-kur="c" transform="translate(200 200) rotate(45)" stroke="currentColor"'),
+        ('<path transform="translate(200 200)" stroke="#111416"',
+         '<path data-kur="isaret" transform="translate(200 200)" stroke="currentColor"'),
+        ('<g fill="#111416" transform=', '<g data-kur="yazi" data-metin="COUNCIL" data-ara="60" fill="currentColor" transform='),
+    ):
+        assert s.count(eski) == 1, eski
+        s = s.replace(eski, yeni)
+    return s

@@ -62,3 +62,9 @@ def test_marker_icon():
         assert 'viewBox="0 0 24 24"' in icon
         assert 'stroke="currentColor"' in icon
         assert 'stroke-width="2"' in icon
+
+
+def test_build_logo_writes_kur_fragment(tmp_path):
+    pytest.importorskip("fontTools")
+    _load("build_logo").main(tmp_path)
+    assert (tmp_path / "council-logo-kur.html").read_bytes() == (LOGO / "council-logo-kur.html").read_bytes()

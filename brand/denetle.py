@@ -1,7 +1,9 @@
-"""Headless checks of the living example page with Chrome: horizontal overflow and screenshots.
+"""Headless checks of a page with Chrome (default: the living example page): horizontal overflow and screenshots.
+The page opts in to measuring with brand/js/denetim.js (?denetim=1).
 
-    python brand/denetle.py <output folder>
+    python brand/denetle.py <output folder> [--sayfa PATH ...]
 """
+import argparse
 import re
 import shutil
 import subprocess
@@ -102,24 +104,48 @@ def ekran_goruntusu(sayfa: Path, cikti: Path, genislik: int, tema: str, azalt: b
     return cikti
 
 
-def main() -> int:
+def png_yap(svg: Path, png: Path, genislik: int, yukseklik: int) -> Path:
+    """Headless Chrome screenshot of an SVG file at exactly genislik x yukseklik (Chrome's 500px minimum window
+    width is worked around by the same iframe wrapper the page checks use)."""
+    png.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as profil, tempfile.TemporaryDirectory() as gecici:
+        sayfa = Path(gecici) / "svg.html"
+        sayfa.write_text(
+            '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:transparent}'
+            f'img{{display:block;width:{genislik}px;height:{yukseklik}px}}</style>'
+            f'<img src="{svg.resolve().as_uri()}" alt="">', encoding="utf-8")
+        r = _calistir([f"--window-size={genislik},{yukseklik}", "--default-background-color=00000000",
+                       f"--screenshot={png}", sayfa.as_uri()], Path(profil))
+    if not png.exists():
+        raise RuntimeError(f"no screenshot written: {r.stderr[-400:]}")
+    return png
+
+
+def _argumanlar(argv: list[str] | None) -> argparse.Namespace:
+    ap = argparse.ArgumentParser(prog="denetle.py", description="Headless Chrome checks of a page.")
+    ap.add_argument("klasor", type=Path, help="output folder for the screenshots")
+    ap.add_argument("--sayfa", type=Path, action="append", help="page to check (repeatable); default: the example page")
+    return ap.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
     if chrome_yolu() is None:
         print("Chrome not found", file=sys.stderr)
         return 1
-    if len(sys.argv) != 2:
-        print(__doc__, file=sys.stderr)
-        return 2
-    klasor = Path(sys.argv[1]).expanduser()
-    for genislik in (375, 1280):
-        for tema in ("light", "dark"):
-            print(ekran_goruntusu(ORNEK, klasor / f"{genislik}-{tema}.png", genislik, tema, False, True))
-        # The static variants: the top of the page, then 900px slices from the scenes down, so the scene frames show up.
-        olcum = _olc(ORNEK, genislik)
-        kaydirmalar = [0, *range(int(olcum["sahney"]), int(olcum["yukseklik"]), 900)]
-        for ad, azalt, js in (("azaltilmis", True, True), ("jssiz", False, False)):
-            for no, y in enumerate(kaydirmalar):
-                print(ekran_goruntusu(ORNEK, klasor / f"{genislik}-{ad}-{no}.png", genislik, "light", azalt, js, 900, y))
-        print("tasma", genislik, tasma_var_mi(ORNEK, genislik))
+    arg = _argumanlar(argv)
+    klasor = arg.klasor.expanduser()
+    for sayfa in arg.sayfa or [ORNEK]:
+        on = "" if sayfa == ORNEK else f"{sayfa.resolve().parent.name}-"
+        for genislik in (375, 1280):
+            for tema in ("light", "dark"):
+                print(ekran_goruntusu(sayfa, klasor / f"{on}{genislik}-{tema}.png", genislik, tema, False, True))
+            # The static variants: the top of the page, then 900px slices from the scenes down, so the scene frames show up.
+            olcum = _olc(sayfa, genislik)
+            kaydirmalar = [0, *range(int(olcum["sahney"]), int(olcum["yukseklik"]), 900)]
+            for ad, azalt, js in (("azaltilmis", True, True), ("jssiz", False, False)):
+                for no, y in enumerate(kaydirmalar):
+                    print(ekran_goruntusu(sayfa, klasor / f"{on}{genislik}-{ad}-{no}.png", genislik, "light", azalt, js, 900, y))
+            print("tasma", genislik, tasma_var_mi(sayfa, genislik))
     return 0
 
 

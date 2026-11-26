@@ -1,12 +1,20 @@
 """The living example page's markup (brand/ornek/), checked without a browser."""
 import json
 import re
+import importlib.util
 from html.parser import HTMLParser
 from pathlib import Path
 
 BRAND = Path(__file__).resolve().parent.parent / "brand"
 ORNEK = BRAND / "ornek" / "index.html"
 ADIMLAR = ["Amblem", "Altı özellik", "Hafıza", "Kişisel gelişim", "Yolda", "1.0.0"]   # the spec's six Kurul turu steps
+
+
+def _amblem():
+    spec = importlib.util.spec_from_file_location("amblem", BRAND / "logo" / "amblem.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def _sayfa():
@@ -64,35 +72,11 @@ def test_kurul_turu_feature_steps_follow_the_features_file():
     assert "Adı henüz yazılmadı" not in _sayfa()
 
 
-WAVE = 'd="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0"'
-
-
-def satir_ici_logo(kaynak: str) -> str:
-    """council-logo.svg as the page carries it: same geometry, colours from tokens, data-kur marks for yazi-kur.js."""
-    s = kaynak.strip()
-    for eski, yeni in (
-        ('<svg xmlns="http://www.w3.org/2000/svg" ', '<svg focusable="false" '),
-        ('id="kesik"', 'id="ust-kesik"'), ("url(#kesik)", "url(#ust-kesik)"),
-        ('fill="#fff"', 'fill="white"'),
-        (f'<path transform="translate(200 200)" {WAVE} fill="none" stroke="#000"',
-         f'<path data-kur="isaret" transform="translate(200 200)" {WAVE} fill="none" stroke="black"'),
-        ('<circle cx="200" cy="200" r="112" stroke="#E8421F"', '<circle data-kur="kor" class="s-kor" cx="200" cy="200" r="112"'),
-        ('<path transform="translate(200 200) rotate(45)" stroke="#111416"',
-         '<path data-kur="c" transform="translate(200 200) rotate(45)" stroke="currentColor"'),
-        ('<path transform="translate(200 200)" stroke="#111416"',
-         '<path data-kur="isaret" transform="translate(200 200)" stroke="currentColor"'),
-        ('<g fill="#111416" transform=', '<g data-kur="yazi" data-metin="COUNCIL" data-ara="60" fill="currentColor" transform='),
-    ):
-        assert s.count(eski) == 1, eski
-        s = s.replace(eski, yeni)
-    return s
-
-
 def test_header_logo_builds_itself_and_is_the_logo_file():
     sayfa = _sayfa()
-    m = re.search(r'<div class="o-logo" data-yazi-kur>(<svg .*?</svg>)</div>', sayfa)
+    m = re.search(r'<div class="o-logo"[^>]*data-yazi-kur[^>]*>(<svg .*?</svg>)</div>', sayfa)
     assert m, "the header logo is inline and marked data-yazi-kur"
-    assert m.group(1) == satir_ici_logo((BRAND / "logo" / "council-logo.svg").read_text(encoding="utf-8"))
+    assert m.group(1) == _amblem().satir_ici_logo((BRAND / "logo" / "council-logo.svg").read_text(encoding="utf-8"))
     assert not re.search(r"#[0-9A-Fa-f]{3,8}\b", m.group(1).replace("url(#ust-kesik)", ""))
     for rol in ("kor", "c", "isaret", "yazi"):
         assert f'data-kur="{rol}"' in m.group(1)
@@ -137,3 +121,43 @@ def test_identity_moment_starts_before_the_features_fetch():
     js = (BRAND / "ornek" / "sahneler.js").read_text(encoding="utf-8")
     assert js.index("yaziKur(document)") < js.index("fetch(")
     assert "await yaziKur" not in js
+
+
+def _bosluksuz(s: str) -> str:
+    return re.sub(r"\s+", "", s)
+
+
+def test_logo_kur_fragment_is_the_example_header_logo():
+    m = re.search(r'<div class="o-logo"[^>]*>(<svg .*?</svg>)</div>', _sayfa())
+    assert m
+    parca = (BRAND / "logo" / "council-logo-kur.html").read_text(encoding="utf-8")
+    assert _bosluksuz(parca) == _bosluksuz(m.group(1))
+    assert 'data-kur="yazi" data-metin="COUNCIL" data-ara="60"' in parca
+    assert 'fill="white"' in parca and 'stroke="black"' in parca
+
+
+def test_example_page_uses_the_check_module():
+    sayfa = _sayfa()
+    assert 'import { denetimKur } from "../js/denetim.js"' in sayfa
+    assert "MutationObserver" not in sayfa and "data-tasma" not in sayfa, "the inline check block is gone"
+    assert "denetimKur();" in sayfa
+    assert re.search(r'class="o-logo"[^>]*data-denetim-logo', sayfa)
+    assert re.search(r'id="sahneler"[^>]*data-denetim-sahne', sayfa)
+
+
+def test_checker_takes_any_page(tmp_path):
+    import shutil
+    import sys
+    import pytest
+    sys.path.insert(0, str(BRAND))
+    import denetle
+    ek = denetle._argumanlar(["cikti", "--sayfa", "a/index.html", "--sayfa", "b/index.html"])
+    assert [str(x) for x in ek.sayfa] == ["a/index.html", "b/index.html"]
+    assert denetle._argumanlar(["cikti"]).sayfa is None
+    if denetle.chrome_yolu() is None:
+        pytest.skip("Chrome is not installed")
+    kopya = tmp_path / "ornek"
+    shutil.copytree(BRAND / "ornek", kopya)
+    shutil.copytree(BRAND / "js", tmp_path / "js")
+    shutil.copytree(BRAND / "css", tmp_path / "css")
+    assert denetle.tasma_var_mi(kopya / "index.html", 1280) is False

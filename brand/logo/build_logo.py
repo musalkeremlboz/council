@@ -9,7 +9,7 @@ from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.ttLib import TTFont
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from amblem import WAVE, amblem_svg  # noqa: E402
+from amblem import WAVE, amblem_svg, satir_ici_logo  # noqa: E402
 
 HERE = pathlib.Path(__file__).parent
 FONT = HERE.parent / "font" / "CouncilHalka.ttf"
@@ -48,7 +48,11 @@ def main(out=HERE):
     for suffix, ink, accent in (("", INK, KOR), ("-koyu", PAPER, KOR), ("-tek-renk", INK, INK)):
         (out / f"council-amblem{suffix}.svg").write_text(svg(400, emblem(ink, accent, "kesik"), "COUNCIL"))
         word = (f'<g fill="{ink}" transform="translate({400 + GAP} 298) scale({SCALE} -{SCALE})">{letters}</g>')
-        (out / f"council-logo{suffix}.svg").write_text(svg(total, emblem(ink, accent, "kesik") + word, "COUNCIL"))
+        logo = svg(total, emblem(ink, accent, "kesik") + word, "COUNCIL")
+        (out / f"council-logo{suffix}.svg").write_text(logo)
+        if not suffix:
+            # The header logo as the pages carry it: token colours, data-kur marks for yazi-kur.js.
+            (out / "council-logo-kur.html").write_text(satir_ici_logo(logo) + "\n")
     for suffix, ink, accent in (("", INK, KOR), ("-koyu", PAPER, KOR)):
         (out / f"council-amblem-kasa{suffix}.svg").write_text(svg(400, amblem_svg("kasa", ink, accent, "kesik"), "COUNCIL Kasa"))
     favicon = (
