@@ -53,3 +53,30 @@ def test_no_generated_files_written(tmp_path):
     assert not (tmp_path / "project/manifest.json").exists()
     assert not (tmp_path / "project/api").exists()
     assert all(p.is_file() for p in yazilan)
+
+
+def _adlar(o):
+    if isinstance(o, dict):
+        if isinstance(o.get("name"), str) and "value" in o:
+            yield o
+        for v in o.values():
+            yield from _adlar(v)
+    elif isinstance(o, list):
+        for v in o:
+            yield from _adlar(v)
+
+
+def test_preview_css_variables_are_defined(tmp_path):
+    import re
+    _yaz(tmp_path)
+    tokenlar = {"--" + t["name"] for t in _adlar(json.loads((BRAND / "tokens.json").read_text(encoding="utf-8")))}
+    css = (tmp_path / "project/components/bundle.css").read_text(encoding="utf-8")
+    # --u ve --s sahne öğelerinde satır içi verilir (sahne betiği/işaretleme), CSS içinde tanımlı değildir
+    tanimli = tokenlar | {"--u", "--s"} | set(re.findall(r"(--[\w-]+)\s*:", css))
+    kullanilan = {}
+    dosyalar = list((tmp_path / "project/components").glob("*/preview.html")) + [tmp_path / "project/components/bundle.css"]
+    for p in dosyalar:
+        for v in re.findall(r"var\((--[\w-]+)", p.read_text(encoding="utf-8")):
+            kullanilan.setdefault(v, p.name)
+    eksik = {v: p for v, p in kullanilan.items() if v not in tanimli}
+    assert not eksik, eksik

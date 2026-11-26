@@ -47,7 +47,7 @@ BILESENLER = {
               f'<span class="c-rozet c-rozet--hata">{D.format("hata")} Hata</span>'
               f'<span class="c-rozet c-rozet--kor">{D.format("hafizada")} Hafızada</span></p>'),
     "Durum": ("Durum", 120, "Sekiz piksellik durum işareti. Açık C hazır, dönen C çalışıyor, tam O tamam, kor O hafızaya yazıldı, yarım halka hata.",
-              '<p style="display:flex;gap:var(--ara-5);flex-wrap:wrap;align-items:center">'
+              '<p style="display:flex;gap:var(--ara-4);flex-wrap:wrap;align-items:center">'
               + "".join(f'<span>{D.format(d)} {d}</span>' for d in ("bekliyor", "calisiyor", "tamam", "hafizada", "hata"))
               + '</p>'),
     "Halka": ("İlerleme", 140, "Dairesel ilerleme. Uçları düz, çember pathLength=100 ile çizilir.",
@@ -67,7 +67,7 @@ BILESENLER = {
              '<div class="c-menu" data-acik style="max-inline-size:220px;padding:var(--ara-3)">'
              '<p>Yeniden adlandır</p><p>Taşı</p><p>Sil</p></div>'),
     "Secim": ("Girdi", 140, "İşaret kutusu kare, radyo halka biçimindedir.",
-              '<p style="display:flex;gap:var(--ara-5);flex-wrap:wrap">'
+              '<p style="display:flex;gap:var(--ara-4);flex-wrap:wrap">'
               '<label><input type="checkbox" class="c-isaret" checked> Hatırlat</label>'
               '<label><input type="radio" name="r" class="c-radyo" checked> Günlük</label>'
               '<label><input type="radio" name="r" class="c-radyo"> Haftalık</label></p>'),
@@ -88,7 +88,7 @@ def _onizleme(ad: str, grup: str, yukseklik: int, govde: str) -> str:
     return (f'<!-- @dsCard group="{grup}" height={yukseklik} -->\n'
             '<!doctype html>\n<html lang="tr"><head><meta charset="utf-8">'
             f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{ad}</title></head>\n'
-            f'<body style="margin:0;padding:var(--ara-4);background:var(--zemin);color:var(--murekkep);font-family:var(--font-govde)">\n{govde}\n</body></html>\n')
+            f'<body style="margin:0;padding:var(--ara-4);background:var(--zemin);color:var(--murekkep);font-family:var(--font-sans)">\n{govde}\n</body></html>\n')
 
 
 def yaz(hedef: Path, index: dict, zaman: str | None = None) -> list[Path]:
