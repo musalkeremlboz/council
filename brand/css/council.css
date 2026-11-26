@@ -154,6 +154,8 @@ body {
   flex: none;
   inline-size: 0;
   block-size: 0;
+  /* boşta sıfır boyutlu öğe gap'i yemesin: etiket ortada kalır */
+  margin-inline-end: calc(var(--ara-3) * -1);
   box-sizing: border-box;
   border: 0 solid currentColor;
   border-right-color: transparent;
@@ -163,6 +165,7 @@ body {
 .c-dugme[aria-busy="true"] .c-dugme__halka {
   inline-size: 16px;
   block-size: 16px;
+  margin-inline-end: 0;
   border-width: 2px;
   animation: c-dugme-don 900ms linear infinite;
 }
@@ -171,6 +174,7 @@ body {
 .c-dugme[data-durum="hafizada"] .c-dugme__halka {
   inline-size: 8px;
   block-size: 8px;
+  margin-inline-end: 0;
   border: 0;
   background: var(--kor);
   animation: none;
@@ -493,4 +497,5 @@ textarea.c-alan__giris { height: auto; min-height: 96px; padding-block: var(--ar
   .c-halka__iz { stroke: GrayText; }
   .c-halka__dolu { stroke: CanvasText; }
   .c-isaret::before, .c-radyo::before { border-color: CanvasText; }
+  .c-radyo:checked::after { background: CanvasText; forced-color-adjust: none; }
 }

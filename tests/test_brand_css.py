@@ -172,3 +172,15 @@ def test_hiding_only_under_js():
     for s, b in rules(CSS):
         if hide.search(n(b)):
             assert all(p.strip().startswith(".js ") or p.strip() == "[hidden]" for p in s.split(",")), s
+
+
+def test_idle_button_ring_takes_no_gap():
+    idle = "".join(body_of(".c-dugme__halka"))
+    assert "margin-inline-end:calc(var(--ara-3)*-1)" in idle.replace(" ", "")
+    for sel in ('.c-dugme[aria-busy="true"] .c-dugme__halka', '.c-dugme[data-durum="hafizada"] .c-dugme__halka'):
+        assert "margin-inline-end:0" in "".join(body_of(sel)).replace(" ", "")
+
+
+def test_checked_radio_visible_in_forced_colors():
+    fc = CSS[CSS.index("@media (forced-colors: active)", CSS.index(".c-radyo:checked::after")):]
+    assert re.search(r"\.c-radyo:checked::after\s*\{[^}]*background:\s*CanvasText", fc)
