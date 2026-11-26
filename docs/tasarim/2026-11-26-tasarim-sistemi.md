@@ -1,6 +1,6 @@
 # COUNCIL tasarım sistemi 0.2
 
-**Durum:** onaylandı (2026-11-26 02:38). Kod yazılmadı.
+**Durum:** onaylandı (2026-11-26 02:38), yapıldı (2026-11-26 10:30; `cf45f3b..a385dc5`, main'e yerelde birleştirildi, GitHub'a gönderilmedi).
 **Kaynak:** proje sahibinin istekleri ve kararları (2026-11-26 00:52 – 02:32). Görünüş ve hareket, sahibin onayladığı denemelere dayanır; denemelerin kopyaları `2026-11-26-tasarim-sistemi-ekler/` klasöründedir ve bu belge her birini ayrıca yazıyla anlatır.
 **Önceki sürüm:** Tasarım sistemi 0.1 (2026-11-17). claude.ai'de özel bir tasarım sistemi sayfası olarak yayınlandı; onaylanmadı. Bu belge 0.1'in yerini alır.
 
