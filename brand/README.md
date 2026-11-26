@@ -1,6 +1,6 @@
 # COUNCIL marka kitabı 0.2
 
-Bu klasör tasarım sisteminin tek kaynağıdır. Panel, site ve ileride Kasa aynı dosyaları kullanır. Hiçbir değer iki yerde tutulmaz. Her kural, uyguladığı değerin adını yanında taşır.
+Bu klasör tasarım sisteminin tek kaynağıdır. Panel, site ve ileride Kasa aynı dosyaları kullanır. Hiçbir değer iki yerde tutulmaz. Renk, yazı, boşluk, köşe ve hareket kuralları değerin adını yanında taşır. Bileşen ölçüleri (Tek Kesik boyları, düğme yazı boyu, 2 piksel odak çizgisi, 6 piksel şerit ve işaret) token değildir; spec sabitidir, rakamıyla yazılır ve `brand/css/council.css` içinde durur.
 
 ## Temel fikir
 
@@ -142,12 +142,28 @@ Depo kökünden:
 ```
 python brand/build.py                    # tokens.json -> brand/css/tokens.css, karşıtlığı denetler
 python brand/simge/build_simge.py        # simgeler
-python brand/font/build_font.py          # Council Halka (fontTools, skia-pathops, brotli gerekir)
-python brand/logo/build_logo.py          # logo SVG'leri
-python docs/assets/build.py              # README görselleri
+python brand/logo/build_logo.py          # logo SVG'leri (font sanal ortamının python'u gerekir)
+python brand/font/build_font.py          # Council Halka (font sanal ortamının python'u gerekir)
+python docs/assets/build.py              # README görselleri (font sanal ortamının python'u gerekir)
 ```
 
-Yazı tipi araçları kalıcı kurulmaz; geçici bir sanal ortamda çalışır (`~/.cache/council-brand-venv`). Hiçbir üretim komutu çıktıyı değiştirmemelidir: değiştiriyorsa kaynak ile dosya ayrışmıştır.
+Yazı tipi araçları (fontTools, skia-pathops, brotli) kalıcı kurulmaz; geçici bir sanal ortamda çalışır. Bir kez kurulur:
+
+```
+python3 -m venv ~/.cache/council-brand-venv
+~/.cache/council-brand-venv/bin/pip install fonttools skia-pathops brotli pytest
+```
+
+Font, logo ve README görseli komutları bu ortamın python'uyla çalıştırılır:
+
+```
+~/.cache/council-brand-venv/bin/python brand/font/build_font.py
+~/.cache/council-brand-venv/bin/python brand/logo/build_logo.py
+~/.cache/council-brand-venv/bin/python docs/assets/build.py
+~/.cache/council-brand-venv/bin/python -m pytest tests/test_brand_font.py tests/test_brand_logo.py -q
+```
+
+Üretim komutları çıktıyı değiştirmemelidir: değiştiriyorsa kaynak ile dosya ayrışmıştır. Tek istisna `build_font.py`: `CouncilHalka.ttf` ve `.woff2` her üretimde yeniden yazılır, çünkü `head` tablosundaki değişiklik zamanı güncellenir. Konturlar, ölçümler ve öteki tablolar aynı kalır. Yazı tipinde glif değişikliği yoksa bu iki dosya depoya geri alınır (`git checkout brand/font/CouncilHalka.ttf brand/font/CouncilHalka.woff2`). Logo SVG'leri her seferinde birebir aynı çıkar.
 
 ## Nasıl denetlenir
 
