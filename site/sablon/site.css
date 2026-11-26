@@ -86,10 +86,10 @@ img, svg { max-inline-size: 100%; }
 .s-acilis__tanim { margin: 0; max-inline-size: 44ch; }
 @media (max-width: 900px) {
   .s-acilis { grid-template-columns: minmax(0, 1fr); }
-  .s-kur { max-inline-size: 760px; }
+  .s-yonerge { max-inline-size: 760px; }
 }
-.s-kur__onu { margin: 0 0 var(--ara-3); color: var(--murekkep-2); }
-.s-kur pre {
+.s-yonerge__onu { margin: 0 0 var(--ara-3); color: var(--murekkep-2); }
+.s-yonerge pre {
   margin: 0 0 var(--ara-6);
   padding: var(--ara-4);
   background: var(--yuzey);
@@ -99,9 +99,9 @@ img, svg { max-inline-size: 100%; }
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.s-kur code { font: inherit; }
-.s-kur__eylem { display: flex; flex-wrap: wrap; gap: var(--ara-3); }
-.s-kur__eylem [hidden] { display: none; }
+.s-yonerge code { font: inherit; }
+.s-yonerge__eylem { display: flex; flex-wrap: wrap; gap: var(--ara-3); }
+.s-yonerge__eylem [hidden] { display: none; }
 
 /* Home: sections (ruled, no boxes) */
 .s-bolum { padding-block-start: var(--ara-16); }

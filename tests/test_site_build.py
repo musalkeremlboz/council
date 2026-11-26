@@ -409,3 +409,21 @@ def test_unknown_placeholder_stops_build():
     assert build._doldur("Öteki {yolda} özellik", {"yolda": 4}) == "Öteki 4 özellik"
     with pytest.raises(SystemExit, match=r"\{yok\}"):
         build._doldur("{yok}", {"yolda": 4})
+
+
+def test_site_does_not_reuse_brand_state_classes():
+    # brand JS adds these at run time (s-kur/s-kurulum during the identity moment,
+    # s-acik/s-etkin/...); a site class with the same name would pick up brand rules
+    # and push site rules onto brand elements.
+    durum = set()
+    for js in (KOK / "brand" / "js").rglob("*.js"):
+        for cagri in re.findall(r"classList\.(?:add|toggle|remove)\(([^)]*)\)", js.read_text(encoding="utf-8")):
+            durum.update(re.findall(r'"(s-[a-z0-9_-]+)"', cagri))
+    assert {"s-kur", "s-kurulum"} <= durum
+    sablon = KOK / "site" / "sablon"
+    for dosya in sorted(sablon.iterdir()):
+        if dosya.suffix not in {".css", ".html", ".js"}:
+            continue
+        metin = dosya.read_text(encoding="utf-8")
+        for ad in sorted(durum):
+            assert not re.search(r"(?<![\w-])\.?" + re.escape(ad) + r"(?![\w-])", metin), f"{dosya.name}: {ad}"
