@@ -207,3 +207,11 @@ def test_menu_opens_with_cut():
     assert "clip-path:polygon(" in opened
     rm = "".join(n(b) for blk in blocks(CSS, "(prefers-reduced-motion") for s, b in rules(blk) if ".c-menu" in s)
     assert "transition:0ms" in rm
+
+
+def test_kor_marks_not_kor_on_kor():
+    """Kor dolgu üstündeki durum işareti kor olamaz: düğmede ve rozette kor-ustu."""
+    dugme = "".join(body_of('.c-dugme--kor[data-durum="hafizada"] .c-dugme__halka'))
+    assert "background:var(--kor-ustu)" in dugme
+    rozet = "".join(body_of('.c-rozet--kor .c-durum[data-durum="hafizada"]'))
+    assert "border-color:var(--kor-ustu)" in rozet

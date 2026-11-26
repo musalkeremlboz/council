@@ -88,6 +88,39 @@ def test_kerning_pairs():
         assert kern(*pair) < 0, pair
 
 
+def test_kerned_pairs_do_not_collide():
+    """After advance + kern, the right glyph's ink must not reach into the left glyph's ink."""
+    def spans(name):
+        """Per 10-unit row: (min x, max x) of the glyph's ink, from its filled outline."""
+        import pathops
+        path = pathops.Path()
+        GLYPHS[name].draw(path.getPen())
+        rows = {}
+        for y in range(-100, 1100, 10):
+            xs = []
+            for x in range(-100, 1400, 5):
+                if path.contains((x, y)):
+                    xs.append(x)
+            if xs:
+                rows[y] = (min(xs), max(xs))
+        return rows
+
+    bad = []
+    seen = set()
+    gpos_pairs = [(a, b) for (a, b) in build_font.KERN if a in CMAP.values() and b in CMAP.values()]
+    for a, b in gpos_pairs:
+        if (a, b) in seen:
+            continue
+        seen.add((a, b))
+        sa, sb = spans(a), spans(b)
+        shift = HMTX[a][0] + kern(a, b)
+        for y in set(sa) & set(sb):
+            if shift + sb[y][0] <= sa[y][1]:
+                bad.append((a, b, y))
+                break
+    assert not bad, bad
+
+
 def test_version():
     assert "0.2" in FONT["name"].getDebugName(5)
 

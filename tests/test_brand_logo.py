@@ -40,8 +40,19 @@ def test_kasa_keyhole_geometry():
     hafiza = amblem.amblem_svg("hafiza", INK, KOR, "kesik")
     assert 'cx="200" cy="182" r="34"' in kasa
     assert 'x="186" y="182" width="28" height="76"' in kasa
-    for part in (r'<circle cx="200" cy="200" r="112"[^>]*/>', r'<path[^>]*rotate\(45\)[^>]*/>'):
-        assert re.search(part, kasa).group(0) == re.search(part, hafiza).group(0)
+    # The C is identical for every product.
+    part = r'<path[^>]*rotate\(45\)[^>]*/>'
+    assert re.search(part, kasa).group(0) == re.search(part, hafiza).group(0)
+
+
+def test_kasa_o_is_a_full_ring():
+    amblem = _load("amblem")
+    kasa = amblem.amblem_svg("kasa", INK, KOR, "kesik")
+    o = re.search(r'<circle cx="200" cy="200" r="112"[^>]*/>', kasa).group(0)
+    assert "mask" not in o
+    assert "<mask" not in kasa
+    assert "mask=" not in kasa
+    assert "<mask" in amblem.amblem_svg("hafiza", INK, KOR, "kesik")
 
 
 def test_marker_icon():

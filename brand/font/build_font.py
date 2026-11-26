@@ -285,7 +285,7 @@ KERN: dict[tuple[str, str], int] = {
                                 "G": -40, "Q": -40, "U": -40, "quotesingle": -100, "quotedbl": -100}.items()},
     ("T", "A"): -50, ("A", "T"): -50, ("F", "A"): -50, ("P", "A"): -40, ("V", "A"): -30, ("A", "V"): -30,
     **{(a, b): -40 for a in "TX" for b in "OCGQ"}, **{("K", b): -60 for b in "OCGQ"},
-    **{(a, b): -40 for a in "OQ" for b in "TX"},
+    **{(a, b): -40 for a in "O" for b in "TX"}, ("Q", "T"): -40, ("Q", "X"): -20,
     **{("T", b): -80 for b in "acegoqs"}, **{("T", b): -60 for b in "mnpruvwxyz"},
     **{(a, b): -50 for a in "FV" for b in "aceo"}, **{("P", b): -40 for b in "aceo"},
     **{("Y", b): -40 for b in "aceo"}, ("V", "u"): -30,

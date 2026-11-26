@@ -180,6 +180,9 @@ body {
   animation: none;
 }
 
+/* Kor düğmede kor O görünmez olur: işaret kor-ustu */
+.c-dugme--kor[data-durum="hafizada"] .c-dugme__halka { background: var(--kor-ustu); }
+
 /* Devre dışı: düz kare */
 .c-dugme:is(:disabled, [aria-disabled="true"]) {
   --k0: 0px;
@@ -398,6 +401,8 @@ textarea.c-alan__giris { height: auto; min-height: 96px; padding-block: var(--ar
 .c-rozet--uyari { border-color: var(--uyari); --isaret: var(--uyari); }
 .c-rozet--hata { border-color: var(--hata); --isaret: var(--hata); }
 .c-rozet .c-durum { color: var(--isaret); }
+/* Kor rozette kor O kor zeminde kaybolur: işaret kor-ustu */
+.c-rozet--kor .c-durum[data-durum="hafizada"] { border-color: var(--kor-ustu); }
 
 /* ===== Durum işareti: 8px. Açık C bekliyor, dönen C çalışıyor, tam O tamam, kor O hafızada, yarım halka hata ===== */
 @keyframes c-durum-don {

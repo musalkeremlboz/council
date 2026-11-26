@@ -2,7 +2,7 @@
 
 WAVE = "M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0"
 
-# Marker markup, {m} is the ink colour. The wave also masks the O for every product.
+# Marker markup, {m} is the ink colour. Only the hafiza wave masks the O; kasa keeps a full ring.
 ISARETLER = {
     "hafiza": f'<path transform="translate(200 200)" stroke="{{m}}" d="{WAVE}"/>',
     "kasa": ('<circle cx="200" cy="182" r="34" fill="{m}" stroke="none"/>'
@@ -18,12 +18,16 @@ _SIMGE = {
 
 def amblem_svg(isaret, murekkep, vurgu, uid):
     """Inner SVG markup (no <svg> wrapper) for a 400x400 box."""
-    return (
+    maske = isaret == "hafiza"
+    defs = (
         f'<defs><mask id="{uid}" maskUnits="userSpaceOnUse" x="0" y="0" width="400" height="400">'
         f'<rect width="400" height="400" fill="#fff"/>'
         f'<path transform="translate(200 200)" d="{WAVE}" fill="none" stroke="#000" stroke-width="48"/></mask></defs>'
+    ) if maske else ""
+    return (
+        f'{defs}'
         f'<g fill="none" stroke-width="28">'
-        f'<circle cx="200" cy="200" r="112" stroke="{vurgu}" mask="url(#{uid})"/>'
+        f'<circle cx="200" cy="200" r="112" stroke="{vurgu}"' + (f' mask="url(#{uid})"' if maske else "") + '/>'
         f'<path transform="translate(200 200) rotate(45)" stroke="{murekkep}" d="M168 0A168 168 0 1 1 0 -168"/>'
         f'{ISARETLER[isaret].format(m=murekkep)}</g>'
     )
