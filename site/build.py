@@ -13,7 +13,6 @@ import importlib.util
 import json
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import tomllib
@@ -30,7 +29,6 @@ CIKTI = SITE / "cikti"
 SUNUCU = KOK / "council" / "server.py"
 OZELLIKLER = BRAND / "js" / "ozellikler.json"
 SAHNE_METIN = BRAND / "js" / "metin.json"
-PARCA = BRAND / "js" / "parca.mjs"
 LOGO_KUR = BRAND / "logo" / "council-logo-kur.html"
 
 SITE_URL = "https://council.systems"
@@ -39,11 +37,9 @@ SAYFALAR = {"ana": {"tr": "", "en": "en/"}, "hafiza": {"tr": "hafiza/", "en": "e
 GITHUB = "https://github.com/musalkeremlboz/council"
 OGRENME_ARACLARI = ("council_rule", "council_skill", "council_skill_feedback", "council_unlearn")
 OZET_YER = "__ozet__"   # stands for the asset hash until the assets are copied
-YARAR_SIMGELERI = ("hafiza", "ogrenme", "telefon", "not")   # one icon per "what it does" item, in order
 YARDIMCI_DURUMLARI = {"tam": "tam", "kullanımda": "kullanimda", "denenmedi": "denenmedi"}   # veri/yardimcilar.json -> data-durum, metin key
 KUR_UNIX = "curl -fsSL https://raw.githubusercontent.com/musalkeremlboz/council/main/install.sh | sh"
 KUR_WINDOWS = "irm https://raw.githubusercontent.com/musalkeremlboz/council/main/install.ps1 | iex"
-TUR_OZELLIK = {2: 0, 3: 1, 4: 2}   # Kurul turu panel index -> feature index whose status its label shows
 
 
 def _brand_denetle():
@@ -142,10 +138,10 @@ def _varliklar() -> list[tuple[str, Path]]:
         ("font", BRAND / "font", ["*.woff2", "*.ttf", "OFL-*.txt"]),
         ("logo", BRAND / "logo", ["*.svg", "*.png"]),
         ("simge", BRAND / "simge", ["*.svg"]),
-        ("js/sahne", BRAND / "js" / "sahne", ["*.js"]),
-        ("js", BRAND / "js", ["ozellikler.json", "metin.json", "denetim.js"]),
-        ("css", SABLON, ["site.css"]),
-        ("js", SABLON, ["site.js"]),
+        ("js/sahne", BRAND / "js" / "sahne", ["ortak.js", "yazi-kur.js"]),   # the identity moment; the other scenes are not on the site
+        ("js", BRAND / "js", ["denetim.js"]),
+        ("css", SABLON, ["site.css", "masa.css"]),   # masa.css is loaded by the home page only
+        ("js", SABLON, ["site.js", "masa.js"]),      # masa.js is imported by site.js where the canvas is
     ]
     out = []
     for hedef, kaynak, desenler in secim:
@@ -273,7 +269,7 @@ def sayfa_yaz(ad: str, dil: str, govde: str, m: dict, ozet: str, once: str = "")
     ) + f'\n<link rel="alternate" hreflang="x-default" href="{SITE_URL}/{SAYFALAR[ad][DILLER[0]]}">'
     github = f'<a href="{GITHUB}">{_e(s["gezinme"]["github"])}</a>'
     dil_bag = f'<a href="{_bag(yol, SAYFALAR[ad][diger])}" hreflang="{diger}" lang="{diger}">{_e(s["digerDil"])}</a>'
-    ana = False   # becomes `ad == "ana"` with the Kurul Masası home page
+    ana = ad == "ana"
     alt = "" if ana else (
         '<footer class="s-alt">\n  <div class="s-alt__ic">\n'
         f'    <a class="s-alt__logo" href="{_bag(yol, SAYFALAR["ana"][dil])}"><img class="ia" src="{varlik}logo/council-amblem.svg" alt="" width="24" height="24">'
@@ -291,6 +287,7 @@ def sayfa_yaz(ad: str, dil: str, govde: str, m: dict, ozet: str, once: str = "")
         og_gorsel=f"{SITE_URL}/paylas-{dil}.png",
         og_yerel=_e(s["ogYerel"]),
         varlik=varlik,
+        stiller=f'<link rel="stylesheet" href="{varlik}css/masa.css">\n' if ana else "",
         atla=_e(s["atla"]),
         ust=ust_yap(ad, dil, m, ozet),
         once=once,
@@ -309,89 +306,115 @@ def _doldur(metin: str, degerler: dict) -> str:
     return re.sub(r"\{(\w+)\}", koy, metin)
 
 
-def _buyuk(metin: str, dil: str) -> str:
-    """Upper case; Turkish i becomes İ."""
-    return (metin.replace("i", "İ") if dil == "tr" else metin).upper()
+def _vurgu(metin: str) -> str:
+    """Escaped heading text: *x* becomes <em>x</em>, a line break becomes <br>."""
+    return re.sub(r"\*([^*]+)\*", r"<em>\1</em>", _e(metin)).replace("\n", "<br>")
 
 
-def sahne_parcalari(dil: str) -> dict[str, str]:
-    """The Çizgi ve söz figures as static SVG ({"cizgi", "soz"}), from node brand/js/parca.mjs <dil>."""
-    try:
-        r = subprocess.run(["node", str(PARCA), dil], capture_output=True, text=True, encoding="utf-8", check=True)
-    except FileNotFoundError:
-        raise SystemExit("parca: node bulunamadı (Çizgi ve söz sahnesinin durağan SVG'leri için gerekir)") from None
-    except subprocess.CalledProcessError as hata:
-        raise SystemExit(f"parca: {hata.stderr.strip()}") from None
-    return json.loads(r.stdout)["cizgiSoz"]
+def _slogan_satirlari(slogan: str) -> str:
+    """The h1 as three block lines (spans joined by spaces, so the text reads as the slogan): up to the comma,
+    then the last word apart, then the word before it ("Tek hafıza," / "her" / "yardımcı.")."""
+    bas, virgul, son = slogan.partition(", ")
+    ilk, _, sonu = son.rpartition(" ")
+    parcalar = [bas + virgul.strip(), ilk, sonu]
+    if not virgul or not ilk:
+        raise SystemExit(f"slogan: üç satıra bölünemiyor: {slogan!r}")
+    return " ".join(f'<span{s}>{_e(p)}</span>' for s, p in zip(("", ' class="t2"', ' class="t3"'), parcalar))
 
 
-def _simge(ad: str) -> str:
-    """A brand/simge icon, inline (it draws in currentColor and is hidden from assistive technology)."""
-    svg = (BRAND / "simge" / f"{ad}.svg").read_text(encoding="utf-8").strip()
-    return svg.replace('<svg xmlns="http://www.w3.org/2000/svg" ', '<svg class="s-yarar__simge" focusable="false" ', 1)
+def yol_haritasi(dil: str, m: dict) -> tuple[list[str], str]:
+    """Roadmap rows and the per-feature statuses of the ring. Named features (brand/js/ozellikler.json) get a row of their
+    own, a run of unnamed ones one row ("3–6 / Four features"); statuses and names come from the feature list."""
+    y, sahne = m["ana"]["yol"], _json(SAHNE_METIN)[dil]["kurulTuru"]["durum"]
+    oz = ozellikler(dil)
+    cumleler = iter(y["cumleler"])
+    satirlar, i = [], 0
+    while i < len(oz):
+        n = 1
+        if oz[i]["ad"] is None:
+            while i + n < len(oz) and oz[i + n]["ad"] is None and oz[i + n]["durum"] == oz[i]["durum"]:
+                n += 1
+            sayi = f"{i + 1}–{i + n}" if n > 1 else f"{i + 1}/{len(oz)}"
+            ad = _doldur(y["yolda"]["baslik"], {"sayi": y["sayilar"][n]})
+            cumle = y["yolda"]["cumle"]
+        else:
+            sayi, ad = f"{i + 1}/{len(oz)}", oz[i]["ad"]
+            cumle = next(cumleler, oz[i]["aciklama"])
+        durum = oz[i]["durum"]
+        sinif = {"tamam": " rozet--tamam", "denemede": " rozet--denemede"}.get(durum, "")
+        satirlar.append(
+            f'      <li data-sira style="--sira:{3 + len(satirlar)}" data-i="{i}" data-n="{n}"><span class="n">{_e(sayi)}</span>'
+            f'<h3>{_e(ad)}<span class="rozet{sinif}">{_e(sahne[durum].capitalize())}</span></h3><p>{_e(cumle)}</p></li>')
+        i += n
+    return satirlar, ",".join(o["durum"] for o in oz)
+
+
+KONUSMA = (("a", "sen"), ("a", "sistem"), ("a", "yazdi"), ("a", "yardimci"),
+           ("b", "sistem"), ("b", "sen"), ("b", "sistem"), ("b", "yardimci"))   # Canlı: which box and kind each line is
+
+
+def ana_once(dil: str, m: dict, ozet: str) -> str:
+    """Home page markup before <main>: the particle canvas, the dot grid and the row of five seats (a tablist; the
+    section names are the seats' hidden text)."""
+    b = m["ana"]["bolumler"]
+    if len(b["adlar"]) != len(BOLUMLER):
+        raise SystemExit(f"metin: {dil} ana.bolumler.adlar {len(BOLUMLER)} ad olmalı")
+    yerler = ((48, 66), (104, 47), (160, 41), (216, 47), (272, 66))   # seats on the arc: x, y in a 320 x 104 box
+    koltuklar = "\n".join(
+        f'    <button class="koltuk" role="tab" id="r{i + 1}" aria-controls="{k}" aria-selected="{"true" if i == 0 else "false"}"'
+        f'{"" if i == 0 else " tabindex=\"-1\""} style="--x:{x}px;--y:{y}px">0{i + 1}<span class="gizli"> {_e(ad)}</span></button>'
+        for i, (k, ad, (x, y)) in enumerate(zip(BOLUMLER, b["adlar"], yerler, strict=True)))
+    return (f'<canvas id="alan" data-denetim-sahne aria-hidden="true"></canvas>\n<div class="izgara" aria-hidden="true"></div>\n\n'
+            f'<nav class="masa" aria-label="{_e(b["etiket"])}">\n'
+            f'  <svg class="masa__kenar" viewBox="0 0 320 104" aria-hidden="true"><path d="M20 84 Q160 -6 300 84"/>'
+            f'<path class="iz" d="M20 84 Q160 -6 300 84" pathLength="100"/></svg>\n'
+            f'  <div role="tablist" aria-label="{_e(b["etiket"])}" aria-orientation="horizontal">\n{koltuklar}\n  </div>\n'
+            f'  <p class="masa__ad" aria-hidden="true"><b id="masa-ad">{_e(b["adlar"][0])}</b></p>\n</nav>\n\n')
+
+
+BOLUMLER = ("giris", "canli", "nasil", "kurul", "yardimcilar")   # section ids, in seat order (language-neutral anchors)
 
 
 def ana_govde(dil: str, m: dict, ozet: str) -> str:
-    """Home body (sablon/ana.html): hero, Çizgi ve söz, what it does, Kurul turu, products strip."""
-    yol = SAYFALAR["ana"][dil]
-    varlik = f"{_kok(yol)}varlik/{ozet}/"
-    a, kur, cs, kurul = m["ana"], m["ana"]["kurulum"], m["ana"]["cizgiSoz"], m["kurul"]
-    sahne = _json(SAHNE_METIN)[dil]
-    oz = ozellikler(dil)
-    sayilar = {d: sum(o["durum"] == d for o in oz) for d in sahne["kurulTuru"]["durum"]}
+    """Home body (sablon/ana.html): the five sections of the Kurul Masası; the rows come from the feature list
+    (brand/js/ozellikler.json), the helper list (veri/yardimcilar.json) and the counts (pyproject.toml, council/server.py)."""
+    varlik = f"{_kok(SAYFALAR['ana'][dil])}varlik/{ozet}/"
+    kur, c, nasil, yol, yar = (m["ana"][k] for k in ("kurulum", "canli", "nasil", "yol", "yardimcilar"))
     temel, ogrenme = arac_sayilari()
-    parca = sahne_parcalari(dil)
-
-    maddeler = "\n".join(
-        f'    <li>{_simge(simge)}<h3 class="yazi-govde-l">{_e(md["baslik"])}</h3><p class="yazi-govde">{_e(md["cumle"])}</p></li>'
-        for simge, md in zip(YARAR_SIMGELERI, a["yarar"]["maddeler"], strict=True))
-    paneller = []
-    for i, p in enumerate(kurul["paneller"]):
-        etiket = p["etiket"]
-        if i in TUR_OZELLIK:
-            etiket += " · " + _buyuk(sahne["kurulTuru"]["durum"][oz[TUR_OZELLIK[i]]["durum"]], dil)
-        paneller.append(f'<article class="s-tur__panel"><p class="yazi-etiket">{_e(etiket)}</p>'
-                        f'<h3 class="yazi-baslik-m">{_e(p["baslik"])}</h3>'
-                        f'<p class="yazi-govde-l">{_e(_doldur(p["govde"], sayilar))}</p></article>')
-    if len(paneller) != 6:
-        raise SystemExit(f"metin: {dil} kurul.paneller altı panel olmalı, {len(paneller)} var")
-    urunler = []
-    for u in _json(VERI / "urunler.json"):
-        metin = m["urunler"][u["anahtar"]]
-        urunler.append(
-            f'    <li class="s-urun"><span class="s-urun__amblem">'
-            f'<img class="ia" src="{varlik}logo/{u["amblem"]}.svg" alt="" width="64" height="64">'
-            f'<img class="ik" src="{varlik}logo/{u["amblem"]}-koyu.svg" alt="" width="64" height="64"></span>'
-            f'<div><h3 class="yazi-baslik-m"><a class="c-baglanti" href="{_bag(yol, SAYFALAR[u["sayfa"]][dil])}">'
-            f'{_e(metin["ad"])}</a></h3><p class="yazi-govde">{_e(metin["cumle"])}</p></div></li>')
-
+    satirlar_a, satirlar_b = [], []
+    if len(c["satirlar"]) != len(KONUSMA):
+        raise SystemExit(f"metin: {dil} ana.canli.satirlar {len(KONUSMA)} satır olmalı")
+    for (kutu, tur), metin in zip(KONUSMA, c["satirlar"], strict=True):
+        ad = f' data-ad="{_e(c["yardimci"])}"' if tur == "yardimci" else ""
+        (satirlar_a if kutu == "a" else satirlar_b).append(f'<p class="satir {tur}"{ad}>{_kod(metin)}</p>')
+    adimlar = "\n".join(
+        f'      <li data-sira style="--sira:{2 + i}" data-i="{i}"><span class="n">0{i + 1}</span>'
+        f'<h3>{_e(x["baslik"])}</h3><p>{_e(x["cumle"])}</p></li>' for i, x in enumerate(nasil["adimlar"]))
+    satirlar, durumlar = yol_haritasi(dil, m)
+    rozet = m["ana"]["yardimcilar"]["durum"]
+    yardimcilar_satirlari = "\n".join(
+        f'      <li data-sira style="--sira:{2 + i}"><span class="n">0{i + 1}</span><h3>{_e(o["ad"])}'
+        f'<span class="rozet{" rozet--tamam" if o["durum"] == "tam" else ""}" data-durum="{o["durum"]}">{_e(rozet[o["durum"]])}</span></h3>'
+        f'<p>{_e(o["destek"])}</p></li>' for i, o in enumerate(yardimcilar(dil)))
     return Template((SABLON / "ana.html").read_text(encoding="utf-8")).substitute(
         varlik=varlik,
-        slogan=_e(m["sayfalar"]["ana"]["h1"]),
-        tanim=_e(a["tanim"]),
-        kur_onu=_e(kur["onu"]),
-        kur_cumlesi=_e(kur["cumle"]),
-        kopyala=_e(kur["kopyala"]),
-        kopyalandi=_e(kur["kopyalandi"]),
-        secin=_e(kur["secin"]),
-        github=GITHUB,
-        cs_etiket=_e(cs["etiket"]),
-        cs_secici=_e(cs["secici"]),
-        cs_ad_cizgi=_e(cs["cizgi"]),
-        cs_ad_soz=_e(cs["soz"]),
-        cs_etiket_cizgi=_e(sahne["cizgiSoz"]["etiketCizgi"]),
-        cs_etiket_soz=_e(sahne["cizgiSoz"]["etiketSoz"]),
-        cs_cizgi=parca["cizgi"],
-        cs_soz=parca["soz"],
-        yarar_baslik=_e(a["yarar"]["baslik"]),
-        yarar_onu=_e(a["yarar"]["onu"]),
-        yarar_maddeler=maddeler,
-        kurul_baslik=_e(kurul["baslik"]),
-        kurul_gorsel=_e(kurul["gorsel"]),
-        kurul_paneller="\n".join(paneller),
-        kurul_son=_e(_doldur(kurul["son"], {"surum": surum(), "temel": temel, "ogrenme": ogrenme})),
-        urunler_baslik=_e(a["urunler"]),
-        urunler="\n".join(urunler),
+        etiket=_e(m["ana"]["etiket"]), surum=_e(_doldur(m["ana"]["surum"], {"surum": surum()})),
+        h1=_slogan_satirlari(m["sayfalar"]["ana"]["h1"]), tanim=_e(m["ana"]["tanim"]),
+        kur_cumlesi=_e(kur["cumle"]), kur_onu=_e(kur["onu"]), kopyala=_e(kur["kopyala"]), kopyalandi=_e(kur["kopyalandi"]),
+        secin=_e(kur["secin"]), komut=_e(kur["komut"]), unix_etiket=_e(kur["unix"]), windows_etiket=_e(kur["windows"]),
+        kur_unix=_e(KUR_UNIX), kur_windows=_e(KUR_WINDOWS), komut_kopyala=_e(kur["komutKopyala"]), komut_secin=_e(kur["komutSecin"]),
+        gerekenler=_e(kur["gerekenler"]),
+        canli_etiket=_e(c["etiket"]), canli_calisiyor=_e(c["calisiyor"]), canli_bitti=_e(c["bitti"]),
+        canli_baslik=_vurgu(c["baslik"]), telefon=_e(c["telefon"]), bilgisayar=_e(c["bilgisayar"]),
+        satirlar_a="\n".join(satirlar_a), satirlar_b="\n".join(satirlar_b),
+        canli_not=_e(c["not"]), yeniden=_e(c["yeniden"]),
+        nasil_etiket=_e(nasil["etiket"]), nasil_baslik=_vurgu(nasil["baslik"]), nasil_adimlar=adimlar,
+        yol_etiket=_e(yol["etiket"]), yol_baslik=_vurgu(yol["baslik"]), yol_onu=_e(yol["onu"]),
+        yol_durumlar=durumlar, yol_satirlari="\n".join(satirlar), yol_son_sira=3 + len(satirlar),
+        yol_bugun=_e(_doldur(yol["bugun"], {"surum": surum(), "temel": temel, "ogrenme": ogrenme})),
+        yardimcilar_etiket=_e(yar["etiket"]), yardimcilar_baslik=_vurgu(yar["baslik"]),
+        yardimcilar_satirlari=yardimcilar_satirlari, yardimcilar_son_sira=2 + len(yardimcilar(dil)),
+        lisans=_e(m["site"]["altbilgi"]["lisans"]),
     ).rstrip("\n")
 
 
@@ -518,9 +541,9 @@ def hafiza_govde(dil: str, m: dict, ozet: str) -> str:
     ).rstrip("\n")
 
 
-def govde_yap(ad: str, dil: str, m: dict, ozet: str) -> str:
-    """Page body: the home page (sablon/ana.html) or the Hafıza page (sablon/hafiza.html)."""
-    return (ana_govde if ad == "ana" else hafiza_govde)(dil, m, ozet)
+def govde_yap(ad: str, dil: str, m: dict, ozet: str) -> tuple[str, str]:
+    """(markup before <main>, body): the home page (sablon/ana.html) or the Hafıza page (sablon/hafiza.html)."""
+    return (ana_once(dil, m, ozet), ana_govde(dil, m, ozet)) if ad == "ana" else ("", hafiza_govde(dil, m, ozet))
 
 
 def sitemap() -> str:
@@ -589,8 +612,8 @@ def main(argv: list[str] | None = None) -> int:
     for dil in DILLER:
         ozellikler(dil)   # a named feature without this language stops the build
     arac_sayilari()
-    sayfalar = {(ad, dil): sayfa_yaz(ad, dil, govde_yap(ad, dil, metin[dil], OZET_YER), metin[dil], OZET_YER)
-                for ad in SAYFALAR for dil in DILLER}
+    sayfalar = {(ad, dil): sayfa_yaz(ad, dil, govde, metin[dil], OZET_YER, once)
+                for ad in SAYFALAR for dil in DILLER for once, govde in [govde_yap(ad, dil, metin[dil], OZET_YER)]}
     ozet = varlik_kopyala(hedef, glif_altkumesi(list(sayfalar.values())))
     for (ad, dil), icerik in sayfalar.items():
         yol = hedef / SAYFALAR[ad][dil] / "index.html"

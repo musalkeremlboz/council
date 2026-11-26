@@ -1,60 +1,73 @@
-<div class="s-acilis">
-  <h1 class="yazi-baslik-xl" data-yazi-kur data-glifler="${varlik}glifler.json">$slogan</h1>
-  <p class="s-acilis__tanim yazi-govde-l">$tanim</p>
-  <div class="s-yonerge">
-    <p class="s-yonerge__onu yazi-govde">$kur_onu</p>
-    <pre><code id="kur-cumlesi">$kur_cumlesi</code></pre>
-    <div class="s-yonerge__eylem">
-      <button type="button" class="c-dugme c-dugme--b c-dugme--kor" data-kopyala="kur-cumlesi" data-tamam="$kopyalandi" data-hata="$secin" aria-live="polite" hidden>$kopyala</button>
-      <a class="c-dugme c-dugme--b c-dugme--ikincil" href="$github">GitHub</a>
+<section class="sahne" id="giris" role="tabpanel" aria-labelledby="r1" data-bicim="amblem" data-acik>
+  <div class="ic">
+    <p class="kas" data-sira style="--sira:0">$etiket <b>· $surum</b></p>
+    <h1 class="dev" data-sira style="--sira:1">$h1</h1>
+    <p class="tanim" data-sira style="--sira:2">$tanim</p>
+    <div class="kur" data-sira style="--sira:3">
+      <pre><code id="kur-cumlesi">$kur_cumlesi</code></pre>
+      <div class="kur__alt"><button class="c-dugme c-dugme--kor" type="button" data-kopyala="kur-cumlesi" data-tamam="$kopyalandi" data-hata="$secin" aria-live="polite" hidden>$kopyala</button><p class="kur__not">$kur_onu</p></div>
+      <details class="kur__komut"><summary>$komut</summary>
+        <p class="kur__etiket" lang="en">$unix_etiket</p>
+        <div class="kur__satir"><pre><code id="kur-unix">$kur_unix</code></pre><button class="c-dugme c-dugme--k c-dugme--ikincil" type="button" data-kopyala="kur-unix" data-tamam="$kopyalandi" data-hata="$komut_secin" aria-live="polite" hidden>$komut_kopyala</button></div>
+        <p class="kur__etiket" lang="en">$windows_etiket</p>
+        <div class="kur__satir"><pre><code id="kur-windows">$kur_windows</code></pre><button class="c-dugme c-dugme--k c-dugme--ikincil" type="button" data-kopyala="kur-windows" data-tamam="$kopyalandi" data-hata="$komut_secin" aria-live="polite" hidden>$komut_kopyala</button></div>
+        <p class="kur__not">$gerekenler</p>
+      </details>
     </div>
   </div>
-</div>
+</section>
 
-<section id="cizgi-soz-bolum" data-denetim-sahne class="s-bolum s-bolum--cs" aria-label="$cs_etiket">
-  <div class="s-cs">
-    <figure class="s-cs__bicim" data-bicim="cizgi">
-      <div class="s-cs__amblem" role="img" aria-label="$cs_etiket_cizgi">$cs_cizgi</div>
-      <figcaption class="yazi-govde-k">$cs_ad_cizgi</figcaption>
-    </figure>
-    <figure class="s-cs__bicim" data-bicim="soz">
-      <div class="s-cs__amblem" role="img" aria-label="$cs_etiket_soz">$cs_soz</div>
-      <figcaption class="yazi-govde-k">$cs_ad_soz</figcaption>
-    </figure>
+<section class="sahne" id="canli" role="tabpanel" aria-labelledby="r2" data-bicim="ag">
+  <div class="ic ic--ust">
+    <p class="kas" data-sira style="--sira:0">02 <b>· $canli_etiket</b></p>
+    <p class="durum-satir" id="durum" aria-hidden="true" data-metin-calisiyor="$canli_calisiyor" data-metin-bitti="$canli_bitti"><svg class="c-halka" style="--deger:1" viewBox="0 0 48 48"><circle class="c-halka__iz" cx="24" cy="24" r="20" pathLength="100"/><circle class="c-halka__dolu" cx="24" cy="24" r="20" pathLength="100"/></svg><span>$canli_bitti</span></p>
+    <h2 class="orta" data-sira style="--sira:1">$canli_baslik</h2>
+    <div class="ekranlar" data-sira style="--sira:2">
+      <div class="ekran"><div class="ekran__bas"><i data-simge="telefon"></i>$telefon<span class="saat">08:12</span></div><div class="ekran__govde" id="ekran-a">
+$satirlar_a
+</div></div>
+      <div class="ekran"><div class="ekran__bas"><i data-simge="bilgisayar"></i>$bilgisayar<span class="saat">21:40</span></div><div class="ekran__govde" id="ekran-b">
+$satirlar_b
+</div></div>
+    </div>
+    <div class="canli-alt" data-sira style="--sira:3">
+      <p>$canli_not</p>
+      <button class="c-dugme c-dugme--k c-dugme--ikincil" type="button" id="yeniden" hidden>$yeniden</button>
+    </div>
   </div>
-  <div class="s-cs__secici" role="group" aria-label="$cs_secici" hidden>
-    <button type="button" class="c-dugme c-dugme--k" data-bicim="cizgi" aria-pressed="true">$cs_ad_cizgi</button>
-    <button type="button" class="c-dugme c-dugme--k c-dugme--ikincil" data-bicim="soz" aria-pressed="false">$cs_ad_soz</button>
+</section>
+
+<section class="sahne" id="nasil" role="tabpanel" aria-labelledby="r3" data-bicim="dongu">
+  <div class="ic">
+    <p class="kas" data-sira style="--sira:0">03 <b>· $nasil_etiket</b></p>
+    <h2 class="orta" data-sira style="--sira:1">$nasil_baslik</h2>
+    <ol class="adimlar" data-dongu>
+$nasil_adimlar
+    </ol>
+  </div>
+</section>
+
+<section class="sahne" id="kurul" role="tabpanel" aria-labelledby="r4" data-bicim="kurul">
+  <div class="ic">
+    <p class="kas" data-sira style="--sira:0">04 <b>· $yol_etiket</b></p>
+    <h2 class="orta" data-sira style="--sira:1">$yol_baslik</h2>
+    <p class="tanim" data-sira style="--sira:2">$yol_onu</p>
+    <ol class="adimlar" data-kurul data-durumlar="$yol_durumlar">
+$yol_satirlari
+    </ol>
+    <p class="son" data-sira style="--sira:$yol_son_sira">$yol_bugun</p>
   </div>
 </section>
 
-<section id="ne-ise-yarar" class="s-bolum" aria-labelledby="ne-ise-yarar-b">
-  <h2 id="ne-ise-yarar-b" class="yazi-baslik-m">$yarar_baslik</h2>
-  <p class="s-bolum__onu yazi-govde-l">$yarar_onu</p>
-  <ul class="s-yarar">
-$yarar_maddeler
-  </ul>
-</section>
-
-<div class="s-bolum s-bolum--tur"><h2 id="kurul-b" class="yazi-baslik-m">$kurul_baslik</h2></div>
-<section class="s-tur" id="kurul-turu" aria-labelledby="kurul-b">
-  <div class="s-tur__sahne">
-    <figure class="s-tur__gorsel">
-      <svg class="s-tur__svg" viewBox="-120 -70 640 540" role="img" aria-label="$kurul_gorsel">
-        <image class="ia" href="${varlik}logo/council-amblem.svg" x="0" y="0" width="400" height="400"/>
-        <image class="ik" href="${varlik}logo/council-amblem-koyu.svg" x="0" y="0" width="400" height="400"/>
-      </svg>
-    </figure>
-    <div class="s-tur__metin"><div class="s-tur__paneller">
-$kurul_paneller
-    </div></div>
+<section class="sahne" id="yardimcilar" role="tabpanel" aria-labelledby="r5" data-bicim="yorunge">
+  <div class="ic">
+    <p class="kas" data-sira style="--sira:0">05 <b>· $yardimcilar_etiket</b></p>
+    <h2 class="orta" data-sira style="--sira:1">$yardimcilar_baslik</h2>
+<!-- yardimcilar:bas -->
+    <ol class="adimlar">
+$yardimcilar_satirlari
+    </ol>
+<!-- yardimcilar:son -->
+    <p class="son" data-sira style="--sira:$yardimcilar_son_sira">$lisans</p>
   </div>
-</section>
-<div id="kurul-sonu" class="s-tur-sonu"><p class="yazi-kod">$kurul_son</p></div>
-
-<section id="urunler" class="s-bolum" aria-labelledby="urunler-b">
-  <h2 id="urunler-b" class="yazi-baslik-m">$urunler_baslik</h2>
-  <ul class="s-urunler">
-$urunler
-  </ul>
 </section>

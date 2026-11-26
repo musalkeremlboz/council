@@ -1,7 +1,7 @@
-// COUNCIL site: page boot. The measuring hook (?denetim=1) starts first so it sees the identity moment build the logo;
-// then the identity moment (once per session), the copy buttons and, on the home page, the two scenes after it.
-// Without JS, with reduced motion or when a file does not load, the page stays as written. The page holds every text:
-// a copy button carries its result labels (data-tamam, data-hata), the scenes read metin.json in the page's language.
+// COUNCIL site: page boot. The measuring hook (?denetim=1) starts first so it sees the identity moment build the
+// wordmark; then the identity moment (once per session), the copy buttons and, on the home page, the Kurul Masası
+// (masa.js, loaded only where its canvas is). Without JS, with reduced motion or when a file does not load, the page
+// stays as written. The page holds every text: a copy button carries its result labels (data-tamam, data-hata).
 import { denetimKur } from "./denetim.js";
 import { baslat as yaziKur } from "./sahne/yazi-kur.js";
 
@@ -36,33 +36,21 @@ function kopyaKur(doc) {
   }
 }
 
-const bosa = (p) => p.catch(() => null);
-const json = (ad) => fetch(new URL(ad, import.meta.url)).then((r) => {
-  if (!r.ok) throw new Error(String(r.status));
-  return r.json();
-});
-
-// The home page's scenes load only where their sections are, and start once the identity moment is over.
-async function sahneler(doc, kimlik) {
-  const cs = doc.getElementById("cizgi-soz-bolum"), tur = doc.getElementById("kurul-turu");
-  if (!cs && !tur) return;
-  const [csModul, turModul, veri] = await Promise.all([
-    cs && bosa(import("./sahne/cizgi-soz.js")),
-    tur && bosa(import("./sahne/kurul-turu.js")),
-    tur && bosa(Promise.all([json("ozellikler.json"), json("metin.json")])),
-  ]);
-  await bosa(kimlik);
-  if (csModul) csModul.baslat(cs);
-  if (turModul && veri) {
-    const [ozellikler, metin] = veri;
-    const dil = Object.hasOwn(metin, doc.documentElement.lang) ? doc.documentElement.lang : "tr";
-    turModul.baslat(tur, ozellikler, metin[dil].kurulTuru, dil);
+// The home page's table (canvas, seats, sections) loads only on the home page.
+async function masa(doc) {
+  if (!doc.getElementById("alan")) return;
+  try {
+    (await import("./masa.js")).baslat(doc);
+  } catch {
+    // The sections stay stacked and readable, as without JS.
+    doc.documentElement.classList.remove("masa-js");
+    for (const s of doc.querySelectorAll(".sahne")) s.hidden = false;
   }
 }
 
 if (globalThis.document) {
   denetimKur(document);
-  const kimlik = yaziKur(document);
+  yaziKur(document);
   kopyaKur(document);
-  sahneler(document, kimlik);
+  masa(document);
 }

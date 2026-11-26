@@ -14,7 +14,7 @@ YARDIMCILAR = re.compile(r"<!-- yardimcilar:bas -->.*?<!-- yardimcilar:son -->",
 RENK = re.compile(r"(?<![&\w])#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\(", re.I)
 SITE_URL_IZINLI = re.compile(
     r'<link rel="(?:canonical|alternate)"[^>]*>|<meta property="og:(?:url|image)"[^>]*>')
-SAHNE = re.compile(r'class="(?:[^"]*\s)?s-(?:cs|tur)(?![\w-])[^"]*"')
+SAHNE = re.compile(r"\bdata-denetim-sahne\b")
 
 
 def _yukle(ad: str, yol: Path):
@@ -56,7 +56,8 @@ def _uretilen_metin(yol: Path) -> str:
 
 def test_scan_sees_sources_and_pages(cikti):
     adlar = {p.relative_to(SITE).as_posix() for p in _kaynaklar()}
-    assert {"build.py", "sablon/sayfa.html", "metin/tr.json", "metin/en.json", "veri/urunler.json"} <= adlar
+    assert {"build.py", "sablon/sayfa.html", "sablon/masa.css", "sablon/masa.js", "metin/tr.json", "metin/en.json",
+            "veri/urunler.json"} <= adlar
     assert len(_sayfalar(cikti)) == 4
 
 
@@ -154,11 +155,13 @@ def test_internal_links_resolve(cikti):
 
 
 def test_scene_count(cikti):
+    """The home page's one canvas is its only scene; the Hafıza pages have none (never more than two per page)."""
     for ad, yollar in build.SAYFALAR.items():
         for yol in yollar.values():
             html = (cikti / yol / "index.html").read_text(encoding="utf-8")
             sayi = len(SAHNE.findall(html))
-            assert sayi <= (2 if ad == "ana" else 0), (yol, sayi)
+            assert sayi <= 2 and sayi == (1 if ad == "ana" else 0), (yol, sayi)
+            assert len(re.findall(r"<canvas\b", html)) == sayi, yol
 
 
 def test_committed_output_is_current(cikti):

@@ -1,8 +1,11 @@
 """The built site in headless Chrome (skipped without Chrome), plus the files around it: sitemap, robots, share images."""
+import html as html_lib
 import importlib.util
+import json
 import re
 import struct
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -97,3 +100,95 @@ def test_identity_moment_builds_the_wordmark(cikti, sayfa):
 def test_no_hidden_text_without_js_or_with_reduced_motion(cikti, sayfa, genislik):
     assert denetle.gizli_say(cikti / sayfa, genislik, azalt=True, js=True) == 0
     assert denetle.gizli_say(cikti / sayfa, genislik, azalt=False, js=False) == 0
+
+
+# Home page (Kurul Masası) in headless Chrome: layouts, seats, keyboard
+# The page is measured by a script appended to a copy of it (next to the original, so the relative links hold): it
+# opens each section through its seat, waits for the fade, and records overflow and which sections are shown.
+
+OLCUM = """<script>(async () => {
+  const bekle = (ms) => new Promise((r) => setTimeout(r, ms));
+  if (document.readyState !== "complete") await new Promise((r) => addEventListener("load", r));
+  for (let i = 0; i < 100 && !document.documentElement.classList.contains("masa-js"); i++) await bekle(100);   // masa.js is imported late
+  await bekle(800);
+  const kok = document.documentElement, o = { js: kok.classList.contains("masa-js"), bolumler: [], klavye: [] };
+  const sekmeler = [...document.querySelectorAll("[role=tab]")];
+  const sec = () => document.querySelector("[role=tab][aria-selected=true]").id;
+  const tus = (hedef, k) => hedef.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
+  for (const sekme of sekmeler) {
+    sekme.click();
+    await bekle(900);
+    const b = document.getElementById(sekme.getAttribute("aria-controls")), r = b.getBoundingClientRect();
+    o.bolumler.push({
+      id: b.id,
+      acik: b.hasAttribute("data-acik") && !b.hidden && getComputedStyle(b).visibility === "visible" && r.width > 0,
+      kapali: [...document.querySelectorAll(".sahne")].filter((x) => x !== b && (!x.hidden || x.hasAttribute("data-acik"))).length,
+      bolumTasma: b.scrollWidth > b.clientWidth + 1,
+      belgeTasma: kok.scrollWidth > innerWidth,
+      secili: sekme.getAttribute("aria-selected"),
+    });
+  }
+  const m = document.querySelector(".masa").getBoundingClientRect();
+  o.masa = m.left >= 0 && m.right <= innerWidth && m.top >= 0 && m.bottom <= innerHeight;
+  o.tabindex = sekmeler.map((x) => x.tabIndex).join(",");
+  const adim = async (hedef, k) => { tus(hedef, k); await bekle(60); o.klavye.push(sec() + (document.activeElement.id || "")); };
+  await adim(document.body, "1"); await adim(document.body, "3"); await adim(document.body, "PageDown"); await adim(document.body, "PageUp");
+  await adim(document.querySelector("#r3"), "ArrowRight"); await adim(document.querySelector("#r4"), "End"); await adim(document.querySelector("#r5"), "Home");
+  kok.dataset.olcum = JSON.stringify(o);
+})()</script>"""
+
+
+def _ana_olc(sayfa: Path, genislik: int, yukseklik: int, azalt: bool = False) -> dict:
+    kopya = sayfa.with_name(".ana-olcum.html")
+    kopya.write_text(sayfa.read_text(encoding="utf-8").replace("</body>", OLCUM + "</body>"), encoding="utf-8")
+    try:
+        with tempfile.TemporaryDirectory() as profil:
+            adres = kopya.resolve().as_uri()
+            if genislik < denetle.ASGARI:   # Chrome opens no window narrower than 500 px: measure inside an iframe
+                sarmal = Path(profil) / "sarmal.html"
+                sarmal.write_text(
+                    f'<!doctype html><meta charset="utf-8"><style>body{{margin:0}}iframe{{border:0;display:block}}</style>'
+                    f'<iframe id="f" width="{genislik}" height="{yukseklik}" src="{adres}"></iframe>'
+                    "<script>setInterval(()=>{try{const d=f.contentDocument.documentElement.dataset;"
+                    "if(d.olcum)document.documentElement.dataset.olcum=d.olcum}catch(e){}},100)</script>", encoding="utf-8")
+                adres = sarmal.as_uri()
+            r = denetle._calistir([f"--window-size={max(genislik, denetle.ASGARI)},{yukseklik}", "--virtual-time-budget=14000",
+                                   "--dump-dom", adres, *(["--force-prefers-reduced-motion"] if azalt else [])], Path(profil))
+    finally:
+        kopya.unlink(missing_ok=True)
+    bulunan = re.search(r'data-olcum="([^"]*)"', r.stdout)
+    assert bulunan, f"no measurement (exit {r.returncode}): {r.stderr[-300:]}"
+    return json.loads(html_lib.unescape(bulunan.group(1)))
+
+
+BOYUTLAR = ((375, 812), (812, 375), (820, 1180), (1180, 820), (950, 1150), (1280, 800), (1920, 1080))
+
+
+def _kontrol(o: dict) -> None:
+    assert o["js"] is True
+    assert [b["id"] for b in o["bolumler"]] == ["giris", "canli", "nasil", "kurul", "yardimcilar"]
+    for b in o["bolumler"]:
+        assert b["acik"] is True and b["secili"] == "true", b   # clicking the seat shows its section
+        assert b["kapali"] == 0, b                              # and no other section is open or shown
+        assert b["bolumTasma"] is False and b["belgeTasma"] is False, b   # no horizontal overflow, in the section or the page
+    assert o["masa"] is True                                    # the seat row sits inside the window
+    assert o["tabindex"] == "-1,-1,-1,-1,0"                      # one tab stop (the selected seat) after the clicks
+    # keys 1 and 3, PageDown, PageUp (selection only), then arrow, End and Home on a seat (focus follows)
+    assert o["klavye"] == ["r1", "r3", "r4", "r3", "r4r4", "r5r5", "r1r1"]
+
+
+@chrome
+@pytest.mark.parametrize("genislik,yukseklik", BOYUTLAR)
+def test_home_layouts_have_no_overflow_and_seats_open_sections(cikti, genislik, yukseklik):
+    _kontrol(_ana_olc(cikti / "index.html", genislik, yukseklik))
+
+
+@chrome
+@pytest.mark.parametrize("genislik,yukseklik", ((375, 812), (1280, 800)))
+def test_english_home_layouts(cikti, genislik, yukseklik):
+    _kontrol(_ana_olc(cikti / "en" / "index.html", genislik, yukseklik))
+
+
+@chrome
+def test_home_seats_with_reduced_motion(cikti):
+    _kontrol(_ana_olc(cikti / "index.html", 1280, 800, azalt=True))

@@ -29,85 +29,107 @@
   },
   "urunler": {
     "hafiza": {
-      "ad": "Hafıza",
-      "cumle": "Kullandığın bütün yardımcılar aynı hafızayı okur ve yazar."
+      "ad": "Hafıza"
     }
   },
   "ana": {
-    "tanim": "COUNCIL, yapay zekâ yardımcılarına kalıcı hafıza veren açık kaynak bir sistemdir.",
+    "etiket": "Açık kaynak",
+    "surum": "sürüm {surum}",
+    "tanim": "COUNCIL, yapay zekâ yardımcılarına kalıcı hafıza verir. Bilgisayarında çalışır; notların düz metin olarak sende kalır.",
     "kurulum": {
-      "onu": "Kurmak için şu cümleyi yapay zekâ yardımcına yapıştır. Gerisini o yapar.",
+      "onu": "Cümleyi yapay zekâ yardımcına yapıştır. Gerisini o yapar.",
       "cumle": "Şu yönergeyi oku ve COUNCIL'i kur:\nhttps://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md",
       "kopyala": "Kurulum cümlesini kopyala",
       "kopyalandi": "Kopyalandı",
-      "secin": "Kopyalanamadı, cümleyi seç"
+      "secin": "Kopyalanamadı, cümleyi seç",
+      "komut": "Komut satırından kurmak istersen",
+      "unix": "macOS · Linux",
+      "windows": "Windows · PowerShell",
+      "gerekenler": "Gerekenler: Python 3.11 ya da üstü ve git.",
+      "komutKopyala": "Kopyala",
+      "komutSecin": "Kopyalanamadı, metni seç"
     },
-    "cizgiSoz": {
-      "etiket": "Logonun iki biçimi",
-      "secici": "Logonun biçimi",
-      "cizgi": "Çizgi",
-      "soz": "Söz"
+    "bolumler": {
+      "etiket": "Bölümler",
+      "adlar": [
+        "Açılış",
+        "Canlı",
+        "Nasıl çalışır",
+        "Yol haritası",
+        "Yardımcılar"
+      ]
     },
-    "yarar": {
-      "baslik": "Ne işe yarar",
-      "onu": "Yapay zekâ yardımcıları sohbet bitince her şeyi unutur. COUNCIL bu boşluğu doldurur.",
-      "maddeler": [
+    "canli": {
+      "etiket": "canlı",
+      "calisiyor": "Oynatılıyor · bir kural, iki cihaz",
+      "bitti": "Bitti · iki cihaz aynı kuralı biliyor",
+      "baslik": "Sabah telefonda söyle,\n*akşam bilgisayar bilsin.*",
+      "telefon": "Telefon",
+      "bilgisayar": "Bilgisayar",
+      "yardimci": "Yardımcı",
+      "not": "İki ayrı oturum, iki ayrı cihaz. Arada eşitlenecek klasör yok; ikisi de aynı hafızayı okur ve yazar.",
+      "yeniden": "Yeniden oynat",
+      "satirlar": [
+        "Raporları bundan sonra Türkçe yaz, İngilizce terim kullanma.",
+        "⋯ hafızaya yazılıyor",
+        "✓ `rules.md` +1 satır · “Raporlar Türkçe, terimler de.”",
+        "Tamam, kural olarak kaydettim. İstersen geri alırım.",
+        "◦ oturum açıldı · bağlam yüklendi (profil, kurallar, açık işler)",
+        "Haftalık satış raporunu hazırla.",
+        "↳ ilgili not: `rules.md` › “Raporlar Türkçe…”",
+        "Rapor hazır. Kuralın gereği Türkçe yazdım, terimleri de Türkçeleştirdim."
+      ]
+    },
+    "nasil": {
+      "etiket": "nasıl çalışır",
+      "baslik": "Her oturum hafızaya *üç kez* uğrar.",
+      "adimlar": [
         {
-          "baslik": "Yeni oturum sıfırdan başlamaz",
-          "cumle": "Oturum açılır açılmaz profilin, kuralların, açık işlerin ve son oturumların yardımcının önüne gelir."
+          "baslik": "Başlarken okur",
+          "cumle": "Kim olduğun, düzeltmelerin, açık işlerin ve son oturumlar yardımcının önüne gelir."
         },
         {
-          "baslik": "Düzeltmen kural olur",
-          "cumle": "Düzeltmen tarihli tek satır olarak kurallara girer ve sonraki her oturumda yüklenir."
+          "baslik": "Her mesajda ilgili notu alır",
+          "cumle": "Mesajın hafızada aranır; en ilgili birkaç bölüm sessizce eklenir."
         },
         {
-          "baslik": "Bütün cihazların tek hafızayı paylaşır",
-          "cumle": "Sunucuya taşıdığında bütün cihazların aynı notları paylaşır; eşitlenecek klasör yoktur."
-        },
-        {
-          "baslik": "Hafıza açık metindir",
-          "cumle": "Notlar düz metindir; her değişiklik ne zaman ve neden yapıldığıyla birlikte geçmişte durur."
+          "baslik": "Bitince yazar",
+          "cumle": "Ne yapıldı, neden, ne açık kaldı. Sonraki oturum buradan başlar."
         }
       ]
     },
-    "urunler": "Ürünler"
-  },
-  "kurul": {
-    "baslik": "Yol haritası",
-    "gorsel": "COUNCIL amblemi: altı parçalı dış halka",
-    "paneller": [
-      {
-        "etiket": "1 / 6",
-        "baslik": "Amblem",
-        "govde": "Tek bir yardımcıya bağlı değildir: kullandığın bütün yardımcılar aynı hafızayı okur ve yazar."
+    "yol": {
+      "etiket": "yol haritası",
+      "baslik": "Altı parça, *bir halka.*",
+      "onu": "Dış halkanın her parçası bir özelliktir. Altısı da dolduğunda sürüm 1.0.0 çıkar.",
+      "cumleler": [
+        "Telefon, bilgisayar ve sunucu aynı hafızayı paylaşır.",
+        "Yardımcı öğrendiğini kaydeder, tek satırla haber verir; istersen geri alınır."
+      ],
+      "sayilar": [
+        "",
+        "Bir",
+        "İki",
+        "Üç",
+        "Dört",
+        "Beş",
+        "Altı"
+      ],
+      "yolda": {
+        "baslik": "{sayi} özellik",
+        "cumle": "Adları henüz yazılmadı. Bir özellik testlerini ve ölçümlerini geçince eklenir."
       },
-      {
-        "etiket": "2 / 6",
-        "baslik": "Altı özellik",
-        "govde": "Dış halkanın altı parçası sistemin altı temel özelliğidir."
-      },
-      {
-        "etiket": "3 / 6",
-        "baslik": "Hafıza",
-        "govde": "Notlar düz dosyalarda durur, her değişiklik geçmişe işlenir, kelimeyle aranır ve bağlam kendiliğinden gelir."
-      },
-      {
-        "etiket": "4 / 6",
-        "baslik": "Kişisel gelişim",
-        "govde": "Yardımcı kararını, tercihini ve düzeltmeni söylediğin anda kendisi kaydeder."
-      },
-      {
-        "etiket": "5 / 6",
-        "baslik": "Yolda",
-        "govde": "Öteki {yolda} özelliğin adı henüz yazılmadı. Bir özellik ancak testlerini ve ölçümlerini geçtiğinde eklenir."
-      },
-      {
-        "etiket": "6 / 6",
-        "baslik": "1.0.0",
-        "govde": "Bir özellik eklendiğinde adı yazılır ve parçası dolar. Altısı da dolduğunda sürüm 1.0.0 çıkar."
+      "bugun": "Bugün: sürüm {surum} · {temel} temel araç + {ogrenme} kişisel gelişim aracı (denemede)"
+    },
+    "yardimcilar": {
+      "etiket": "desteklenen yardımcılar",
+      "baslik": "Hangi yardımcıyı kullanırsan *aynı hafıza.*",
+      "durum": {
+        "tam": "Tam",
+        "kullanimda": "Kullanımda",
+        "denenmedi": "Denenmedi"
       }
-    ],
-    "son": "Bugün: sürüm {surum} · {temel} temel araç + {ogrenme} kişisel gelişim aracı (denemede)"
+    }
   },
   "hafiza": {
     "tanim": "Hafıza tek bir yardımcıya bağlı değildir: kullandığın bütün yardımcılar aynı hafızayı okur ve yazar. Notların düz Markdown dosyaları olarak sende kalır.",

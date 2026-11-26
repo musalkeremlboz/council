@@ -171,25 +171,36 @@ def test_old_asset_folders_are_removed(tmp_path):
 def test_asset_folder_layout(cikti):
     (varlik,) = (cikti / "varlik").iterdir()
     assert re.fullmatch(r"[0-9a-f]{10}", varlik.name)
-    for yol in ("css/tokens.css", "css/council.css", "css/site.css", "font/CouncilHalka.woff2", "font/OFL-DMSans.txt",
-                "logo/favicon.svg", "logo/council-ikon-180.png", "simge/hafiza.svg", "js/sahne/yazi-kur.js",
-                "js/ozellikler.json", "js/metin.json", "js/denetim.js", "js/site.js", "glifler.json"):
+    for yol in ("css/tokens.css", "css/council.css", "css/site.css", "css/masa.css", "font/CouncilHalka.woff2",
+                "font/OFL-DMSans.txt", "logo/favicon.svg", "logo/council-ikon-180.png", "simge/hafiza.svg", "simge/telefon.svg",
+                "simge/bilgisayar.svg", "js/sahne/yazi-kur.js", "js/sahne/ortak.js", "js/denetim.js", "js/site.js", "js/masa.js",
+                "glifler.json"):
         assert (varlik / yol).is_file(), yol
-    for yok in ("font/build_font.py", "font/glifler.json"):
+    for yok in ("font/build_font.py", "font/glifler.json",
+                "js/sahne/cizgi-soz.js", "js/sahne/kurul-turu.js", "js/ozellikler.json", "js/metin.json"):   # old home scenes are not shipped
         assert not (varlik / yok).exists(), yok
     assert not [p for p in varlik.rglob("*") if "kasa" in p.name]
+
+
+def test_masa_assets_only_on_home(cikti):
+    for (ad, dil), dosya in SAYFA_DOSYALARI.items():
+        html = _oku(cikti, dosya)
+        assert ("css/masa.css" in html) == (ad == "ana"), dosya
+        assert "masa.js" not in html   # site.js imports it where the canvas is
+    (varlik,) = (cikti / "varlik").iterdir()
+    assert 'import("./masa.js")' in (varlik / "js" / "site.js").read_text(encoding="utf-8")
 
 
 def test_glyph_subset_covers_the_built_text(cikti):
     (varlik,) = (cikti / "varlik").iterdir()
     veri = json.loads((varlik / "glifler.json").read_text(encoding="utf-8"))
-    for harf in "COUNCILTekhafızaMemory":
+    for harf in "COUNCILHafızaMemory":
         assert harf in veri["harita"], harf
     assert len(veri["glifler"]) < len(json.loads((KOK / "brand/font/glifler.json").read_text(encoding="utf-8"))["glifler"])
 
 
 def test_relative_asset_links(cikti):
-    for dosya in SAYFA_DOSYALARI.values():
+    for (ad, _), dosya in SAYFA_DOSYALARI.items():
         html = _oku(cikti, dosya)
         etiketler = [m.group(0) for m in re.finditer(r"<(?:link|script|img|source)\b[^>]*>", html)]
         kaynaklar = []
@@ -201,9 +212,10 @@ def test_relative_asset_links(cikti):
         for href in kaynaklar:
             assert not urlsplit(href).scheme and not href.startswith("//"), (dosya, href)
             assert _cozumle(cikti, dosya, href).is_file(), (dosya, href)
-        for rel in ("tokens.css", "council.css", "site.css"):
+        stiller = ["tokens.css", "council.css", "site.css"] + (["masa.css"] if ad == "ana" else [])
+        for rel in stiller:
             assert re.search(rf'<link rel="stylesheet" href="(?:\.\./)*varlik/[0-9a-f]{{10}}/css/{rel}">', html), (dosya, rel)
-        sira = [html.index(f"css/{rel}") for rel in ("tokens.css", "council.css", "site.css")]
+        sira = [html.index(f"css/{rel}") for rel in stiller]
         assert sira == sorted(sira), dosya
 
 
@@ -266,14 +278,20 @@ def test_shell_header_and_footer(cikti):
             assert '<footer class="s-alt">' in html
 
 
-# Home page (Task 5)
+# Home page: the Kurul Masası (five sections, a seat row, one canvas)
 
 ANA = {"tr": "index.html", "en": "en/index.html"}
+SLOGAN = {"tr": "Tek hafıza, her yardımcı.", "en": "One memory, every agent."}
 KUR_CUMLESI = {
     "tr": "Şu yönergeyi oku ve COUNCIL'i kur:\nhttps://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md",
     "en": "Read these instructions and set up COUNCIL:\nhttps://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md",
 }
+KOLTUK_ADLARI = {"tr": ["Açılış", "Canlı", "Nasıl çalışır", "Yol haritası", "Yardımcılar"],
+                 "en": ["Opening", "Live", "How it works", "Roadmap", "Agents"]}
+BOLUMLER = ["giris", "canli", "nasil", "kurul", "yardimcilar"]
 SAHNE_METIN = json.loads((KOK / "brand" / "js" / "metin.json").read_text(encoding="utf-8"))
+OZELLIKLER = json.loads((KOK / "brand" / "js" / "ozellikler.json").read_text(encoding="utf-8"))
+YARDIMCILAR = json.loads((KOK / "site" / "veri" / "yardimcilar.json").read_text(encoding="utf-8"))
 
 
 def _bolum(html: str, acilis: str) -> str:
@@ -287,86 +305,162 @@ def _bolum(html: str, acilis: str) -> str:
     raise AssertionError(f"{acilis} is not closed")
 
 
-def test_home_order(cikti):
+def _duz(html: str) -> str:
+    """Text of a fragment with tags dropped and whitespace folded."""
+    return " ".join(html_lib.unescape(re.sub(r"<[^>]+>", " ", html)).split())
+
+
+def test_home_has_five_sections_in_order(cikti):
     for dil, dosya in ANA.items():
         html = _oku(cikti, dosya)
-        sira = [html.index(f'id="{k}"') for k in ("icerik", "cizgi-soz-bolum", "ne-ise-yarar", "kurul-turu", "urunler")]
-        assert sira == sorted(sira), (dosya, sira)
-        assert html.index("data-yazi-kur data-glifler", html.index('id="icerik"')) < sira[1], dosya   # hero first
-        assert re.search(r'<section id="cizgi-soz-bolum" data-denetim-sahne\b', html), dosya
-        tur = _bolum(html, '<section class="s-tur" id="kurul-turu"')
-        assert re.match(r'\s*<div id="kurul-sonu"', html[html.index(tur) + len(tur):]), dosya   # the skip link's target
+        assert re.findall(r'<section class="sahne" id="([^"]+)" role="tabpanel"', html) == BOLUMLER, dosya
+        assert re.findall(r'<section class="sahne" id="[^"]+" role="tabpanel" aria-labelledby="(r\d)"', html) == [f"r{i}" for i in range(1, 6)]
+        assert html.count("<section") == 5 and "<footer" not in html, dosya   # no footer: the licence closes the last section
+        # the first section is open, the others are not (the script opens them one at a time)
+        assert re.findall(r"<section\b[^>]* data-acik>", html) and html.count(" data-acik") == 1, dosya
+        assert [html.index(f'id="{k}"') for k in BOLUMLER] == sorted(html.index(f'id="{k}"') for k in BOLUMLER)
 
 
-def test_hero(cikti):
+def test_home_is_dark_and_has_one_canvas(cikti):
     for dil, dosya in ANA.items():
         html = _oku(cikti, dosya)
-        h1 = re.findall(r'<h1 class="yazi-baslik-xl" data-yazi-kur data-glifler="((?:\.\./)*varlik/[0-9a-f]{10}/glifler\.json)">'
-                        r"([^<]+)</h1>", html)
-        assert [t for _, t in h1] == [build.metin_yukle()[dil]["site"]["slogan"]], dosya
-        assert _cozumle(cikti, dosya, h1[0][0]).is_file()
-        assert re.search(r'<a class="c-dugme c-dugme--b c-dugme--ikincil" href="https://github\.com/musalkeremlboz/council">GitHub</a>',
-                         html), dosya
+        assert re.search(rf'<html lang="{dil}" data-theme="dark">', html), dosya
+        assert len(re.findall(r"<canvas\b", html)) == 1 and '<canvas id="alan" data-denetim-sahne aria-hidden="true">' in html
+        assert re.search(r'href="(?:\.\./)*varlik/[0-9a-f]{10}/css/masa\.css"', html), dosya
+    for dosya in HAFIZA.values():
+        html = _oku(cikti, dosya)
+        assert "data-theme" not in html and "masa.css" not in html and "<canvas" not in html, dosya
 
 
-def test_one_kor_on_home(cikti):
+def test_seats_are_a_tablist_over_the_five_sections(cikti):
+    for dil, dosya in ANA.items():
+        html = _oku(cikti, dosya)
+        (liste,) = re.findall(r'<div role="tablist"[^>]*>(.*?)</div>', html, re.S)
+        koltuklar = re.findall(r'<button class="koltuk" role="tab" id="(r\d)" aria-controls="([^"]+)" aria-selected="(true|false)"([^>]*)>'
+                               r'0(\d)<span class="gizli"> ([^<]+)</span></button>', liste)
+        assert [k[1] for k in koltuklar] == BOLUMLER, dosya
+        assert [k[5] for k in koltuklar] == KOLTUK_ADLARI[dil], dosya
+        assert [k[2] for k in koltuklar] == ["true", "false", "false", "false", "false"]
+        assert ['tabindex="-1"' in k[3] for k in koltuklar] == [False, True, True, True, True]   # roving tabindex
+        assert re.search(r'<b id="masa-ad">' + KOLTUK_ADLARI[dil][0] + "</b>", html)
+
+
+def test_hero_slogan_in_three_lines(cikti):
+    for dil, dosya in ANA.items():
+        html = _oku(cikti, dosya)
+        (h1,) = re.findall(r'<h1 class="dev"[^>]*>(.*?)</h1>', html, re.S)
+        satirlar = re.findall(r"<span\b[^>]*>([^<]+)</span>", h1)
+        assert len(satirlar) == 3, dosya
+        assert _duz(h1) == SLOGAN[dil] == build.metin_yukle()[dil]["site"]["slogan"], dosya
+        assert html.count("<h1") == 1, dosya
+        assert "yazi-kur" not in h1   # the heading is plain text; only the header wordmark builds itself
+
+
+def test_one_kor_button_copies_the_install_sentence(cikti):
     for dil, dosya in ANA.items():
         html = _oku(cikti, dosya)
         assert html.count("c-dugme--kor") == 1, dosya
-        dugme = re.search(r'<button type="button" class="c-dugme c-dugme--b c-dugme--kor"([^>]*)>([^<]+)</button>', html)
-        assert dugme, dosya
-        assert 'data-kopyala="kur-cumlesi"' in dugme.group(1)
-        assert dugme.group(2) == {"tr": "Kurulum cümlesini kopyala", "en": "Copy the setup sentence"}[dil]
+        (dugme,) = re.findall(r'<button class="c-dugme c-dugme--kor" type="button"([^>]*)>([^<]+)</button>', html)
+        assert 'data-kopyala="kur-cumlesi"' in dugme[0] and " hidden" in dugme[0]   # shown only when site.js wires it
+        assert dugme[1] == {"tr": "Kurulum cümlesini kopyala", "en": "Copy the setup sentence"}[dil]
         for oz in ("data-tamam", "data-hata"):
-            assert re.search(rf'{oz}="[^"]+"', dugme.group(1)), (dosya, oz)
+            assert re.search(rf'{oz}="[^"]+"', dugme[0]), (dosya, oz)
+        kodlar = re.findall(r'<pre><code id="(kur-[a-z]+)">(.*?)</code></pre>', html, re.S)
+        assert dict(kodlar).keys() == {"kur-cumlesi", "kur-unix", "kur-windows"}
+        assert html_lib.unescape(dict(kodlar)["kur-cumlesi"]) == KUR_CUMLESI[dil] == build.metin_yukle()[dil]["ana"]["kurulum"]["cumle"]
+        assert html_lib.unescape(dict(kodlar)["kur-unix"]) == build.KUR_UNIX
+        assert html_lib.unescape(dict(kodlar)["kur-windows"]) == build.KUR_WINDOWS
+        for k in ("kur-unix", "kur-windows"):   # the command buttons are not kor
+            assert re.search(rf'<button class="c-dugme c-dugme--k c-dugme--ikincil" type="button" data-kopyala="{k}"', html)
 
 
-def test_install_sentence_is_text(cikti):
-    for dil, dosya in ANA.items():
-        kod = re.findall(r'<pre><code id="kur-cumlesi">(.*?)</code></pre>', _oku(cikti, dosya), re.S)
-        assert [html_lib.unescape(k) for k in kod] == [KUR_CUMLESI[dil]], dosya
-
-
-def test_what_it_does_four_items(cikti):
-    for dosya in ANA.values():
-        bolum = _bolum(_oku(cikti, dosya), '<section id="ne-ise-yarar"')
-        maddeler = re.findall(r"<li\b.*?</li>", bolum, re.S)
-        assert len(maddeler) == 4, dosya
-        for madde, simge in zip(maddeler, ("hafiza", "ogrenme", "telefon", "not")):
-            svg = (KOK / "brand" / "simge" / f"{simge}.svg").read_text(encoding="utf-8")
-            yol = re.search(r'viewBox="0 0 24 24"[^>]*>(.*)</svg>', svg).group(1)
-            assert yol in madde, (dosya, simge)
-            assert re.search(r"<h3\b[^>]*>[^<]+</h3>", madde) and re.search(r"<p\b[^>]*>[^<]+</p>", madde), (dosya, simge)
-        assert "c-kart" not in bolum
-
-
-def test_six_tour_panels(cikti):
-    for dil, dosya in ANA.items():
-        tur = _bolum(_oku(cikti, dosya), '<section class="s-tur" id="kurul-turu"')
-        paneller = re.findall(r'<article class="s-tur__panel">(.*?)</article>', tur, re.S)
-        assert len(paneller) == 6, dosya
-        etiketler = [re.search(r'<p class="yazi-etiket">([^<]+)</p>', p).group(1) for p in paneller]
-        durum = SAHNE_METIN[dil]["kurulTuru"]["durum"]
-        assert durum["tamam"].casefold() in etiketler[2].casefold(), etiketler
-        assert durum["denemede"].casefold() in etiketler[3].casefold(), etiketler
-        assert durum["yolda"].casefold() in etiketler[4].casefold(), etiketler
-        assert [e.split(" ")[0] for e in etiketler] == [str(i) for i in range(1, 7)], etiketler
-        for p in paneller:
-            assert re.search(r'<h3 class="yazi-baslik-m">[^<]+</h3><p class="yazi-govde-l">[^<]+</p>', p), p
-            assert "{" not in p, p   # every placeholder filled
-        assert re.search(r'<svg class="s-tur__svg" viewBox="-120 -70 640 540" role="img" aria-label="[^"]+">', tur)
-        assert 'class="ia" href="' in tur and 'class="ik" href="' in tur
-
-
-def test_tour_end_counts(cikti):
+def test_version_line_from_sources(cikti):
     temel, ogrenme = build.arac_sayilari()
     for dil, dosya in ANA.items():
         html = _oku(cikti, dosya)
-        son = re.search(r'<div id="kurul-sonu"[^>]*>(.*?)</div>', html, re.S).group(1)
-        assert build.surum() in son, dosya
-        beklenen = {"tr": f"{temel} temel araç + {ogrenme} kişisel gelişim aracı (denemede)",
-                    "en": f"{temel} core tools + {ogrenme} personal-development tools (in trial)"}[dil]
-        assert beklenen in html_lib.unescape(son), (dosya, son)
+        (kas,) = re.findall(r'<p class="kas"[^>]*>(?:Açık kaynak|Open source) <b>· ([^<]+)</b>', html)
+        assert kas == {"tr": f"sürüm {build.surum()}", "en": f"version {build.surum()}"}[dil]
+        (son,) = re.findall(r'<p class="son"[^>]*>(Bugün: [^<]+|Today: [^<]+)</p>', html)
+        beklenen = {"tr": f"Bugün: sürüm {build.surum()} · {temel} temel araç + {ogrenme} kişisel gelişim aracı (denemede)",
+                    "en": f"Today: version {build.surum()} · {temel} core tools + {ogrenme} personal-development tools (in trial)"}[dil]
+        assert son == beklenen, dosya
+
+
+def test_roadmap_rows_come_from_the_feature_list(cikti):
+    for dil, dosya in ANA.items():
+        html = _oku(cikti, dosya)
+        bolum = _bolum(html, '<section class="sahne" id="kurul"')
+        (liste,) = re.findall(r'<ol class="adimlar" data-kurul data-durumlar="([^"]+)">', bolum)
+        oz = build.ozellikler(dil)
+        assert liste == ",".join(o["durum"] for o in oz), dosya   # the ring's six statuses
+        satirlar = re.findall(r'<li\b[^>]*data-i="(\d)" data-n="(\d)"><span class="n">([^<]+)</span><h3>([^<]*)<span class="rozet([^"]*)">([^<]+)</span></h3><p>([^<]+)</p></li>', bolum)
+        durum = SAHNE_METIN[dil]["kurulTuru"]["durum"]
+        assert [(i, n) for i, n, *_ in satirlar] == [("0", "1"), ("1", "1"), ("2", "4")], dosya   # two named, four unnamed in one row
+        assert [s[2] for s in satirlar] == ["1/6", "2/6", "3–6"]
+        for (i, n, _, ad, sinif, rozet, _), o in zip(satirlar[:2], oz[:2], strict=True):
+            assert html_lib.unescape(ad) == o["ad"], dosya
+            assert rozet.casefold() == durum[o["durum"]].casefold(), (dosya, o)
+            assert sinif.strip() == {"tamam": "rozet--tamam", "denemede": "rozet--denemede"}[o["durum"]]
+        assert satirlar[2][5].casefold() == durum["yolda"].casefold() and satirlar[2][4] == ""
+        assert [o["durum"] for o in oz][2:] == ["yolda"] * 4 and satirlar[2][3] == {"tr": "Dört özellik", "en": "Four features"}[dil]
+
+
+def test_live_replay_is_written_in_the_page(cikti):
+    """Without JS the finished conversation reads as text; masa.js reads these lines and replays them."""
+    for dil, dosya in ANA.items():
+        html = _oku(cikti, dosya)
+        bolum = _bolum(html, '<section class="sahne" id="canli"')
+        kutular = re.findall(r'<div class="ekran__govde" id="ekran-([ab])">(.*?)</div></div>', bolum, re.S)
+        assert [k for k, _ in kutular] == ["a", "b"]
+        turler = [re.findall(r'<p class="satir ([a-z]+)"', v) for _, v in kutular]
+        assert turler == [["sen", "sistem", "yazdi", "yardimci"], ["sistem", "sen", "sistem", "yardimci"]], dosya
+        etiket = {"tr": "Yardımcı", "en": "Agent"}[dil]
+        assert bolum.count(f'data-ad="{etiket}"') == 2
+        assert bolum.count("<code>rules.md</code>") == 2
+        assert 'id="durum"' in bolum and 'data-metin-calisiyor="' in bolum and 'data-metin-bitti="' in bolum
+        assert re.search(r'<button class="c-dugme c-dugme--k c-dugme--ikincil" type="button" id="yeniden" hidden>', bolum)
+
+
+def test_how_it_works_has_three_steps(cikti):
+    for dosya in ANA.values():
+        bolum = _bolum(_oku(cikti, dosya), '<section class="sahne" id="nasil"')
+        assert re.findall(r'<li data-sira style="--sira:\d" data-i="(\d)">', bolum) == ["0", "1", "2"]
+
+
+def test_assistant_rows_come_from_the_data_file(cikti):
+    icerik = _icerik()
+    for dil, dosya in ANA.items():
+        html = _oku(cikti, dosya)
+        bloklar = ARAC_BLOK.findall(html)
+        assert len(bloklar) == 1 and html.count("<!-- yardimcilar:bas -->") == 1, dosya
+        assert icerik.arac_adlari_bul(ARAC_BLOK.sub("", html)) == [], dosya   # tool names only inside the block
+        assert {"claude", "hermes", "antigravity", "codex", "gemini"} <= set(icerik.arac_adlari_bul(bloklar[0])), dosya
+        satirlar = re.findall(r"<li\b.*?</li>", bloklar[0], re.S)
+        assert len(satirlar) == len(YARDIMCILAR), dosya
+        rozet = build.metin_yukle()[dil]["ana"]["yardimcilar"]["durum"]
+        for satir, o in zip(satirlar, YARDIMCILAR, strict=True):
+            ad = o["ad"] if isinstance(o["ad"], str) else o["ad"][dil]
+            assert html_lib.escape(ad, quote=True) in satir and html_lib.escape(o["destek"][dil], quote=True) in satir
+            durum = o["durum"].replace("ı", "i")
+            assert f'data-durum="{durum}">{rozet[durum]}</span>' in satir
+            assert ("rozet--tamam" in satir) == (durum == "tam")
+
+
+def test_licence_closes_the_home_page(cikti):
+    for dil, dosya in ANA.items():
+        html = _oku(cikti, dosya)
+        alt = "© 2026 COUNCIL · MIT lisansı" if dil == "tr" else "© 2026 COUNCIL · MIT license"
+        assert html.count(alt) == 1 and html.index(alt) > html.index('id="yardimcilar"'), dosya
+        assert html.rstrip().endswith("</main>\n</body>\n</html>"), dosya
+
+
+def test_old_home_texts_are_gone():
+    for dil in build.DILLER:
+        m = build.metin_yukle()[dil]
+        assert "kurul" not in m, dil
+        assert not {"cizgiSoz", "yarar", "urunler"} & set(m["ana"]), dil
+        assert all(set(u) == {"ad"} for u in m["urunler"].values()), dil
+        assert set(m["ana"]) == {"etiket", "surum", "tanim", "kurulum", "bolumler", "canli", "nasil", "yol", "yardimcilar"}, dil
 
 
 class _Metin(HTMLParser):
@@ -405,12 +499,12 @@ class _Metin(HTMLParser):
 
 
 def test_en_home_has_no_turkish_letters(cikti):
-    html = _oku(cikti, ANA["en"])
     okur = _Metin()
-    okur.feed(html)
-    metin = " ".join(okur.parcalar)
+    okur.feed(_oku(cikti, ANA["en"]))
+    metin = " ".join(" ".join(okur.parcalar).split())
     assert "One memory, every agent." in metin and "Türkçe" not in metin   # the parser sees the text, skips lang="tr"
-    assert re.findall(r"[ğışİĞŞ]", metin) == [], [w for w in metin.split() if re.search(r"[ğışİĞŞ]", w)]
+    harf = r"[ğışİĞŞüöçÜÖÇ]"
+    assert re.findall(harf, metin) == [], [w for w in metin.split() if re.search(harf, w)]
 
 
 def test_en_memory_has_no_turkish_letters(cikti):
@@ -421,20 +515,6 @@ def test_en_memory_has_no_turkish_letters(cikti):
     assert "Memory" in metin
     harf = r"[ğışİĞŞüöçÜÖÇ]"
     assert re.findall(harf, metin) == [], [w for w in metin.split() if re.search(harf, w)]
-
-
-def test_products_strip_lists_only_hafiza(cikti):
-    for dil, dosya in ANA.items():
-        bolum = _bolum(_oku(cikti, dosya), '<section id="urunler"')
-        ogeler = re.findall(r"<li\b.*?</li>", bolum, re.S)
-        assert len(ogeler) == 1, dosya
-        (oge,) = ogeler
-        urun = build.metin_yukle()[dil]["urunler"]["hafiza"]
-        assert urun["ad"] in oge and html_lib.escape(urun["cumle"], quote=True) in oge, dosya
-        (href,) = re.findall(r'<a\b[^>]*href="([^"]+)"', oge)
-        assert _cozumle(cikti, dosya, href) == (cikti / SAYFA_DOSYALARI[("hafiza", dil)]).resolve()
-        assert re.search(r'<img class="ia" src="[^"]*logo/council-amblem\.svg"', oge)
-        assert re.search(r'<img class="ik" src="[^"]*logo/council-amblem-koyu\.svg"', oge)
 
 
 def test_home_weight_budget(cikti):
