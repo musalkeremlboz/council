@@ -24,9 +24,16 @@ kontrol() {
 
 for y in / /en/ /hafiza/ /en/memory/ /sitemap.xml; do kontrol "$y" 200; done
 
+# "/" must be the new site, not whatever answered 200 before: the generated home page carries this canonical link.
+if curl -s --max-time 15 "$taban/" | grep -q '<link rel="canonical" href="https://council.systems/">'; then
+  echo "OK   yeni site / (canonical)"
+else
+  echo "FAIL / yeni siteyi sunmuyor (canonical bulunamadi)"; hata=1
+fi
+
 if [ "${DOGRULA_SAYFALAR_YALNIZ:-}" != 1 ]; then
   for y in /health /icon.svg /.well-known/oauth-authorization-server; do kontrol "$y" 200; done
-  for y in /mcp /panel/; do kontrol "$y" yok404; done
+  for y in /mcp /panel/ /login; do kontrol "$y" yok404; done
 fi
 
 exit "$hata"

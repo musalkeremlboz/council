@@ -216,6 +216,7 @@
     "ic": {
       "id": "hafizanin-ici",
       "baslik": "Hafızanın içi",
+      "agac_etiket": "Hafıza klasörünün dosya ağacı",
       "agac": "vault/\n├── core.md            kim olduğun ve kalıcı tercihlerin\n├── rules.md           düzeltmelerin, her biri tarihli tek satır\n├── threads.md         açık konular: şu anki durum ve sıradaki adım\n├── sessions.md        son oturum kartları\n├── projects/<ad>/     proje notları ve projeye özel kurallar\n├── knowledge/         tek tek bilgi notları\n├── imported/          başka sistemlerden kopyalanan notlar\n└── log/               hangi iş yapıldı, hangi notlar değişti",
       "son": "İlk dört dosya her oturumun başında yüklenir. Geri kalanı yalnız konuyla ilgili olduğunda gelir. Hepsi düz metindir: herhangi bir düzenleyiciyle açıp okuyabilir, elle düzeltebilirsin."
     },

@@ -216,6 +216,7 @@
     "ic": {
       "id": "inside-the-memory",
       "baslik": "Inside the memory",
+      "agac_etiket": "File tree of the memory vault",
       "agac": "vault/\n├── core.md            who you are and your lasting preferences\n├── rules.md           your corrections, one dated line each\n├── threads.md         open threads: where each stands and the next step\n├── sessions.md        the latest session cards\n├── projects/<name>/   project notes and project-specific rules\n├── knowledge/         single facts\n├── imported/          notes copied from other systems\n└── log/               what was done and which notes changed",
       "son": "The first four files load at the start of every session. The rest arrives only when it is relevant. All of it is plain text: you can open it in any editor, read it and fix it by hand."
     },

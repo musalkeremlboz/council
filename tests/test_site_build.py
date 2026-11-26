@@ -577,3 +577,15 @@ def test_hafiza_misc_sections(cikti):
         yollar = re.findall(r'href="(https://github\.com/musalkeremlboz/council/blob/main/[^"]+)"', belge)
         assert any(y.endswith("/INSTALL.md") for y in yollar) and any(y.endswith("docs/setup.md") for y in yollar), dosya
         assert len(re.findall(r"<li\b", _bolum(html, f'<section id="{BOLUM_IDLERI[dil][5]}"'))) == 6, dosya
+
+
+def test_hafiza_tree_is_keyboard_scrollable(cikti):
+    for dil, dosya in HAFIZA.items():
+        html = _oku(cikti, dosya)
+        etiket = build.metin_yukle()[dil]["hafiza"]["ic"]["agac_etiket"]
+        m = re.search(r'<pre class="s-agac"([^>]*)>', html)
+        assert m, dosya
+        assert 'tabindex="0"' in m.group(1), dosya
+        assert f'aria-label="{html_lib.escape(etiket, quote=True)}"' in m.group(1), dosya
+    css = (KOK / "site" / "sablon" / "site.css").read_text(encoding="utf-8")
+    assert re.search(r"\.s-agac:focus-visible\s*\{[^}]*outline:[^}]*var\(--", css)

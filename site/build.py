@@ -437,7 +437,7 @@ def hafiza_govde(dil: str, m: dict, ozet: str) -> str:
         kurulum_sonra=_e(kur["sonra"]), secenekler_baslik=_e(sec["baslik"]), secenekler_onu=_kod(sec["onu"]),
         secenekler_tablo=secenekler,
         ilk_id=ilk["id"], ilk_baslik=_e(ilk["baslik"]), ilk_adimlar=ilk_adimlar,
-        ic_id=ic["id"], ic_baslik=_e(ic["baslik"]), ic_agac=_e(ic["agac"]), ic_son=_e(ic["son"]),
+        ic_id=ic["id"], ic_baslik=_e(ic["baslik"]), ic_agac=_e(ic["agac"]), ic_agac_etiket=_e(ic["agac_etiket"]), ic_son=_e(ic["son"]),
         olcumler_id=olc["id"], olcumler_baslik=_e(olc["baslik"]), olcumler_onu=_e(olc["onu"]), olcumler_tablo=olcumler,
         olcumler_araclar=_e(_doldur(olc["araclar"], {"surum": surum(), "temel": temel, "ogrenme": ogrenme})),
         fark_id=fark["id"], fark_baslik=_e(fark["baslik"]), fark_maddeler=maddeler,

@@ -216,6 +216,8 @@ img, svg { max-inline-size: 100%; }
   overflow-wrap: anywhere;
 }
 .s-agac { white-space: pre; overflow-x: auto; margin-block-end: var(--ara-6); }
+.s-agac:focus { outline: none; }
+.s-agac:focus-visible { outline: 2px solid var(--kor-metin); outline-offset: 2px; }
 .s-yol code, .s-agac code { font: inherit; }
 .s-yol [hidden] { display: none; }
 

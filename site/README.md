@@ -53,8 +53,8 @@ site/yayinla.sh kullanici@sunucu:/var/www/council-site   # ya da yerel bir klas�
 site/dogrula.sh https://council.systems
 ```
 
-- `yayinla.sh <hedef>`: `site/cikti/` klasörünü `<hedef>/surumler/<git kısa özeti>/` altına `rsync -a --delete` ile kopyalar, `<hedef>/guncel` bağını yeni sürüme çevirir (uzakta `ln -s` ve `mv -T` ile tek adımda; yerelde `ln -sfn`), `surumler/` içinde en yeni 3 klasörü tutar. `site/` kirliyse durur. `SURUM=ad` sürüm adını değiştirir (testler için).
-- `dogrula.sh <temel-adres>`: `/`, `/en/`, `/hafiza/`, `/en/memory/`, `/sitemap.xml` için 200; değişmeyen hizmet yolları için `/health`, `/icon.svg`, `/.well-known/oauth-authorization-server` 200, `/mcp` ve `/panel/` 404 değil. Her denetim bir satır; biri başarısızsa çıkış kodu sıfırdan farklıdır. `DOGRULA_SAYFALAR_YALNIZ=1` hizmet yollarını atlar (yerel dosya sunucusu).
+- `yayinla.sh <hedef>`: önce `site/cikti/` klasörünün taze bir `build.py` çıktısıyla aynı olduğunu denetler (farklıysa durur). Sonra `site/cikti/` klasörünü `<hedef>/surumler/<git kısa özeti>/` altına `rsync -a --delete` ile kopyalar, `<hedef>/guncel` bağını yeni sürüme çevirir (uzakta `ln -sfn` ve `mv -T` ile tek adımda; yerelde `ln -sfn`); yayından önce o an canlı sürümün `varlik/<özet>/` klasörlerinden yeni sürümde olmayanlar yeni sürüme taşınır (`rsync --ignore-existing`), böylece geçiş sırasında açık olan sayfaların istediği varlıklar 404 olmaz, `surumler/` içinde en yeni 3 klasörü tutar. `site/` kirliyse durur. `SURUM=ad` sürüm adını değiştirir (testler için).
+- `dogrula.sh <temel-adres>`: `/`, `/en/`, `/hafiza/`, `/en/memory/`, `/sitemap.xml` için 200; değişmeyen hizmet yolları için `/health`, `/icon.svg`, `/.well-known/oauth-authorization-server` 200, `/mcp`, `/panel/` ve `/login` 404 değil. `/` yanıtında yeni sitenin canonical bağı aranır (eski sunucu da 200 verir). Her denetim bir satır; biri başarısızsa çıkış kodu sıfırdan farklıdır. `DOGRULA_SAYFALAR_YALNIZ=1` hizmet yollarını atlar (yerel dosya sunucusu).
 
 ### Caddy bloğu
 
