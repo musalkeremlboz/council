@@ -9,17 +9,21 @@ Writes CouncilHalka.ttf and CouncilHalka.woff2 next to this file.
 import math
 import pathlib
 
+from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.cu2quPen import Cu2QuPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from pathops import Path
 
 FAMILY = "Council Halka"
-VERSION = "0.1"
+VERSION = "0.2"
 UPM = 1000
-H = 700          # cap height
+H = 700          # cap height, also the lowercase ascender
+XH = 500         # x-height
+DESC_LC = -200   # lowercase descender
 S = 100          # stroke weight
 ASC, DESC = 960, -260
+PAREN = math.degrees(math.asin(0.8))  # half the arc of ( and ): they run from -100 to 700
 
 
 class Glyph:
@@ -169,22 +173,134 @@ def glyphs():
     g["slash"] = Glyph(420, 15, 15).poly([(285, 700), (420, 700), (135, 0), (0, 0)])
     g["question"] = (Glyph(400, 35, 35).ring(200, 500, 200, -90, 180).bar(150, 220, S, 180)
                      .bar(150, 0, S, S))
+
+    lowercase(g, with_marks, tick)
+    punctuation(g)
     return g
 
 
+def lowercase(g, with_marks, tick):
+    """a–z and the Turkish lowercase: x-height XH, ascenders to H, descenders to DESC_LC."""
+    r = XH / 2                                 # 250: the full o
+    breve = lambda x: (lambda gl: gl.ring(x, 735, 135, 180, 360, 70))  # the capital breve, lowered onto XH
+    bowl = lambda gl: gl.ring(r, r, r)
+    # g, j, y: the stem ending at x turns through a quarter ring into a flat foot on the descender
+    foot = lambda gl, x: gl.bar(x - S, -50, S, XH + 50).ring(x - 150, -50, 150, 270, 360).bar(0, DESC_LC, x - 150, S)
+    dot = lambda x: (lambda gl: gl.bar(x, 600, S, S))
+    # the e's ring starts where its outline crosses the top of the bar, and the bar ends there too: no step
+    e_top = math.degrees(math.asin(S / 2 / r))
+    e_end = r + math.sqrt(r * r - (S / 2) ** 2)
+
+    g["a"] = bowl(Glyph(500, 30, 50)).bar(400, 0, S, XH)
+    g["b"] = bowl(Glyph(500, 50, 30)).bar(0, 0, S, H)
+    g["c"] = Glyph(500, 30, 20).ring(r, r, r, 45, 315)
+    g["d"] = bowl(Glyph(500, 30, 50)).bar(400, 0, S, H)
+    g["e"] = Glyph(500, 30, 25).ring(r, r, r, e_top, 315).bar(50, r - S / 2, e_end - 50, S)
+    g["f"] = Glyph(356, 20, 10).bar(100, 0, S, 550).ring(250, 550, 150, 45, 180).bar(0, 400, 300, S)
+    g["g"] = foot(bowl(Glyph(500, 30, 50)), 500)
+    g["h"] = Glyph(500, 50, 50).bar(0, 0, S, H).bar(400, 0, S, r).ring(r, r, r, 0, 180)
+    g["dotlessi"] = Glyph(100, 50, 50).bar(0, 0, S, XH)
+    g["i"] = dot(0)(Glyph(100, 50, 50).bar(0, 0, S, XH))
+    g["j"] = dot(150)(foot(Glyph(250, 20, 50), 250))
+    g["k"] = (Glyph(450, 50, 15).bar(0, 0, S, H)
+              .poly([(60, 230), (195, 230), (450, 500), (315, 500)])
+              .poly([(60, 270), (195, 270), (450, 0), (315, 0)]))
+    g["l"] = Glyph(150, 50, 15).bar(0, 150, S, H - 150).ring(150, 150, 150, 180, 270)
+    g["m"] = (Glyph(800, 50, 50).bar(0, 0, S, XH).bar(350, 0, S, 275).bar(700, 0, S, 275)
+              .ring(225, 275, 225, 0, 180).ring(575, 275, 225, 0, 180))
+    g["n"] = Glyph(500, 50, 50).bar(0, 0, S, XH).bar(400, 0, S, r).ring(r, r, r, 0, 180)
+    g["o"] = bowl(Glyph(500, 30, 30))
+    g["p"] = bowl(Glyph(500, 50, 30)).bar(0, DESC_LC, S, XH - DESC_LC)
+    g["q"] = bowl(Glyph(500, 30, 50)).bar(400, DESC_LC, S, XH - DESC_LC)
+    g["r"] = Glyph(375, 50, 15).bar(0, 0, S, XH).ring(r, r, r, 60, 180)
+    g["s"] = Glyph(300, 30, 30).ring(150, 350, 150, 30, 270).ring(150, 150, 150, -150, 90)
+    g["t"] = Glyph(300, 20, 15).bar(100, 150, S, 500).bar(0, 400, 300, S).ring(250, 150, 150, 180, 270)
+    g["u"] = Glyph(500, 50, 50).bar(0, r, S, r).bar(400, 0, S, XH).ring(r, r, r, 180, 360)
+    g["v"] = (Glyph(440, 10, 10).poly([(0, 500), (120, 500), (280, 0), (160, 0)])
+              .poly([(320, 500), (440, 500), (280, 0), (160, 0)]))
+    g["w"] = (Glyph(800, 50, 50).bar(0, 225, S, 275).bar(350, 225, S, 275).bar(700, 225, S, 275)
+              .ring(225, 225, 225, 180, 360).ring(575, 225, 225, 180, 360))
+    g["x"] = (Glyph(420, 15, 15).poly([(0, 500), (125, 500), (420, 0), (295, 0)])
+              .poly([(295, 500), (420, 500), (125, 0), (0, 0)]))
+    g["y"] = foot(Glyph(500, 50, 50).bar(0, r, S, r).ring(r, r, r, 180, 360), 500)
+    g["z"] = (Glyph(420, 25, 25).bar(0, 400, 420, S).bar(0, 0, 420, S)
+              .poly([(270, 400), (420, 400), (150, 100), (0, 100)]))
+
+    g["ccedilla"] = with_marks("c", tick(200))
+    g["gbreve"] = with_marks("g", breve(250))
+    g["odieresis"] = with_marks("o", dot(85), dot(315))
+    g["scedilla"] = with_marks("s", tick(100))
+    g["udieresis"] = with_marks("u", dot(85), dot(315))
+
+
+def punctuation(g):
+    g["ampersand"] = (Glyph(560, 30, 20).ring(230, 545, 155).ring(230, 220, 220, 90, 405)
+                      .poly([(105, 470), (240, 470), (560, 0), (425, 0)]))
+    g["at"] = (Glyph(800, 35, 35).ring(400, 300, 400, 30, 330).ring(400, 300, 175)
+               .bar(475, 125, S, 350))
+    g["numbersign"] = (Glyph(560, 25, 25).bar(120, 0, S, H).bar(340, 0, S, H)
+                       .bar(0, 180, 560, S).bar(0, 420, 560, S))
+    g["percent"] = (Glyph(700, 25, 25).ring(150, 550, 150).ring(550, 150, 150)
+                    .poly([(565, 700), (700, 700), (135, 0), (0, 0)]))
+    g["plus"] = Glyph(400, 40, 40).bar(0, 300, 400, S).bar(150, 150, S, 400)
+    g["equal"] = Glyph(400, 40, 40).bar(0, 200, 400, S).bar(0, 400, 400, S)
+    g["parenleft"] = Glyph(260, 50, 30).ring(500, 300, 500, 180 - PAREN, 180 + PAREN)
+    g["parenright"] = Glyph(260, 30, 50).ring(-240, 300, 500, -PAREN, PAREN)
+    g["quotedbl"] = Glyph(280, 50, 50).bar(0, 500, S, 200).bar(180, 500, S, 200)
+    g["quotesingle"] = Glyph(100, 50, 50).bar(0, 500, S, 200)
+    g["semicolon"] = (Glyph(100, 50, 50).bar(0, 0, S, S).poly([(40, 0), (100, 0), (60, -150), (0, -150)])
+                      .bar(0, 400, S, S))
+    g["ellipsis"] = Glyph(500, 50, 50).bar(0, 0, S, S).bar(200, 0, S, S).bar(400, 0, S, S)
+    g["arrowright"] = (Glyph(600, 40, 40).bar(0, 300, 530, S)
+                       .poly([(209, 600), (350, 600), (600, 350), (459, 350)])
+                       .poly([(209, 100), (350, 100), (600, 350), (459, 350)]))
+
+
 CMAP = {
-    **{ord(c): c for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"},
-    **{ord(c.lower()): c for c in "ABCDEFGHJKLMNOPQRSTUVWXYZ"},
-    ord("i"): "Idotaccent", ord("ı"): "I", ord("İ"): "Idotaccent",
-    ord("Ç"): "Ccedilla", ord("ç"): "Ccedilla", ord("Ş"): "Scedilla", ord("ş"): "Scedilla",
-    ord("Ğ"): "Gbreve", ord("ğ"): "Gbreve", ord("Ö"): "Odieresis", ord("ö"): "Odieresis",
-    ord("Ü"): "Udieresis", ord("ü"): "Udieresis",
+    **{ord(c): c for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"},
+    ord("İ"): "Idotaccent", ord("ı"): "dotlessi",
+    ord("Ç"): "Ccedilla", ord("ç"): "ccedilla", ord("Ş"): "Scedilla", ord("ş"): "scedilla",
+    ord("Ğ"): "Gbreve", ord("ğ"): "gbreve", ord("Ö"): "Odieresis", ord("ö"): "odieresis",
+    ord("Ü"): "Udieresis", ord("ü"): "udieresis",
     **{ord(str(i)): n for i, n in enumerate(
         ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"])},
     ord(" "): "space", ord("."): "period", ord(","): "comma", ord(":"): "colon",
     ord("-"): "hyphen", ord("·"): "periodcentered", ord("!"): "exclam", ord("/"): "slash",
-    ord("?"): "question",
+    ord("?"): "question", ord("&"): "ampersand", ord("@"): "at", ord("#"): "numbersign",
+    ord("%"): "percent", ord("+"): "plus", ord("="): "equal", ord("("): "parenleft",
+    ord(")"): "parenright", ord('"'): "quotedbl", ord("'"): "quotesingle", ord(";"): "semicolon",
+    ord("\u2026"): "ellipsis", ord("\u2192"): "arrowright",
 }
+
+# Pair adjustments in font units, closing the gaps that open where a bar or an arm overhangs
+# a ring or a stem ("LA", "To", "ro"). Accented letters kern like their base letter.
+KERN: dict[tuple[str, str], int] = {
+    **{("L", b): v for b, v in {"T": -100, "V": -90, "Y": -90, "W": -50, "A": -40, "O": -40, "C": -40,
+                                "G": -40, "Q": -40, "U": -40, "quotesingle": -100, "quotedbl": -100}.items()},
+    ("T", "A"): -50, ("A", "T"): -50, ("F", "A"): -50, ("P", "A"): -40, ("V", "A"): -30, ("A", "V"): -30,
+    **{(a, b): -40 for a in "TX" for b in "OCGQ"}, **{("K", b): -60 for b in "OCGQ"},
+    **{(a, b): -40 for a in "OQ" for b in "TX"},
+    **{("T", b): -80 for b in "acegoqs"}, **{("T", b): -60 for b in "mnpruvwxyz"},
+    **{(a, b): -50 for a in "FV" for b in "aceo"}, **{("P", b): -40 for b in "aceo"},
+    **{("Y", b): -40 for b in "aceo"}, ("V", "u"): -30,
+    **{("r", b): -40 for b in "acegoqs"}, **{("f", b): -30 for b in "aceo"}, **{("k", b): -40 for b in "aceo"},
+    **{(a, b): v for a, v in {"T": -80, "F": -80, "P": -70, "V": -60, "Y": -80, "r": -80}.items()
+       for b in ("period", "comma", "ellipsis")},
+}
+MARKED = {"Ccedilla": "C", "Scedilla": "S", "Gbreve": "G", "Idotaccent": "I", "Odieresis": "O",
+          "Udieresis": "U", "ccedilla": "c", "scedilla": "s", "gbreve": "g", "odieresis": "o",
+          "udieresis": "u", "dotlessi": "i"}
+
+
+def kern_feature():
+    """The KERN table as a feature file, with each accented letter taking its base letter's pairs."""
+    pairs = dict(KERN)
+    for (a, b), v in KERN.items():
+        for la in [a] + [m for m, base in MARKED.items() if base == a]:
+            for rb in [b] + [m for m, base in MARKED.items() if base == b]:
+                pairs.setdefault((la, rb), v)
+    rules = "".join(f"  pos {a} {b} {v};\n" for (a, b), v in sorted(pairs.items()))
+    return "languagesystem DFLT dflt;\nlanguagesystem latn dflt;\nfeature kern {\n" + rules + "} kern;\n"
 
 
 def build(out_dir):
@@ -214,8 +330,9 @@ def build(out_dir):
     fb.setupNameTable({"familyName": FAMILY, "styleName": "Regular", "fullName": FAMILY,
                        "psName": "CouncilHalka-Regular", "version": "Version " + VERSION})
     fb.setupOS2(sTypoAscender=ASC, sTypoDescender=DESC, sTypoLineGap=0, usWinAscent=ASC,
-                usWinDescent=-DESC, sCapHeight=H, sxHeight=H, usWeightClass=500)
+                usWinDescent=-DESC, sCapHeight=H, sxHeight=XH, usWeightClass=500)
     fb.setupPost()
+    addOpenTypeFeaturesFromString(fb.font, kern_feature())
     out = pathlib.Path(out_dir)
     fb.font.save(out / "CouncilHalka.ttf")
     fb.font.flavor = "woff2"

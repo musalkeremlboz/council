@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Council Halka 0.2 örneği</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<style>
+@font-face { font-family: "Council Halka"; src: url("CouncilHalka.woff2") format("woff2"), url("CouncilHalka.ttf") format("truetype"); }
+@font-face { font-family: "DM Sans"; src: url("DMSans.ttf") format("truetype"); font-weight: 100 1000; }
+body { margin: 0; background: var(--zemin); color: var(--murekkep); font-family: var(--font-sans); }
+section { padding: var(--ara-12) var(--ara-16); border-bottom: 2px solid var(--cizgi); }
+h2 { margin: 0 0 var(--ara-4); font: 500 15px/1.4 var(--font-sans); color: var(--murekkep-2); }
+.halka { font-family: "Council Halka", sans-serif; overflow-wrap: anywhere; }
+.dev { font-size: 200px; line-height: 1.2; }
+.buyuk { font-size: 96px; line-height: 1.25; }
+.orta { font-size: 56px; line-height: 1.3; }
+.kucuk { font-size: 24px; line-height: 1.4; }
+.harfsiz { font-kerning: none; }
+</style>
+</head>
+<body>
+<section>
+<h2>Küçük harfler, 200 px</h2>
+<div class="halka dev">abcçdefgğh<br>ıijklmnoö<br>pqrsştuü<br>vwxyz</div>
+</section>
+<section>
+<h2>Türkçe sözcükler, 200 px</h2>
+<div class="halka dev">ışık, öğrenme,<br>çağ, şimdi</div>
+</section>
+<section>
+<h2>İşaretler, 200 px</h2>
+<div class="halka dev">&amp; @ # % + =<br>( ) " ' ; … →<br>. , : - · ! / ?</div>
+</section>
+<section>
+<h2>Büyük ve küçük harf karışık başlıklar</h2>
+<div class="halka buyuk">Ortak hafıza<br>Toplantı kararı<br>İzmir, Iğdır, Uşak</div>
+<div class="halka orta">Proje notu · Görev listesi → yazıldı<br>Hafıza (2026): %100 &amp; "tamam"; şimdi…</div>
+</section>
+<section>
+<h2>Harf çifti aralığı: üstte açık, altta kapalı</h2>
+<div class="halka buyuk">LA To ro Ta Fo Ve LT LY P. r,</div>
+<div class="halka buyuk harfsiz">LA To ro Ta Fo Ve LT LY P. r,</div>
+</section>
+<section>
+<h2>En küçük boy, 24 px</h2>
+<div class="halka kucuk">Ortak hafıza · Toplantı kararı · Proje notu · ışık, öğrenme, çağ, şimdi · abcçdefgğhıijklmnoöprsştuüvyz</div>
+<div class="halka kucuk">PİJAMALI HASTA YAĞIZ ŞOFÖRE ÇABUCAK GÜVENDİ · pijamalı hasta yağız şoföre çabucak güvendi.</div>
+</section>
+</body>
+</html>
