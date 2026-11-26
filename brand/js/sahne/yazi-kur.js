@@ -9,7 +9,7 @@
 //     <circle data-kur="kor" …/>                 kor O
 //     <path data-kur="c" …/>                     C
 //     <path data-kur="isaret" …/>                dalga; maskedeki kopyası da data-kur="isaret" taşır.
-//                                                Kasa'nın anahtar deliği burada çizgi olarak verilir
+//                                                anahtar deliği işareti burada çizgi olarak verilir
 //                                                (daire r 17, kalınlık 34; gövde x 200, 182→258, kalınlık 28).
 //     <g data-kur="yazi" data-metin="COUNCIL" data-ara="60" transform="… scale(k -k)">…</g>   logo yazısı
 //   </svg></div>

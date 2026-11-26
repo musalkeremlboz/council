@@ -172,5 +172,9 @@ def test_committed_output_is_current(cikti):
 
 
 def test_no_kasa(cikti):
-    bulunan = [str(p) for p in _sayfalar(cikti) if "kasa" in icerik.duz(p.read_text(encoding="utf-8"))]
+    """Kasa is archived: not in any published text file (pages, copied CSS/JS/SVG, JSON, sitemap) nor any file name."""
+    metin = [p for p in sorted(cikti.rglob("*")) if p.is_file() and p.suffix in METIN_UZANTI]
+    assert any(p.suffix == ".js" for p in metin) and any(p.suffix == ".html" for p in metin)   # scope sanity
+    bulunan = [str(p) for p in metin if "kasa" in icerik.duz(p.read_text(encoding="utf-8"))]
+    bulunan += [str(p) for p in cikti.rglob("*") if "kasa" in icerik.duz(p.name)]
     assert bulunan == []
