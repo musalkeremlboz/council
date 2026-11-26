@@ -374,6 +374,16 @@ def test_en_home_has_no_turkish_letters(cikti):
     assert re.findall(r"[ğışİĞŞ]", metin) == [], [w for w in metin.split() if re.search(r"[ğışİĞŞ]", w)]
 
 
+def test_en_memory_has_no_turkish_letters(cikti):
+    # Includes the helper table: every row's name must have an English form when it carries Turkish words.
+    okur = _Metin()
+    okur.feed(_oku(cikti, "en/memory/index.html"))
+    metin = " ".join(okur.parcalar)
+    assert "Memory" in metin
+    harf = r"[ğışİĞŞüöçÜÖÇ]"
+    assert re.findall(harf, metin) == [], [w for w in metin.split() if re.search(harf, w)]
+
+
 def test_products_strip_lists_only_hafiza(cikti):
     for dil, dosya in ANA.items():
         bolum = _bolum(_oku(cikti, dosya), '<section id="urunler"')

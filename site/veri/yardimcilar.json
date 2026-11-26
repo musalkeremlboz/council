@@ -8,7 +8,7 @@
     "durum": "tam"
   },
   {
-    "ad": "claude.ai (web, masaüstü, telefon)",
+    "ad": {"tr": "claude.ai (web, masaüstü, telefon)", "en": "claude.ai (web, desktop, phone)"},
     "destek": {
       "tr": "Özel bağlayıcıyla. Hafızayı oturum başında bir araç çağrısıyla yükler. Sunucu kurulumu ister.",
       "en": "As a custom connector. It loads the memory with a tool call at the start of a session. Needs a server setup."
