@@ -72,7 +72,7 @@ def css_from_tokens(tokens: dict) -> str:
     lines += _color_lines(tokens, "light", "  ")
     for fam in ("spacing", "radius", "motion"):
         lines += [f"  --{t['name']}: {t['value']};" for t in tokens[fam]["tokens"]]
-    lines += [f"  --{t['name']}: {t['value']};" for t in tokens["type"]["families"]]
+    lines += [f"  --font-{k}: {v};" for k, v in tokens["type"]["families"].items()]
     lines.append("}")
     lines.append("@media (prefers-color-scheme: dark) {")
     lines.append('  :root:not([data-theme="light"]) {')
@@ -82,14 +82,15 @@ def css_from_tokens(tokens: dict) -> str:
     lines += _color_lines(tokens, "dark", "  ")
     lines.append("}")
     for g in tokens["type"]["groups"]:
-        lines.append(f".yazi-{g['name']} {{")
-        lines.append(f"  font-family: var(--{g['font']});")
-        lines.append(f"  font-size: {g['size']};")
-        lines.append(f"  line-height: {g['line']};")
-        lines.append(f"  font-weight: {g['weight']};")
-        if g["tracking"]:
-            lines.append(f"  letter-spacing: {g['tracking']};")
-        lines.append("}")
+        for st in g["styles"]:
+            lines.append(f".yazi-{st['name']} {{")
+            lines.append(f"  font-family: var(--font-{st.get('family', g['family'])});")
+            lines.append(f"  font-size: {st['fontSize']};")
+            lines.append(f"  line-height: {st['lineHeight']};")
+            lines.append(f"  font-weight: {st['fontWeight']};")
+            if st.get("letterSpacing"):
+                lines.append(f"  letter-spacing: {st['letterSpacing']};")
+            lines.append("}")
     return "\n".join(lines) + "\n"
 
 

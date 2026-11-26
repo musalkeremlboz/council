@@ -69,7 +69,8 @@ def _adlar(o):
 def test_preview_css_variables_are_defined(tmp_path):
     import re
     _yaz(tmp_path)
-    tokenlar = {"--" + t["name"] for t in _adlar(json.loads((BRAND / "tokens.json").read_text(encoding="utf-8")))}
+    tj = json.loads((BRAND / "tokens.json").read_text(encoding="utf-8"))
+    tokenlar = {"--" + t["name"] for t in _adlar(tj)} | {f"--font-{k}" for k in tj["type"]["families"]}
     css = (tmp_path / "project/components/bundle.css").read_text(encoding="utf-8")
     # --u ve --s sahne öğelerinde satır içi verilir (sahne betiği/işaretleme), CSS içinde tanımlı değildir
     tanimli = tokenlar | {"--u", "--s"} | set(re.findall(r"(--[\w-]+)\s*:", css))

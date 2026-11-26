@@ -46,8 +46,9 @@ def _token_adlari():
     t = json.loads((BRAND / "tokens.json").read_text(encoding="utf-8"))
     adlar = set()
     for aile in t.values():
-        for anahtar in ("tokens", "families", "groups"):
-            adlar |= {x["name"] for x in aile.get(anahtar, [])}
+        adlar |= {x["name"] for x in aile.get("tokens", [])}
+    adlar |= {f"font-{k}" for k in t["type"]["families"]}
+    adlar |= {s["name"] for g in t["type"]["groups"] for s in g["styles"]}
     return adlar
 
 

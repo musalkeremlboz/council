@@ -1,4 +1,5 @@
 import importlib.util
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -57,21 +58,38 @@ def test_spec_values():
                  "egri-ac": "cubic-bezier(.2,0,0,1)", "egri-kapa": "cubic-bezier(.4,0,1,1)"}
 
 
+def _styles():
+    return {s["name"]: (g["family"], s["fontSize"], s["lineHeight"], s["fontWeight"], s.get("letterSpacing"))
+            for g in T["type"]["groups"] for s in g["styles"]}
+
+
 def test_text_styles():
-    got = {g["name"]: (g["font"], g["size"], g["line"], g["weight"], g["tracking"])
-           for g in T["type"]["groups"]}
-    assert got == {
-        "baslik-xl": ("font-display", "64px", "1.05", 500, "0.04em"),
-        "baslik-l": ("font-display", "40px", "1.1", 500, "0.04em"),
-        "baslik-m": ("font-display", "24px", "1.2", 500, "0.05em"),
-        "etiket": ("font-sans", "12px", "1.3", 600, "0.08em"),
-        "govde-l": ("font-sans", "18px", "28px", 400, None),
-        "govde": ("font-sans", "16px", "24px", 400, None),
-        "govde-k": ("font-sans", "14px", "20px", 400, None),
-        "kod": ("font-mono", "14px", "22px", 400, None),
+    assert _styles() == {
+        "baslik-xl": ("display", "64px", 1.05, 500, "0.04em"),
+        "baslik-l": ("display", "40px", 1.1, 500, "0.04em"),
+        "baslik-m": ("display", "24px", 1.2, 500, "0.05em"),
+        "etiket": ("sans", "12px", 1.3, 600, "0.08em"),
+        "govde-l": ("sans", "18px", "28px", 400, None),
+        "govde": ("sans", "16px", "24px", 400, None),
+        "govde-k": ("sans", "14px", "20px", 400, None),
+        "kod": ("mono", "14px", "22px", 400, None),
     }
-    assert [f["file"] for f in T["type"]["fonts"]] == [
-        "fonts/CouncilHalka.woff2", "fonts/DMSans.ttf", "fonts/DMMono-Regular.ttf"]
+    assert [(f["family"], f["file"], f["weight"]) for f in T["type"]["fonts"]] == [
+        ("Council Halka", "fonts/CouncilHalka.woff2", "500"), ("DM Sans", "fonts/DMSans.ttf", "100 1000"),
+        ("DM Mono", "fonts/DMMono-Regular.ttf", "400"), ("DM Mono", "fonts/DMMono-Medium.ttf", "500")]
+
+
+def test_type_follows_page_grammar():
+    ad = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
+    ty = T["type"]
+    assert isinstance(ty["families"], dict) and set(ty["families"]) == {"display", "sans", "mono"}
+    for f in ty["fonts"]:
+        assert {"family", "file", "weight"} <= set(f) and isinstance(f["weight"], str)
+    for g in ty["groups"]:
+        assert {"name", "family", "styles"} <= set(g) and g["family"] in ty["families"]
+        for s in g["styles"]:
+            assert {"name", "fontSize", "lineHeight", "fontWeight"} <= set(s)
+            assert ad.match(s["name"])
 
 
 def test_contrast_function():
