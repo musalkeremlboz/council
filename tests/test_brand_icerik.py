@@ -1,14 +1,25 @@
 """Content scan of brand/: no AI-tool names, no personal examples, and the README names only real tokens."""
+import importlib.util
 import json
 import re
 from pathlib import Path
 
 BRAND = Path(__file__).resolve().parent.parent / "brand"
+ICERIK = BRAND / "icerik.py"
 README = BRAND / "README.md"
 METIN = {".md", ".json", ".css", ".js", ".mjs", ".py", ".html", ".svg", ".txt"}
-ARAC_ADLARI = ("claude", "hermes", "antigravity", "chatgpt", "codex", "gemini")
-KISISEL = ("randevu", "dişçi", "vize", "sınav", "borç", "maaş")
 IZIN = "claude.ai tasarım sistemi sayfası"
+
+
+def _icerik_yukle():
+    """Load brand/icerik.py by path (brand is not a package)."""
+    spec = importlib.util.spec_from_file_location("brand_icerik", ICERIK)
+    modul = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modul)
+    return modul
+
+
+icerik = _icerik_yukle()
 # A backticked name counts as a token name when it starts with a token family word.
 TOKEN_BICIMI = re.compile(
     r"^(zemin|yuzey|murekkep|cizgi|kor|basari|uyari|hata|pasif|ton|kose|sure|egri|ara|baslik|govde|etiket|font|kod)(-[a-z0-9]+)*$"
@@ -16,12 +27,13 @@ TOKEN_BICIMI = re.compile(
 
 
 def _dosyalar():
-    return [p for p in BRAND.rglob("*") if p.is_file() and p.suffix in METIN]
+    return [p for p in BRAND.rglob("*") if p.is_file() and p.suffix in METIN and p != ICERIK]
 
 
-def _duz(metin: str) -> str:
-    """Lowercase with the Turkish dotted/dotless i folded together, so "DİŞÇİ" and "dişçi" both match."""
-    return metin.replace("İ", "i").replace("I", "i").replace("ı", "i").lower()
+def test_icerik_module_matches_rules():
+    assert icerik.arac_adlari_bul("Claude ve HERMES") == ["claude", "hermes"]
+    assert icerik.kisisel_bul("DİŞÇİ randevusu") == ["randevu", "dişçi"]
+    assert icerik.kisisel_bul("") == []
 
 
 def test_no_tool_names():
@@ -30,15 +42,15 @@ def test_no_tool_names():
         metin = yol.read_text(encoding="utf-8").lower()
         if yol == README:
             metin = metin.replace(IZIN, "")
-        bulunan += [f"{yol.relative_to(BRAND)}: {ad}" for ad in ARAC_ADLARI if ad in metin]
+        bulunan += [f"{yol.relative_to(BRAND)}: {ad}" for ad in icerik.arac_adlari_bul(metin)]
     assert bulunan == []
 
 
 def test_no_personal_examples():
     bulunan = []
     for yol in _dosyalar():
-        metin = _duz(yol.read_text(encoding="utf-8"))
-        bulunan += [f"{yol.relative_to(BRAND)}: {ad}" for ad in KISISEL if _duz(ad) in metin]
+        metin = yol.read_text(encoding="utf-8")
+        bulunan += [f"{yol.relative_to(BRAND)}: {ad}" for ad in icerik.kisisel_bul(metin)]
     assert bulunan == []
 
 
