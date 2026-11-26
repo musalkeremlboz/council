@@ -2,20 +2,14 @@
 // C altı parçaya (6 × 45°) ayrılır; her parça COUNCIL'in bir temel özelliğidir ve bugünkü durumu
 // ozellikler.json'dan okunur. Kor yalnız ortadaki O'dadır; taşınan not zemin renginde bir kesiktir.
 // Hareket azaltılmışsa altı duran kare; JS yoksa duran amblem ve altı açıklama alt alta.
-//
-// İşaretleme:
-//   <section class="s-tur" aria-label="…"><div class="s-tur__sahne">
-//     <figure class="s-tur__gorsel"><svg class="s-tur__svg" viewBox="-120 -70 640 540" role="img" aria-label="…">duran amblem</svg></figure>
-//     <div class="s-tur__metin"><div class="s-tur__paneller"><article class="s-tur__panel">…</article> × 6</div></div>
-//   </div></section>
-//   Sonraki öğe "atla" bağlantısının hedefidir.
+// İşaretleme ve etiket yerleşimi: brand/README.md, "Üç sahne".
 
 import { hareketAzaltildi, azaltmaIzle, yaklas, cizimDongusu, gorunurlukBekcisi, kokuIsaretle } from "./ortak.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const DALGA = "M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0";   // iki yarım daire, merkezden C'nin ağzına
 const L = 2 * Math.PI * 56, D = 30, BIT_YOL = L - D - 64;    // dalganın boyu, taşınan kesiğin boyu, yolu
-const VB = [-120, -70, 640, 540];                             // görüş alanı sabit: yakınlaşma yok
+const VB = [-120, -70, 640, 540], SAG = VB[0] + VB[2];   // görüş alanı sabit: yakınlaşma yok
 const SINIRLAR = [0.10, 0.27, 0.47, 0.64, 0.82];
 const KARELER = [0.05, 0.26, 0.46, 0.63, 0.80, 1];           // duran kareler
 const CIZGILER = [1.1, 0.45, 0.5, 0.45, 1.6, 0.45, 0.8, 0.45]; // henüz yazılmamış adın çizgileri (yazı boyu cinsinden)
@@ -125,15 +119,19 @@ function sahne(svg, oz, kayit, metin) {
         yaz(lb.ad, "x", x); yaz(lb.ad, "y", f(y1)); yaz(lb.ad, "text-anchor", yon);
       }
       yaz(lb.st, "x", x); yaz(lb.st, "y", f(y2)); yaz(lb.st, "text-anchor", yon);
+      // görüş alanından taşan etiket yatayda içeri kayar
+      const k = lb.grp.getBBox();
+      yaz(lb.grp, "transform", `translate(${f(Math.max(VB[0] - k.x, 0) + Math.min(SAG - k.x - k.width, 0))} 0)`);
     });
     const [kx, ky] = nk(190 + fs * 0.45, 0);
-    yaz(kapi, "x", kx); yaz(kapi, "y", ky);
+    yaz(kapi, "x", f(Math.min(kx, SAG - kapi.getComputedTextLength()))); yaz(kapi, "y", ky);
   };
 
   const olc = () => {
     const r = svg.getBoundingClientRect();
     if (r.width > 0 && r.height > 0) { w = r.width; h = r.height; }
     px = innerWidth < 761 ? 12 : 13;
+    fs = -1;   // etiketler yeniden ölçülür
   };
 
   const ciz = (p) => {
@@ -259,6 +257,7 @@ function canli(bolum, oz, metin) {
   });
   sc.ciz(0);
   goster(0);
+  document.fonts?.ready.then(boyut);
 
   return () => {
     birak();
@@ -296,6 +295,7 @@ function durgun(bolum, oz, metin) {
   let no = 0;
   const boyut = () => { if (!no) no = requestAnimationFrame(() => { no = 0; ciz(); }); };
   addEventListener("resize", boyut, { passive: true });
+  document.fonts?.ready.then(boyut);
   return () => {
     removeEventListener("resize", boyut);
     cancelAnimationFrame(no);
