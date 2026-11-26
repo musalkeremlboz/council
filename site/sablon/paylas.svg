@@ -4,6 +4,6 @@
 </defs>
 <rect width="1200" height="630" fill="$zemin"/>
 <g transform="translate(96 96) scale(.55)">$amblem</g>
-<text x="96" y="470" font-family="Council Halka" font-size="88" fill="$murekkep">$slogan</text>
+<text x="96" y="470" font-family="Council Halka" font-size="$slogan_boyut" fill="$murekkep">$slogan</text>
 <text x="100" y="540" font-family="Council Halka" font-size="36" letter-spacing="6" fill="$murekkep2">$ad</text>
 </svg>

@@ -479,6 +479,10 @@ def _yazi_tipi_adresi() -> str:
     return "data:font/woff2;base64," + base64.b64encode((BRAND / "font" / "CouncilHalka.woff2").read_bytes()).decode("ascii")
 
 
+# Tagline size per language: the line must fit between the 96 px margins (1008 px); EN is the longer line.
+SLOGAN_BOYUT = {"tr": 88, "en": 80}
+
+
 def paylas_svg(dil: str, m: dict) -> str:
     """sablon/paylas.svg for one language: dark theme colors from brand/tokens.json, the emblem, the tagline."""
     jetonlar = {t["name"]: t["value"]["dark"] for t in _json(BRAND / "tokens.json")["color"]["tokens"]}
@@ -486,7 +490,7 @@ def paylas_svg(dil: str, m: dict) -> str:
     ic = re.search(r"<svg[^>]*>(.*)</svg>", amblem, re.S).group(1)
     return Template((SABLON / "paylas.svg").read_text(encoding="utf-8")).substitute(
         lang=dil, zemin=jetonlar["zemin"], murekkep=jetonlar["murekkep"], murekkep2=jetonlar["murekkep-2"],
-        yazi_tipi=_yazi_tipi_adresi(), amblem=ic, slogan=_e(m["site"]["slogan"]), ad=_e(m["site"]["ad"]))
+        yazi_tipi=_yazi_tipi_adresi(), amblem=ic, slogan=_e(m["site"]["slogan"]), slogan_boyut=SLOGAN_BOYUT[dil], ad=_e(m["site"]["ad"]))
 
 
 def paylas_gorselleri(hedef: Path, metin: dict[str, dict], yeniden: bool) -> None:

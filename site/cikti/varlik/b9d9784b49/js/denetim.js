@@ -2,9 +2,9 @@
 // data-tasma (yatay taşma), data-yukseklik, data-sahney, data-kurulum (logo parçalarının kurulum sırası),
 // data-ayni (kimlik anı sonunda kaynak işaretleme geri geldi mi), data-gizli (<main> içinde yazı taşıyıp
 // visibility:hidden ya da opacity:0 olan, yani yerini tutup görünmeyen öğe sayısı; azaltılmış harekette ve betiksiz 0 olmalı).
-// display:none sayılmaz. Kurul turu karelerinin çizimi (.s-tur__gorsel) sayılmaz: her kare yalnız kendi adımını
+// display:none sayılmaz. Kurul turu statik karelerinin çizimi (.s-tur__kare .s-tur__gorsel) sayılmaz; canlı sahnenin çizimi sayılır: her kare yalnız kendi adımını
 // gösterir, öteki adımların yazıları o karede bilerek görünmez; kare metinleri (paneller) sayılır.
-const CIZIM = ".s-tur__gorsel";
+const CIZIM = ".s-tur__kare .s-tur__gorsel";
 const yaziVar = (e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim() !== "");
 
 export function gizliSay(doc = document) {

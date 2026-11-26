@@ -63,6 +63,18 @@ def test_share_images_committed_and_copied(cikti):
     assert (KOK / "site" / "sablon" / "paylas.svg").is_file()
 
 
+def test_share_tagline_fits_between_margins():
+    """The tagline of each language ends before the right margin (1200 - 96), measured with the font's advances."""
+    ttlib = pytest.importorskip("fontTools.ttLib")
+    yazi = ttlib.TTFont(KOK / "brand" / "font" / "CouncilHalka.woff2")
+    harita, olcu, birim = yazi.getBestCmap(), yazi["hmtx"], yazi["head"].unitsPerEm
+    metin = build.metin_yukle()
+    for dil in build.DILLER:
+        slogan = metin[dil]["site"]["slogan"]
+        genislik = sum(olcu[harita[ord(c)]][0] for c in slogan) / birim * build.SLOGAN_BOYUT[dil]
+        assert 96 + genislik <= 1200 - 96, (dil, genislik)
+
+
 @chrome
 @pytest.mark.parametrize("sayfa", SAYFALAR)
 @pytest.mark.parametrize("genislik", (375, 1280))
