@@ -117,6 +117,8 @@ Modüller `brand/js/sahne/` altındadır.
 - **Çizgi ve söz** (`cizgi-soz.js`): logonun çizgi ve söz biçimi arasında bir kez geçiş. Logo tanıtılırken kullanılır.
 - **Kurul turu** (`kurul-turu.js`): "nasıl çalışır" bölümü. Kaydırma sahnenin zamanıdır, altı adımda amblemi, altı özelliği ve hafızanın nasıl çalıştığını anlatır.
 
+Sahnelerin yazıları kodda değil, `brand/js/metin.json`dadır. `tr` ve `en` aynı anahtarları taşır: `cizgiSoz` söz biçiminin sözlerini, yerleşimini (sözün yolda kaç kez tekrarlandığı, harf aralığı) ve iki biçimin erişilebilir adını; `kurulTuru` atla bağlantısını, etiketleri ve kayıt satırlarını tutar (`{yolda}`, `{tamam}`, `{denemede}` o durumdaki özellik sayısıyla dolar). Özellik adlarının İngilizcesi `ozellikler.json`daki `en` alanındadır. Söz biçiminin durağan SVG'leri `node brand/js/parca.mjs <tr|en>` ile üretilir. Bir dilin sözü değişirse yerleşimi yeniden ölçülür: yazı yolunu tam doldurmalı, taşmamalı; `tests/test_brand_js.py` bunu Chrome'da denetler.
+
 Hareket yalnız bir şey anlatacaksa eklenir; süs için sahne konmaz.
 
 ## Simgeler

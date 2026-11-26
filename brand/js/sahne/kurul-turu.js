@@ -8,7 +8,7 @@
 //     <figure class="s-tur__gorsel"><svg class="s-tur__svg" viewBox="-120 -70 640 540" role="img" aria-label="…">duran amblem</svg></figure>
 //     <div class="s-tur__metin"><div class="s-tur__paneller"><article class="s-tur__panel">…</article> × 6</div></div>
 //   </div></section>
-//   Sonraki öğe "Hikâyeyi atla" bağlantısının hedefidir.
+//   Sonraki öğe "atla" bağlantısının hedefidir.
 
 import { hareketAzaltildi, azaltmaIzle, yaklas, cizimDongusu, gorunurlukBekcisi, kokuIsaretle } from "./ortak.js";
 
@@ -19,6 +19,7 @@ const VB = [-120, -70, 640, 540];                             // görüş alanı
 const SINIRLAR = [0.10, 0.27, 0.47, 0.64, 0.82];
 const KARELER = [0.05, 0.26, 0.46, 0.63, 0.80, 1];           // duran kareler
 const CIZGILER = [1.1, 0.45, 0.5, 0.45, 1.6, 0.45, 0.8, 0.45]; // henüz yazılmamış adın çizgileri (yazı boyu cinsinden)
+const KAYIT = [[[0.37, 0.47], [0.58, 0.64], [0.68, 0.82], [0.86, 1.01]], [[0.44, 0.47], [0.61, 0.64], [0.74, 0.82], [0.92, 1.01]]]; // kayıt satırlarının aralıkları
 
 const kis = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 const sm = (a, b, p) => { const t = kis((p - a) / (b - a)); return t * t * (3 - 2 * t); };
@@ -32,6 +33,11 @@ export const bolumBul = (p) => SINIRLAR.filter((s) => p >= s).length;
 export const koltukAcilari = (i) => [45 + 45 * i, 90 + 45 * i];
 // Etiket yazısı hiç sönükleşmez (4.5:1): yalnız girer ve kapanıştaki dolumdan önce çekilir.
 export const etiketOpak = (i, p) => sm(0.13 + 0.01 * i, 0.18 + 0.01 * i, p) * (1 - sm(0.83, 0.86, p));
+// Özelliğin o dildeki adı; yazılmamışsa null.
+export const ozellikAdi = (o, dil) => (dil === "en" ? o.en?.ad ?? null : o.ad);
+// Kayıt satırları: {yolda}, {tamam}, {denemede} o durumdaki özellik sayısıyla dolar.
+export const kayitSatirlari = (oz, metin) => metin.kayit.map((satir) =>
+  satir.map((t) => t.replace(/\{(\w+)\}/g, (_, d) => oz.filter((o) => o.durum === d).length)));
 
 // Parçanın doluluğu. Bugünkü hâl: tamam dolu, denemede yarı, yolda boş. Son bölümde altısı sırayla dolar:
 // bu bir gelecek önizlemesidir ("henüz değil").
@@ -55,31 +61,25 @@ function oge(ad, at, ust) {
 }
 const div = (sinif, ust) => { const e = document.createElement("div"); e.className = sinif; return ust ? ust.appendChild(e) : e; };
 
-function kayitKur(oz) {
-  const say = (d) => oz.filter((o) => o.durum === d).length;
-  const satirlar = [
-    [[0.37, 0.47, "telefon → hafıza · “toplantı kararı” · yazıldı"], [0.58, 0.64, "yardımcı öğrendi → beceri kaydedildi"],
-      [0.68, 0.82, `${say("yolda")} özellik yolda · adları henüz yazılmadı`], [0.86, 1.01, `altısı dolduğunda → sürüm 1.0.0`]],
-    [[0.44, 0.47, "hafıza → bilgisayar · okundu"], [0.61, 0.64, "tek satır haber · istersen geri alınır"],
-      [0.74, 0.82, "testi ve ölçümü geçen eklenir"], [0.92, 1.01, `henüz değil · bugün ${say("tamam")} dolu, ${say("denemede")} denemede`]],
-  ];
+function kayitKur(oz, metin) {
   const el = div("s-tur__kayit");
   el.setAttribute("aria-hidden", "true");
   const liste = [];
-  for (const satir of satirlar) {
+  kayitSatirlari(oz, metin).forEach((satir, j) => {
     const s = div("s-tur__satir", el);
-    for (const [a, b, metin] of satir) {
+    satir.forEach((yazi, k) => {
       const sp = s.appendChild(document.createElement("span"));
-      sp.textContent = metin;
+      sp.textContent = yazi;
+      const [a, b] = KAYIT[j][k];
       liste.push({ el: sp, a, b });
-    }
-  }
+    });
+  });
   return { el, liste };
 }
 
 let sayac = 0;
 // Bir SVG'ye sahneyi kurar; { olc, ciz(p) } döndürür.
-function sahne(svg, oz, kayit) {
+function sahne(svg, oz, kayit, metin) {
   const id = `tur-kesik-${++sayac}`;
   svg.replaceChildren();
   svg.setAttribute("viewBox", VB.join(" "));
@@ -99,11 +99,11 @@ function sahne(svg, oz, kayit) {
     const ad = oge(o.ad ? "text" : "path", o.ad ? {} : { class: "s-tur__yer" }, grp);   // ad yoksa yerinde çizgiler
     if (o.ad) ad.textContent = o.ad;
     const st = oge("text", { class: "s-tur__ikincil" }, grp);
-    st.textContent = o.durum;
+    st.textContent = metin.durum[o.durum];
     return { grp, ad, st };
   });
   const kapi = oge("text", { class: "s-tur__ikincil", "text-anchor": "start", opacity: 0 }, lg);
-  kapi.textContent = "cihazlar";
+  kapi.textContent = metin.cihazlar;
 
   let w = VB[2], h = VB[3], px = 13, fs = -1, ara = -1;
 
@@ -204,8 +204,8 @@ function sahne(svg, oz, kayit) {
   return { olc, ciz };
 }
 
-// "Hikâyeyi atla": bölümden sonraki öğeye gider.
-function atlaKur(bolum) {
+// "Atla" bağlantısı: bölümden sonraki öğeye gider.
+function atlaKur(bolum, metin) {
   const hedef = bolum.nextElementSibling || bolum.parentElement?.nextElementSibling;
   if (!hedef) return null;
   if (!hedef.id) hedef.id = `${bolum.id || "kurul-turu"}-sonrasi`;
@@ -213,16 +213,16 @@ function atlaKur(bolum) {
   const a = document.createElement("a");
   a.className = "s-tur__atla c-baglanti";
   a.href = `#${hedef.id}`;
-  a.textContent = "Hikâyeyi atla";
+  a.textContent = metin.atla;
   bolum.prepend(a);
   return a;
 }
 
-function canli(bolum, oz) {
+function canli(bolum, oz, metin) {
   const svg = bolum.querySelector(".s-tur__svg");
   const duran = [...svg.childNodes], vb = svg.getAttribute("viewBox");
   const paneller = [...bolum.querySelectorAll(".s-tur__panel")];
-  const kayit = kayitKur(oz);
+  const kayit = kayitKur(oz, metin);
   svg.after(kayit.el);
   const adimlar = document.createElement("ol");
   adimlar.className = "s-tur__adimlar";
@@ -230,9 +230,9 @@ function canli(bolum, oz) {
   adimlar.innerHTML = paneller.map(() => '<li><svg viewBox="0 0 20 20"><path class="s-tur__c" d="M14.95 14.95A7 7 0 1 1 14.95 5.05"/>' +
     '<circle class="s-tur__o" cx="10" cy="10" r="7"/></svg></li>').join("");   // açık C bekliyor, tam O bitti
   paneller[0]?.parentElement.before(adimlar);
-  const atla = atlaKur(bolum);
+  const atla = atlaKur(bolum, metin);
   bolum.classList.add("s-canli");
-  const sc = sahne(svg, oz, kayit.liste);
+  const sc = sahne(svg, oz, kayit.liste, metin);
 
   const goster = (k) => {
     paneller.forEach((e, i) => e.classList.toggle("s-etkin", i === k));
@@ -276,18 +276,18 @@ function canli(bolum, oz) {
 }
 
 // Hareket azaltılmış: aynı sahne, altı anahtar anda, alt alta.
-function durgun(bolum, oz) {
+function durgun(bolum, oz, metin) {
   const paneller = [...bolum.querySelectorAll(".s-tur__panel")];
   const liste = div("s-tur__kareler");
   const kareler = KARELER.map((p, k) => {
     const kare = div("s-tur__kare", liste);
     const fig = kare.appendChild(document.createElement("figure"));
     fig.className = "s-tur__gorsel";
-    const svg = oge("svg", { class: "s-tur__svg", role: "img", "aria-label": `Kurul turu, adım ${k + 1} / ${KARELER.length}` }, fig);
-    const kayit = kayitKur(oz);
+    const svg = oge("svg", { class: "s-tur__svg", role: "img", "aria-label": metin.adim.replace("{n}", k + 1).replace("{toplam}", KARELER.length) }, fig);
+    const kayit = kayitKur(oz, metin);
     fig.append(kayit.el);
     if (paneller[k]) kare.append(paneller[k].cloneNode(true));
-    return { sc: sahne(svg, oz, kayit.liste), p };
+    return { sc: sahne(svg, oz, kayit.liste, metin), p };
   });
   bolum.classList.add("s-durgun");
   bolum.append(liste);
@@ -305,10 +305,12 @@ function durgun(bolum, oz) {
 }
 
 // Sahneyi kurar; hareket tercihi sayfa açıkken değişirse hemen öteki hâline geçer. Temizleyici döndürür.
-export function baslat(bolum, ozellikler) {
+// metin: metin.json'da bir dilin kurulTuru'su (bütün yazılar oradan); dil: "tr" | "en".
+export function baslat(bolum, ozellikler, metin, dil = "tr") {
   kokuIsaretle(bolum.ownerDocument);
+  const oz = ozellikler.map((o) => ({ ...o, ad: ozellikAdi(o, dil) }));
   let birak = () => {};
-  const kur = (az) => { birak(); birak = (az ? durgun : canli)(bolum, ozellikler); };
+  const kur = (az) => { birak(); birak = (az ? durgun : canli)(bolum, oz, metin); };
   kur(hareketAzaltildi());
   const birakAz = azaltmaIzle(kur);
   return () => { birakAz(); birak(); };

@@ -1,0 +1,46 @@
+{
+  "tr": {
+    "cizgiSoz": {
+      "c": "BİRÇOK ÜYE · TEK HAFIZA",
+      "ci": "TEK HAFIZA · BİRÇOK ÜYE",
+      "dalga": "ORTAK HAFIZA",
+      "etiketCizgi": "COUNCIL logosu, çizgi biçimi",
+      "etiketSoz": "COUNCIL logosu, söz biçimi",
+      "yerlesim": {"c": {"tekrar": 3, "ara": 1.08}, "ci": {"tekrar": 3, "ara": 0.08}, "dalga": {"tekrar": 2, "ara": 2.49}}
+    },
+    "kurulTuru": {
+      "atla": "Hikâyeyi atla",
+      "cihazlar": "cihazlar",
+      "adim": "Kurul turu, adım {n} / {toplam}",
+      "durum": {"tamam": "tamam", "denemede": "denemede", "yolda": "yolda"},
+      "kayit": [
+        ["telefon → hafıza · “toplantı kararı” · yazıldı", "yardımcı öğrendi → beceri kaydedildi",
+         "{yolda} özellik yolda · adları henüz yazılmadı", "altısı dolduğunda → sürüm 1.0.0"],
+        ["hafıza → bilgisayar · okundu", "tek satır haber · istersen geri alınır",
+         "testi ve ölçümü geçen eklenir", "henüz değil · bugün {tamam} dolu, {denemede} denemede"]
+      ]
+    }
+  },
+  "en": {
+    "cizgiSoz": {
+      "c": "MANY MEMBERS · ONE MEMORY",
+      "ci": "ONE MEMORY · MANY MEMBERS",
+      "dalga": "SHARED MEMORY",
+      "etiketCizgi": "COUNCIL logo, line form",
+      "etiketSoz": "COUNCIL logo, word form",
+      "yerlesim": {"c": {"tekrar": 2, "ara": 3.19}, "ci": {"tekrar": 2, "ara": 1.77}, "dalga": {"tekrar": 2, "ara": 0.21}}
+    },
+    "kurulTuru": {
+      "atla": "Skip the story",
+      "cihazlar": "devices",
+      "adim": "Council tour, step {n} / {toplam}",
+      "durum": {"tamam": "complete", "denemede": "in trial", "yolda": "on the way"},
+      "kayit": [
+        ["phone → memory · “meeting decision” · written", "agent learned → skill saved",
+         "{yolda} features on the way · names not written yet", "when all six are filled → version 1.0.0"],
+        ["memory → computer · read", "one-line notice · you can undo it",
+         "added once it passes its tests and measurements", "not yet · today {tamam} filled, {denemede} in trial"]
+      ]
+    }
+  }
+}

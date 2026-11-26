@@ -20,7 +20,12 @@ import { hareketAzaltildi, azaltmaIzle, gorunurlukBekcisi, kokuIsaretle } from "
 
 export const TUR = [{ id: "soz", bekle: 1200 }, { id: "cizgi", bekle: 6800 }];
 export const GECIS = { duration: 840, easing: "cubic-bezier(.2,0,0,1)", fill: "forwards" };
-export const SOZ = { c: "BİRÇOK ÜYE · TEK HAFIZA", dalga: "ORTAK HAFIZA" };
+// Söz biçiminin sözleri (Türkçe); öteki diller brand/js/metin.json'dan (cizgiSoz) gelir. Yerleşim: söz yolda kaç kez
+// tekrarlanır ve harf aralığı (px); sözün boyu dile göre değiştiği için yazı yolu tam doldursun diye ölçülüp yazılır.
+export const SOZ = {
+  c: "BİRÇOK ÜYE · TEK HAFIZA", ci: "TEK HAFIZA · BİRÇOK ÜYE", dalga: "ORTAK HAFIZA",
+  yerlesim: { c: { tekrar: 3, ara: 1.08 }, ci: { tekrar: 3, ara: 0.08 }, dalga: { tekrar: 2, ara: 2.49 } },
+};
 
 const DALGA = "M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0";
 const C_YOL = "M168 0A168 168 0 1 1 0 -168";
@@ -28,7 +33,7 @@ const SVG = 'viewBox="0 0 400 400" aria-hidden="true" focusable="false"';
 const tekrar = (metin, k) => Array(k).fill(metin).join(" · ");
 
 // Bir biçimin amblemi: kor O (aynı) + biçimin kendi C'si ve dalgası.
-export function amblemSvg(bicim, uid) {
+export function amblemSvg(bicim, uid, soz = SOZ) {
   const kor = `<svg class="s-cs__kor" ${SVG}><defs><mask id="${uid}" maskUnits="userSpaceOnUse" x="0" y="0" width="400" height="400">` +
     `<rect width="400" height="400" fill="white"/><path transform="translate(200 200)" d="${DALGA}" fill="none" stroke="black" stroke-width="48"/>` +
     `</mask></defs><circle class="s-kor" cx="200" cy="200" r="112" fill="none" stroke-width="28" mask="url(#${uid})"/></svg>`;
@@ -37,15 +42,16 @@ export function amblemSvg(bicim, uid) {
       `<path transform="translate(200 200) rotate(45)" d="${C_YOL}"/><path transform="translate(200 200)" d="${DALGA}"/></g></svg>`;
   }
   // C iki satır (dış ve iç yarıçap), dalga iki satır: harflerin orta çizgisi çizgi biçiminin kalınlığı içinde kalır.
+  const yer = soz.yerlesim ?? SOZ.yerlesim;
   const yollar = [
-    ["cd", "M319.5 319.5A169 169 0 1 1 319.5 80.5", 1.08, tekrar(SOZ.c, 3)],
-    ["ci", "M308.19 308.19A153 153 0 1 1 308.19 91.81", 0.08, tekrar("TEK HAFIZA · BİRÇOK ÜYE", 3)],
-    ["da", "M159 200A41 41 0 0 1 241 200A71 71 0 0 0 383 200", 2.49, tekrar(SOZ.dalga, 2)],
-    ["db", "M143 200A57 57 0 0 1 257 200A55 55 0 0 0 367 200", 2.49, tekrar(SOZ.dalga, 2)],
+    ["cd", "M319.5 319.5A169 169 0 1 1 319.5 80.5", "c"],
+    ["ci", "M308.19 308.19A153 153 0 1 1 308.19 91.81", "ci"],
+    ["da", "M159 200A41 41 0 0 1 241 200A71 71 0 0 0 383 200", "dalga"],
+    ["db", "M143 200A57 57 0 0 1 257 200A55 55 0 0 0 367 200", "dalga"],
   ];
   return kor + `<svg class="s-cs__form" ${SVG}><defs>` +
     yollar.map(([id, d]) => `<path id="${uid}-${id}" d="${d}"/>`).join("") + `</defs><g class="s-cs__soz">` +
-    yollar.map(([id, , ara, metin]) => `<text style="letter-spacing:${ara}px"><textPath href="#${uid}-${id}">${metin}</textPath></text>`).join("") +
+    yollar.map(([id, , k]) => `<text style="letter-spacing:${yer[k].ara}px"><textPath href="#${uid}-${id}">${tekrar(soz[k], yer[k].tekrar)}</textPath></text>`).join("") +
     "</g></svg>";
 }
 

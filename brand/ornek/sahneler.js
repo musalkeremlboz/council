@@ -5,11 +5,12 @@ import { baslat as kurulTuru } from "../js/sahne/kurul-turu.js";
 
 const bolum = (id) => document.getElementById(id);
 
-// Kimlik anı hemen başlar: glifler ile özellik listesi aynı anda yüklenir.
+// Kimlik anı hemen başlar: glifler, özellik listesi ve sahne yazıları aynı anda yüklenir.
 const kimlik = yaziKur(document);
-let ozellikler = null;
-try { ozellikler = await fetch("../js/ozellikler.json").then((r) => r.json()); } catch { /* dosya olarak açılmışsa duran hâl kalır */ }
+const json = (yol) => fetch(yol).then((r) => r.json());
+let veri = null;
+try { veri = await Promise.all([json("../js/ozellikler.json"), json("../js/metin.json")]); } catch { /* dosya olarak açılmışsa duran hâl kalır */ }
 
 await kimlik;
 cizgiSoz(bolum("cizgi-soz-bolum"));
-if (ozellikler) kurulTuru(bolum("kurul-turu"), ozellikler);
+if (veri) kurulTuru(bolum("kurul-turu"), veri[0], veri[1].tr.kurulTuru);

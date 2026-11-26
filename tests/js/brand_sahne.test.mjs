@@ -5,11 +5,17 @@ import {
   hareketAzaltildi, azaltmaIzle, yaklas, cizimDongusu, gorunurlukBekcisi, kokuIsaretle,
 } from "../../brand/js/sahne/ortak.js";
 import { glifYollari, zamanla, SURE, baslat as yaziKur, amblemiKur } from "../../brand/js/sahne/yazi-kur.js";
-import { TUR, GECIS, amblemSvg } from "../../brand/js/sahne/cizgi-soz.js";
-import { bolumBul, koltukAcilari, doluluk, etiketOpak } from "../../brand/js/sahne/kurul-turu.js";
+import { TUR, GECIS, SOZ, amblemSvg } from "../../brand/js/sahne/cizgi-soz.js";
+import { bolumBul, koltukAcilari, doluluk, etiketOpak, ozellikAdi, kayitSatirlari } from "../../brand/js/sahne/kurul-turu.js";
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const GLIFLER = JSON.parse(readFileSync(new URL("../../brand/font/glifler.json", import.meta.url), "utf8"));
+const oku = (yol) => JSON.parse(readFileSync(new URL(yol, import.meta.url), "utf8"));
+const GLIFLER = oku("../../brand/font/glifler.json");
+const METIN = oku("../../brand/js/metin.json");
+const OZELLIKLER = oku("../../brand/js/ozellikler.json");
+const TURKCE = /[ğışİĞŞ]/;
 
 function sahteMq(matches) {
   const mq = {
@@ -313,4 +319,61 @@ test("amblemiKur draws the kor O first, then the C, the wave last, and the wordm
   assert.ok(yazilar.length >= 7, "every letter of COUNCIL is drawn");
   assert.ok(Math.min(...yazilar) > kor.d);
   assert.ok(son <= SURE.okunur, `the logo is whole by ${son} ms`);
+});
+
+// The shape of a text tree: object keys and array lengths, leaves as their type.
+const bicimi = (v) => Array.isArray(v) ? v.map(bicimi)
+  : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, bicimi(v[k])])) : typeof v;
+const yapraklar = (v) => (v && typeof v === "object" ? Object.values(v).flatMap(yapraklar) : [v]);
+
+test("metin.json: tr and en carry the same keys, and en has no Turkish-only letters", () => {
+  assert.deepEqual(Object.keys(METIN).sort(), ["en", "tr"]);
+  assert.deepEqual(bicimi(METIN.en), bicimi(METIN.tr));
+  for (const t of yapraklar(METIN.en)) assert.ok(!TURKCE.test(t), t);
+  const { c, ci, dalga, yerlesim } = METIN.tr.cizgiSoz;
+  assert.deepEqual({ c, ci, dalga, yerlesim }, SOZ, "the default words are the tr words");
+});
+
+test("amblemSvg: the words come from the language passed in", () => {
+  const soz = amblemSvg("soz", "x", METIN.en.cizgiSoz);
+  assert.ok(soz.includes("SHARED MEMORY") && soz.includes("MANY MEMBERS · ONE MEMORY") && soz.includes("ONE MEMORY · MANY MEMBERS"));
+  assert.ok(!soz.includes("HAFIZA"));
+  assert.equal(amblemSvg("soz", "cs-soz", METIN.tr.cizgiSoz), amblemSvg("soz", "cs-soz"));
+  const sayfa = readFileSync(new URL("../../brand/ornek/index.html", import.meta.url), "utf8");
+  assert.ok(sayfa.includes(amblemSvg("soz", "cs-soz")) && sayfa.includes(amblemSvg("cizgi", "cs-cizgi")), "the example page carries the tr forms");
+  for (const k of ["etiketCizgi", "etiketSoz"]) assert.ok(sayfa.includes(`aria-label="${METIN.tr.cizgiSoz[k]}"`), k);
+});
+
+test("Kurul turu text: feature names and record lines in English", () => {
+  assert.equal(ozellikAdi(OZELLIKLER[0], "en"), "Memory");
+  assert.equal(ozellikAdi(OZELLIKLER[0], "tr"), "Hafıza");
+  assert.equal(ozellikAdi(OZELLIKLER[2], "en"), null);
+  assert.equal(ozellikAdi(OZELLIKLER[2], "tr"), null);
+  const en = kayitSatirlari(OZELLIKLER, METIN.en.kurulTuru);
+  assert.equal(en.length, 2);
+  for (const satir of en) assert.equal(satir.length, 4);
+  const metin = en.flat().join(" ");
+  assert.ok(metin.includes("4"), metin);
+  assert.ok(!TURKCE.test(metin), metin);
+  assert.ok(!/[{}]/.test(metin), metin);
+  const tr = kayitSatirlari(OZELLIKLER, METIN.tr.kurulTuru).flat().join(" ");
+  assert.ok(tr.includes("4 özellik yolda") && tr.includes("bugün 1 dolu, 1 denemede"), tr);
+  assert.equal(METIN.en.kurulTuru.atla, "Skip the story");
+  assert.equal(METIN.tr.kurulTuru.atla, "Hikâyeyi atla");
+});
+
+test("kurul-turu.js holds no Turkish text outside comments", () => {
+  const kaynak = readFileSync(new URL("../../brand/js/sahne/kurul-turu.js", import.meta.url), "utf8");
+  const kod = kaynak.split("\n").map((l) => l.replace(/(^|\s)\/\/.*$/, "")).join("\n");
+  assert.ok(!/[çğıöşüâÇĞİÖŞÜ]/.test(kod), kod.match(/.*[çğıöşüâÇĞİÖŞÜ].*/)?.[0]);
+});
+
+test("parca.mjs prints the two Çizgi-Söz forms of a language", () => {
+  const cli = fileURLToPath(new URL("../../brand/js/parca.mjs", import.meta.url));
+  for (const dil of ["tr", "en"]) {
+    const { cizgiSoz } = JSON.parse(execFileSync("node", [cli, dil], { encoding: "utf8" }));
+    assert.equal(cizgiSoz.soz, amblemSvg("soz", "cs-soz", METIN[dil].cizgiSoz));
+    assert.equal(cizgiSoz.cizgi, amblemSvg("cizgi", "cs-cizgi", METIN[dil].cizgiSoz));
+  }
+  assert.throws(() => execFileSync("node", [cli, "de"], { stdio: "pipe" }));
 });
