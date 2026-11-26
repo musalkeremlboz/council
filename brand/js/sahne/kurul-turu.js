@@ -30,6 +30,8 @@ const yay = (r, a, yon) => `A${r} ${r} 0 0 ${yon} ${nk(r, a).join(" ")}`;
 
 export const bolumBul = (p) => SINIRLAR.filter((s) => p >= s).length;
 export const koltukAcilari = (i) => [45 + 45 * i, 90 + 45 * i];
+// Etiket yazısı hiç sönükleşmez (4.5:1): yalnız girer ve kapanıştaki dolumdan önce çekilir.
+export const etiketOpak = (i, p) => sm(0.13 + 0.01 * i, 0.18 + 0.01 * i, p) * (1 - sm(0.83, 0.86, p));
 
 // Parçanın doluluğu. Bugünkü hâl: tamam dolu, denemede yarı, yolda boş. Son bölümde altısı sırayla dolar:
 // bu bir gelecek önizlemesidir ("henüz değil").
@@ -160,13 +162,13 @@ function sahne(svg, oz, kayit) {
     const tr = `translate(200 200) rotate(${f(th)})`;
     for (const e of [dalga, mDalga, bit]) yaz(e, "transform", tr);
 
-    // Sırası gelen özellik öne çıkar, ötekiler geri çekilir; etiketler kapanıştaki dolumdan önce çekilir.
+    // Sırası gelen özellik öne çıkar, ötekilerin parçaları geri çekilir.
     const one = {
       tamam: sm(0.28, 0.31, p) - sm(0.46, 0.49, p),
       denemede: sm(0.47, 0.50, p) - sm(0.63, 0.66, p),
       yolda: sm(0.64, 0.67, p) - sm(0.81, 0.84, p),
     };
-    const sonuk = kis(one.tamam + one.denemede + one.yolda), cek = 1 - sm(0.83, 0.86, p);
+    const sonuk = kis(one.tamam + one.denemede + one.yolda);
     const kipir = fs * (p * 20 + 9 * sm(0.64, 0.82, p));   // çizgiler yalnız kaydırınca kıpırdar
     oz.forEach((o, i) => {
       const op = f(1 - 0.55 * sonuk * (1 - (one[o.durum] || 0)));
@@ -180,7 +182,7 @@ function sahne(svg, oz, kayit) {
         yaz(cer[i], "display", "none");
       }
       const lb = etiket[i];
-      yaz(lb.grp, "opacity", f(sm(0.13 + 0.01 * i, 0.18 + 0.01 * i, p) * cek * op));
+      yaz(lb.grp, "opacity", f(etiketOpak(i, p)));
       if (lb.ad.tagName === "path") yaz(lb.ad, "stroke-dashoffset", f(-(kipir + i * 1.7 * fs)));
     });
     yaz(kapi, "opacity", f(one.tamam));

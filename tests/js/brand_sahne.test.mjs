@@ -6,7 +6,7 @@ import {
 } from "../../brand/js/sahne/ortak.js";
 import { glifYollari, zamanla, SURE } from "../../brand/js/sahne/yazi-kur.js";
 import { TUR, GECIS, amblemSvg } from "../../brand/js/sahne/cizgi-soz.js";
-import { bolumBul, koltukAcilari, doluluk } from "../../brand/js/sahne/kurul-turu.js";
+import { bolumBul, koltukAcilari, doluluk, etiketOpak } from "../../brand/js/sahne/kurul-turu.js";
 import { readFileSync } from "node:fs";
 
 const GLIFLER = JSON.parse(readFileSync(new URL("../../brand/font/glifler.json", import.meta.url), "utf8"));
@@ -198,6 +198,14 @@ test("koltukAcilari covers 45..315 in six 45° parts", () => {
   for (let i = 0; i < 6; i++) {
     assert.equal(a[i][1] - a[i][0], 45);
     if (i) assert.equal(a[i][0], a[i - 1][1]);
+  }
+});
+
+test("etiketOpak: labels are never dimmed while features take turns (text stays at 4.5:1)", () => {
+  for (let i = 0; i < 6; i++) {
+    assert.equal(etiketOpak(i, 0), 0);
+    for (let p = 0.24; p <= 0.83; p += 0.005) assert.equal(etiketOpak(i, p), 1, `i=${i} p=${p}`);
+    assert.equal(etiketOpak(i, 1), 0);
   }
 });
 
