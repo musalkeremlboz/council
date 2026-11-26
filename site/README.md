@@ -42,3 +42,42 @@ python site/build.py --gorsel     # paylaşım görsellerini Chrome ile yeniden 
 `tests/test_site_build.py` ve `tests/test_site_denetim.py`: dört sayfa, dil eşleri, anahtar eşliği, araç sayıları, tekrarlanabilirlik, göreli varlık bağlantıları; araç adı ve kişisel sözcük taraması (`brand/icerik.py`), renk değeri yok, dış kaynak yok, dış bağlantılar yalnız GitHub, iç bağlantılar var olan dosyalara gider, sayfa başına sahne sınırı.
 
 Tarayıcı denetimi (`tests/test_site_tarayici.py`, Chrome yoksa atlanır): dört sayfada 375 ve 1280 px'te yatay taşma yok; ana sayfalarda kimlik anı `kor-c-yazi-isaret` sırasıyla kurulur ve sonunda kaynak işaretleme geri gelir; azaltılmış harekette ve betiksiz `<main>` içinde yazı taşıyıp görünmeyen öğe yok (`?denetim=1` kancasının `data-gizli` değeri 0); site haritası ve robots.txt; paylaşım görselleri 1200×630. Ekran görüntüleri için: `python brand/denetle.py KLASOR --sayfa site/cikti/index.html --sayfa site/cikti/en/memory/index.html`.
+
+## Yayın
+
+Betikler yalnız yayın hazırlığıdır; sunucuya bu görevde dokunulmadı. Yayın, `site/` temizken (commitli) yapılır.
+
+```sh
+python site/build.py
+site/yayinla.sh kullanici@sunucu:/var/www/council-site   # ya da yerel bir klasör
+site/dogrula.sh https://council.systems
+```
+
+- `yayinla.sh <hedef>`: `site/cikti/` klasörünü `<hedef>/surumler/<git kısa özeti>/` altına `rsync -a --delete` ile kopyalar, `<hedef>/guncel` bağını yeni sürüme çevirir (uzakta `ln -s` ve `mv -T` ile tek adımda; yerelde `ln -sfn`), `surumler/` içinde en yeni 3 klasörü tutar. `site/` kirliyse durur. `SURUM=ad` sürüm adını değiştirir (testler için).
+- `dogrula.sh <temel-adres>`: `/`, `/en/`, `/hafiza/`, `/en/memory/`, `/sitemap.xml` için 200; değişmeyen hizmet yolları için `/health`, `/icon.svg`, `/.well-known/oauth-authorization-server` 200, `/mcp` ve `/panel/` 404 değil. Her denetim bir satır; biri başarısızsa çıkış kodu sıfırdan farklıdır. `DOGRULA_SAYFALAR_YALNIZ=1` hizmet yollarını atlar (yerel dosya sunucusu).
+
+### Caddy bloğu
+
+Canlı `council.systems` bloğunda, mevcut her şeyi yakalayan kuraldan önce:
+
+```caddy
+@varlik path /varlik/*
+@site path / /en /en/* /hafiza /hafiza/* /sitemap.xml /robots.txt /paylas-*.png
+handle @varlik {
+	root * /var/www/council-site/guncel
+	header Cache-Control "public, max-age=31536000, immutable"
+	file_server
+}
+handle @site {
+	root * /var/www/council-site/guncel
+	header Cache-Control "no-cache"
+	file_server
+}
+```
+
+`/varlik/*` yolları içerik özetli olduğu için sonsuza dek önbelleğe alınır; HTML ve diğer dosyalar `no-cache`. Yayından önce `caddy validate` ve `curl -I` ile iki yolun başlığına bakılmalı.
+
+### Geri alma
+
+- Bir sürüm geri: `guncel` bağını bir önceki `surumler/<ad>` klasörüne çevir (`ln -sfn surumler/<ad> guncel`).
+- Bütünüyle: bloğu sil, `caddy validate`, `systemctl reload caddy`.
