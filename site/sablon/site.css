@@ -73,3 +73,77 @@ img, svg { max-inline-size: 100%; }
 .s-alt__logo:focus { outline: none; }
 .s-alt__logo:focus-visible { outline: 2px solid var(--kor-metin); outline-offset: 2px; }
 .s-alt__lisans { margin: 0; margin-inline-start: auto; color: var(--murekkep-2); font: 400 12px/1.6 var(--font-mono); }
+
+/* Home: hero. The install sentence is plain selectable text; the copy button appears only when JS wires it. */
+.s-acilis {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--ara-8) var(--ara-12);
+  align-items: start;
+  padding-block: var(--ara-16) var(--ara-12);
+}
+.s-sayfa .s-acilis h1 { grid-column: 1 / -1; margin: 0; max-inline-size: 16ch; }
+.s-acilis__tanim { margin: 0; max-inline-size: 44ch; }
+@media (max-width: 900px) {
+  .s-acilis { grid-template-columns: minmax(0, 1fr); }
+  .s-kur { max-inline-size: 760px; }
+}
+.s-kur__onu { margin: 0 0 var(--ara-3); color: var(--murekkep-2); }
+.s-kur pre {
+  margin: 0 0 var(--ara-6);
+  padding: var(--ara-4);
+  background: var(--yuzey);
+  border: 1px solid var(--cizgi-guclu);
+  color: var(--murekkep);
+  font: 400 14px/22px var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.s-kur code { font: inherit; }
+.s-kur__eylem { display: flex; flex-wrap: wrap; gap: var(--ara-3); }
+.s-kur__eylem [hidden] { display: none; }
+
+/* Home: sections (ruled, no boxes) */
+.s-bolum { padding-block-start: var(--ara-16); }
+.s-bolum > h2 { margin: 0 0 var(--ara-3); }
+.s-bolum__onu { margin: 0 0 var(--ara-8); max-inline-size: 52ch; color: var(--murekkep-2); }
+.s-bolum--cs { padding-block: var(--ara-12); border-block: 1px solid var(--cizgi); }
+.s-bolum--tur > h2 { margin-block-end: var(--ara-6); }
+
+/* What it does: one ruled row per item, icon / heading / sentence */
+.s-yarar { list-style: none; margin: 0; padding: 0; border-block-start: 1px solid var(--cizgi-guclu); }
+.s-yarar li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 22rem) minmax(0, 1fr);
+  gap: var(--ara-2) var(--ara-6);
+  align-items: baseline;
+  padding-block: var(--ara-6);
+  border-block-end: 1px solid var(--cizgi);
+}
+.s-yarar__simge { align-self: start; inline-size: 24px; block-size: 28px; color: var(--murekkep); }
+.s-yarar h3 { margin: 0; font-weight: 600; }
+.s-yarar p { margin: 0; max-inline-size: 60ch; color: var(--murekkep-2); }
+@media (max-width: 760px) {
+  .s-yarar li { grid-template-columns: 24px minmax(0, 1fr); }
+  .s-yarar p { grid-column: 2; }
+}
+
+/* Kurul turu: the line after the scene (the skip link's target) */
+.s-tur-sonu { padding-block: var(--ara-6) 0; border-block-end: 1px solid var(--cizgi); }
+.s-tur-sonu p { margin: 0 0 var(--ara-6); color: var(--murekkep-2); overflow-wrap: anywhere; }
+.s-tur-sonu:focus { outline: none; }
+
+/* Products strip: one ruled row per product */
+.s-urunler { list-style: none; margin: 0; padding: 0; border-block-start: 1px solid var(--cizgi-guclu); }
+.s-urun {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: var(--ara-6);
+  align-items: center;
+  padding-block: var(--ara-6);
+  border-block-end: 1px solid var(--cizgi);
+}
+.s-urun__amblem { display: flex; }
+.s-urun__amblem img { inline-size: 64px; block-size: 64px; }
+.s-urun h3 { margin: 0 0 var(--ara-1); }
+.s-urun p { margin: 0; color: var(--murekkep-2); }

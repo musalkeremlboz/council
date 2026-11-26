@@ -5,8 +5,15 @@
     "ogYerel": "tr_TR",
     "atla": "İçeriğe geç",
     "digerDil": "English",
-    "gezinme": {"etiket": "Site", "hafiza": "Hafıza", "github": "GitHub"},
-    "altbilgi": {"etiket": "Alt bilgi", "lisans": "© 2026 COUNCIL · MIT lisansı"}
+    "gezinme": {
+      "etiket": "Site",
+      "hafiza": "Hafıza",
+      "github": "GitHub"
+    },
+    "altbilgi": {
+      "etiket": "Alt bilgi",
+      "lisans": "© 2026 COUNCIL · MIT lisansı"
+    }
   },
   "sayfalar": {
     "ana": {
@@ -21,6 +28,85 @@
     }
   },
   "urunler": {
-    "hafiza": {"ad": "Hafıza", "cumle": "Kullandığın bütün yardımcılar aynı hafızayı okur ve yazar."}
+    "hafiza": {
+      "ad": "Hafıza",
+      "cumle": "Kullandığın bütün yardımcılar aynı hafızayı okur ve yazar."
+    }
+  },
+  "ana": {
+    "tanim": "COUNCIL, yapay zekâ yardımcılarına kalıcı hafıza veren açık kaynak bir sistemdir.",
+    "kurulum": {
+      "onu": "Kurmak için şu cümleyi yapay zekâ yardımcına yapıştır. Gerisini o yapar.",
+      "cumle": "Şu yönergeyi oku ve COUNCIL'i kur:\nhttps://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md",
+      "kopyala": "Kurulum cümlesini kopyala",
+      "kopyalandi": "Kopyalandı",
+      "secin": "Kopyalanamadı, cümleyi seç"
+    },
+    "cizgiSoz": {
+      "etiket": "Logonun iki biçimi",
+      "secici": "Logonun biçimi",
+      "cizgi": "Çizgi",
+      "soz": "Söz"
+    },
+    "yarar": {
+      "baslik": "Ne işe yarar",
+      "onu": "Yapay zekâ yardımcıları sohbet bitince her şeyi unutur. COUNCIL bu boşluğu doldurur.",
+      "maddeler": [
+        {
+          "baslik": "Yeni oturum sıfırdan başlamaz",
+          "cumle": "Oturum açılır açılmaz profilin, kuralların, açık işlerin ve son oturumların yardımcının önüne gelir."
+        },
+        {
+          "baslik": "Düzeltmen kural olur",
+          "cumle": "Düzeltmen tarihli tek satır olarak kurallara girer ve sonraki her oturumda yüklenir."
+        },
+        {
+          "baslik": "Bütün cihazların tek hafızayı paylaşır",
+          "cumle": "Sunucuya taşıdığında bütün cihazların aynı notları paylaşır; eşitlenecek klasör yoktur."
+        },
+        {
+          "baslik": "Hafıza açık metindir",
+          "cumle": "Notlar düz metindir; her değişiklik ne zaman ve neden yapıldığıyla birlikte geçmişte durur."
+        }
+      ]
+    },
+    "urunler": "Ürünler"
+  },
+  "kurul": {
+    "baslik": "Yol haritası",
+    "gorsel": "COUNCIL amblemi: altı parçalı dış halka",
+    "paneller": [
+      {
+        "etiket": "1 / 6",
+        "baslik": "Amblem",
+        "govde": "Tek bir yardımcıya bağlı değildir: kullandığın bütün yardımcılar aynı hafızayı okur ve yazar."
+      },
+      {
+        "etiket": "2 / 6",
+        "baslik": "Altı özellik",
+        "govde": "Dış halkanın altı parçası sistemin altı temel özelliğidir."
+      },
+      {
+        "etiket": "3 / 6",
+        "baslik": "Hafıza",
+        "govde": "Notlar düz dosyalarda durur, her değişiklik geçmişe işlenir, kelimeyle aranır ve bağlam kendiliğinden gelir."
+      },
+      {
+        "etiket": "4 / 6",
+        "baslik": "Kişisel gelişim",
+        "govde": "Yardımcı kararını, tercihini ve düzeltmeni söylediğin anda kendisi kaydeder."
+      },
+      {
+        "etiket": "5 / 6",
+        "baslik": "Yolda",
+        "govde": "Öteki {yolda} özelliğin adı henüz yazılmadı. Bir özellik ancak testlerini ve ölçümlerini geçtiğinde eklenir."
+      },
+      {
+        "etiket": "6 / 6",
+        "baslik": "1.0.0",
+        "govde": "Bir özellik eklendiğinde adı yazılır ve parçası dolar. Altısı da dolduğunda sürüm 1.0.0 çıkar."
+      }
+    ],
+    "son": "Bugün: sürüm {surum} · {temel} temel araç + {ogrenme} kişisel gelişim aracı (denemede)"
   }
 }

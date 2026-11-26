@@ -5,8 +5,15 @@
     "ogYerel": "en_US",
     "atla": "Skip to content",
     "digerDil": "Türkçe",
-    "gezinme": {"etiket": "Site", "hafiza": "Memory", "github": "GitHub"},
-    "altbilgi": {"etiket": "Footer", "lisans": "© 2026 COUNCIL · MIT license"}
+    "gezinme": {
+      "etiket": "Site",
+      "hafiza": "Memory",
+      "github": "GitHub"
+    },
+    "altbilgi": {
+      "etiket": "Footer",
+      "lisans": "© 2026 COUNCIL · MIT license"
+    }
   },
   "sayfalar": {
     "ana": {
@@ -21,6 +28,85 @@
     }
   },
   "urunler": {
-    "hafiza": {"ad": "Memory", "cumle": "Every agent you use reads and writes the same memory."}
+    "hafiza": {
+      "ad": "Memory",
+      "cumle": "Every agent you use reads and writes the same memory."
+    }
+  },
+  "ana": {
+    "tanim": "COUNCIL is an open-source system that gives AI agents a lasting memory.",
+    "kurulum": {
+      "onu": "To set it up, paste this sentence to your AI agent. It does the rest.",
+      "cumle": "Read these instructions and set up COUNCIL:\nhttps://raw.githubusercontent.com/musalkeremlboz/council/main/INSTALL.md",
+      "kopyala": "Copy the setup sentence",
+      "kopyalandi": "Copied",
+      "secin": "Could not copy, select the sentence"
+    },
+    "cizgiSoz": {
+      "etiket": "The two forms of the logo",
+      "secici": "Form of the logo",
+      "cizgi": "Line",
+      "soz": "Word"
+    },
+    "yarar": {
+      "baslik": "What it does",
+      "onu": "AI agents forget everything when the chat ends. COUNCIL fills that gap.",
+      "maddeler": [
+        {
+          "baslik": "A new session does not start from zero",
+          "cumle": "As the session opens, your profile, your rules, your open threads and your latest sessions are in front of the agent."
+        },
+        {
+          "baslik": "Your correction becomes a rule",
+          "cumle": "Your correction becomes one dated line in the rules and loads in every later session."
+        },
+        {
+          "baslik": "All your devices share one memory",
+          "cumle": "Move it to a server and all your devices share the same notes; there is no folder to sync."
+        },
+        {
+          "baslik": "The memory is plain text",
+          "cumle": "Notes are plain text; every change stays in the history with when and why it was made."
+        }
+      ]
+    },
+    "urunler": "Products"
+  },
+  "kurul": {
+    "baslik": "Roadmap",
+    "gorsel": "COUNCIL emblem: an outer ring of six parts",
+    "paneller": [
+      {
+        "etiket": "1 / 6",
+        "baslik": "The emblem",
+        "govde": "It is not tied to one agent: every agent you use reads and writes the same memory."
+      },
+      {
+        "etiket": "2 / 6",
+        "baslik": "Six features",
+        "govde": "The six parts of the outer ring are the six basic features of the system."
+      },
+      {
+        "etiket": "3 / 6",
+        "baslik": "Memory",
+        "govde": "Notes live in plain files, every change goes into the history, they are searched by keyword and context arrives by itself."
+      },
+      {
+        "etiket": "4 / 6",
+        "baslik": "Personal development",
+        "govde": "The agent records your decision, preference or correction the moment you state it."
+      },
+      {
+        "etiket": "5 / 6",
+        "baslik": "On the way",
+        "govde": "The names of the other {yolda} features are not written yet. A feature is added only once it has passed its tests and measurements."
+      },
+      {
+        "etiket": "6 / 6",
+        "baslik": "1.0.0",
+        "govde": "When a feature is added, its name is written and its part is filled. When all six are filled, version 1.0.0 is released."
+      }
+    ],
+    "son": "Today: version {surum} · {temel} core tools + {ogrenme} personal-development tools (in trial)"
   }
 }

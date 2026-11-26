@@ -13,9 +13,10 @@ python site/build.py --cikti DIR  # başka bir klasöre yazar
 |---|---|
 | `build.py` | Üretici. Sayfaları doldurur, varlıkları kopyalar, glif alt kümesini yazar. |
 | `sablon/sayfa.html` | Sayfa kabuğu (`string.Template`, `$` yer tutucuları): başlık, açıklama, dil eşleri, üst şerit, alt bilgi. |
+| `sablon/ana.html` | Ana sayfanın gövdesi: açılış ve kurulum cümlesi, Çizgi ve söz, Ne işe yarar, Kurul turu, ürünler şeridi. Tekrarlanan parçalar (maddeler, paneller, ürünler) `build.py` içinde üretilir. |
 | `sablon/site.css` | Kabuğun yerleşimi. Yalnız `tokens.css` değişkenleri; renk değeri yazılmaz. |
-| `sablon/site.js` | Açılış betiği: denetim kancası (`?denetim=1`) ve kimlik anı. |
-| `metin/tr.json`, `metin/en.json` | Bütün metinler. İki dosyanın anahtarları birebir aynı olmalı; eksik ya da fazla anahtar derlemeyi durdurur. |
+| `sablon/site.js` | Açılış betiği: denetim kancası (`?denetim=1`), kimlik anı, kopyala düğmeleri (`data-kopyala`; sonuç yazıları sayfadan, `data-tamam` / `data-hata`) ve ana sayfadaki iki sahne. Betik yoksa kopyala düğmesi gizli kalır, cümle seçilebilir metindir. |
+| `metin/tr.json`, `metin/en.json` | Bütün metinler (yalnız README.md ve README.en.md'den, kısaltılarak). İki dosyanın anahtarları birebir aynı olmalı; eksik ya da fazla anahtar derlemeyi durdurur. `{yolda}`, `{surum}`, `{temel}` gibi yer tutucular derlemede tek kaynaktan dolar. |
 | `veri/urunler.json` | Ürünler şeridi (bugün yalnız Hafıza). Metinleri `metin` içinde `urunler.<anahtar>`. |
 | `cikti/` | Üretilen site. Depoya girer; yayın buradan yapılır. Elle düzenlenmez. |
 
@@ -23,6 +24,7 @@ python site/build.py --cikti DIR  # başka bir klasöre yazar
 
 - Renk, ölçü, bileşenler `brand/css/`; yazı tipleri `brand/font/`; logo `brand/logo/`; simgeler `brand/simge/`; sahneler `brand/js/sahne/`.
 - Özellik adları ve durumları `brand/js/ozellikler.json`. Adı olan bir özelliğin `en` bloğu yoksa derleme durur.
+- Kurul turu etiketlerindeki durum sözcüğü (`TAMAM`, `DENEMEDE`, `YOLDA`) özelliğin `ozellikler.json`daki durumundan, sözcüğün kendisi `brand/js/metin.json`dan; Çizgi ve söz biçimlerinin durağan SVG'leri `node brand/js/parca.mjs <dil>` ile üretilir (derleme için `node` gerekir).
 - Araç sayıları `council/server.py` içindeki `@mcp.tool` işlevlerinden (`ast` ile okunur, sunucu içe aktarılmaz); sürüm `pyproject.toml`.
 
 ## Çıktı

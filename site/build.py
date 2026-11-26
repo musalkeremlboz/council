@@ -10,7 +10,9 @@ import hashlib
 import html
 import importlib.util
 import json
+import re
 import shutil
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -25,6 +27,8 @@ VERI = SITE / "veri"
 CIKTI = SITE / "cikti"
 SUNUCU = KOK / "council" / "server.py"
 OZELLIKLER = BRAND / "js" / "ozellikler.json"
+SAHNE_METIN = BRAND / "js" / "metin.json"
+PARCA = BRAND / "js" / "parca.mjs"
 LOGO_KUR = BRAND / "logo" / "council-logo-kur.html"
 
 SITE_URL = "https://council.systems"
@@ -33,6 +37,8 @@ SAYFALAR = {"ana": {"tr": "", "en": "en/"}, "hafiza": {"tr": "hafiza/", "en": "e
 GITHUB = "https://github.com/musalkeremlboz/council"
 OGRENME_ARACLARI = ("council_rule", "council_skill", "council_skill_feedback", "council_unlearn")
 OZET_YER = "__ozet__"   # stands for the asset hash until the assets are copied
+YARAR_SIMGELERI = ("hafiza", "ogrenme", "telefon", "not")   # one icon per "what it does" item, in order
+TUR_OZELLIK = {2: 0, 3: 1, 4: 2}   # Kurul turu panel index -> feature index whose status its label shows
 
 
 def _brand_build():
@@ -213,8 +219,105 @@ def sayfa_yaz(ad: str, dil: str, govde: str, m: dict, ozet: str) -> str:
     )
 
 
+def _doldur(metin: str, degerler: dict) -> str:
+    """Fill {ad} placeholders; an unknown one stops the build."""
+    def koy(e):
+        if e.group(1) not in degerler:
+            raise SystemExit(f"metin: bilinmeyen yer tutucu {{{e.group(1)}}}: {metin!r}")
+        return str(degerler[e.group(1)])
+    return re.sub(r"\{(\w+)\}", koy, metin)
+
+
+def _buyuk(metin: str, dil: str) -> str:
+    """Upper case; Turkish i becomes İ."""
+    return (metin.replace("i", "İ") if dil == "tr" else metin).upper()
+
+
+def sahne_parcalari(dil: str) -> dict[str, str]:
+    """The Çizgi ve söz figures as static SVG ({"cizgi", "soz"}), from node brand/js/parca.mjs <dil>."""
+    try:
+        r = subprocess.run(["node", str(PARCA), dil], capture_output=True, text=True, encoding="utf-8", check=True)
+    except FileNotFoundError:
+        raise SystemExit("parca: node bulunamadı (Çizgi ve söz sahnesinin durağan SVG'leri için gerekir)") from None
+    except subprocess.CalledProcessError as hata:
+        raise SystemExit(f"parca: {hata.stderr.strip()}") from None
+    return json.loads(r.stdout)["cizgiSoz"]
+
+
+def _simge(ad: str) -> str:
+    """A brand/simge icon, inline (it draws in currentColor and is hidden from assistive technology)."""
+    svg = (BRAND / "simge" / f"{ad}.svg").read_text(encoding="utf-8").strip()
+    return svg.replace('<svg xmlns="http://www.w3.org/2000/svg" ', '<svg class="s-yarar__simge" focusable="false" ', 1)
+
+
+def ana_govde(dil: str, m: dict, ozet: str) -> str:
+    """Home body (sablon/ana.html): hero, Çizgi ve söz, what it does, Kurul turu, products strip."""
+    yol = SAYFALAR["ana"][dil]
+    varlik = f"{_kok(yol)}varlik/{ozet}/"
+    a, kur, cs, kurul = m["ana"], m["ana"]["kurulum"], m["ana"]["cizgiSoz"], m["kurul"]
+    sahne = _json(SAHNE_METIN)[dil]
+    oz = ozellikler(dil)
+    sayilar = {d: sum(o["durum"] == d for o in oz) for d in sahne["kurulTuru"]["durum"]}
+    temel, ogrenme = arac_sayilari()
+    parca = sahne_parcalari(dil)
+
+    maddeler = "\n".join(
+        f'    <li>{_simge(simge)}<h3 class="yazi-govde-l">{_e(md["baslik"])}</h3><p class="yazi-govde">{_e(md["cumle"])}</p></li>'
+        for simge, md in zip(YARAR_SIMGELERI, a["yarar"]["maddeler"], strict=True))
+    paneller = []
+    for i, p in enumerate(kurul["paneller"]):
+        etiket = p["etiket"]
+        if i in TUR_OZELLIK:
+            etiket += " · " + _buyuk(sahne["kurulTuru"]["durum"][oz[TUR_OZELLIK[i]]["durum"]], dil)
+        paneller.append(f'<article class="s-tur__panel"><p class="yazi-etiket">{_e(etiket)}</p>'
+                        f'<h3 class="yazi-baslik-m">{_e(p["baslik"])}</h3>'
+                        f'<p class="yazi-govde-l">{_e(_doldur(p["govde"], sayilar))}</p></article>')
+    if len(paneller) != 6:
+        raise SystemExit(f"metin: {dil} kurul.paneller altı panel olmalı, {len(paneller)} var")
+    urunler = []
+    for u in _json(VERI / "urunler.json"):
+        metin = m["urunler"][u["anahtar"]]
+        urunler.append(
+            f'    <li class="s-urun"><span class="s-urun__amblem">'
+            f'<img class="ia" src="{varlik}logo/{u["amblem"]}.svg" alt="" width="64" height="64">'
+            f'<img class="ik" src="{varlik}logo/{u["amblem"]}-koyu.svg" alt="" width="64" height="64"></span>'
+            f'<div><h3 class="yazi-baslik-m"><a class="c-baglanti" href="{_bag(yol, SAYFALAR[u["sayfa"]][dil])}">'
+            f'{_e(metin["ad"])}</a></h3><p class="yazi-govde">{_e(metin["cumle"])}</p></div></li>')
+
+    return Template((SABLON / "ana.html").read_text(encoding="utf-8")).substitute(
+        varlik=varlik,
+        slogan=_e(m["sayfalar"]["ana"]["h1"]),
+        tanim=_e(a["tanim"]),
+        kur_onu=_e(kur["onu"]),
+        kur_cumlesi=_e(kur["cumle"]),
+        kopyala=_e(kur["kopyala"]),
+        kopyalandi=_e(kur["kopyalandi"]),
+        secin=_e(kur["secin"]),
+        github=GITHUB,
+        cs_etiket=_e(cs["etiket"]),
+        cs_secici=_e(cs["secici"]),
+        cs_ad_cizgi=_e(cs["cizgi"]),
+        cs_ad_soz=_e(cs["soz"]),
+        cs_etiket_cizgi=_e(sahne["cizgiSoz"]["etiketCizgi"]),
+        cs_etiket_soz=_e(sahne["cizgiSoz"]["etiketSoz"]),
+        cs_cizgi=parca["cizgi"],
+        cs_soz=parca["soz"],
+        yarar_baslik=_e(a["yarar"]["baslik"]),
+        yarar_onu=_e(a["yarar"]["onu"]),
+        yarar_maddeler=maddeler,
+        kurul_baslik=_e(kurul["baslik"]),
+        kurul_gorsel=_e(kurul["gorsel"]),
+        kurul_paneller="\n".join(paneller),
+        kurul_son=_e(_doldur(kurul["son"], {"surum": surum(), "temel": temel, "ogrenme": ogrenme})),
+        urunler_baslik=_e(a["urunler"]),
+        urunler="\n".join(urunler),
+    ).rstrip("\n")
+
+
 def govde_yap(ad: str, dil: str, m: dict, ozet: str) -> str:
-    """Page body. Placeholder heading until the home and Hafıza bodies arrive."""
+    """Page body: the home page from sablon/ana.html; a placeholder heading until the Hafıza body arrives."""
+    if ad == "ana":
+        return ana_govde(dil, m, ozet)
     return f'<h1 class="yazi-baslik-xl" data-yazi-kur>{_e(m["sayfalar"][ad]["h1"])}</h1>'
 
 
