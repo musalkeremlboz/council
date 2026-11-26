@@ -25,3 +25,9 @@ def test_no_horizontal_overflow_on_phone():
 
 def test_no_horizontal_overflow_on_desktop():
     assert denetle.tasma_var_mi(ORNEK, 1280) is False
+
+
+def test_header_logo_builds_in_order_and_ends_as_its_source():
+    sira, ayni = denetle.kimlik_ani(ORNEK)
+    assert sira == "kor-c-yazi-isaret", sira   # kor O, then C, wordmark from 160 ms, the wave last
+    assert ayni, "after the identity moment the logo and the heading are their source markup again"

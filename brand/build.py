@@ -1,6 +1,7 @@
-"""tokens.json'dan CSS değişkenlerini üretir ve renk karşıtlığını denetler."""
+"""tokens.json'dan CSS değişkenlerini üretir ve renk karşıtlığını denetler; örnek sayfanın glif alt kümesini yazar."""
 import json
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
 BRAND = Path(__file__).resolve().parent
@@ -8,6 +9,11 @@ TOKENS = BRAND / "tokens.json"
 CSS_OUT = BRAND / "css" / "tokens.css"
 
 HEADER = "/* COUNCIL — generated from tokens.json */"
+
+GLIFLER = BRAND / "font" / "glifler.json"
+ORNEK = BRAND / "ornek" / "index.html"
+ORNEK_GLIFLER = BRAND / "ornek" / "glifler.json"
+HEP = ("space", "question")   # yazi-kur.js: sözcük arası ve bilinmeyen harf
 
 # (metin tokeni, zemin tokeni, en düşük oran)
 CONTRAST_PAIRS: list[tuple[str, str, float]] = (
@@ -87,6 +93,71 @@ def css_from_tokens(tokens: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+class _Kurulanlar(HTMLParser):
+    """[data-yazi-kur] öğelerinin metni (svg içi hariç) ve içlerindeki data-metin değerleri."""
+    BOS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+
+    def __init__(self):
+        super().__init__()
+        self.metinler: list[str] = []
+        self._yigin: list[tuple[str, bool, bool]] = []   # (etiket, kurulan mı, svg içinde mi)
+
+    def _icinde(self):
+        return any(k for _, k, _ in self._yigin), any(s for _, _, s in self._yigin)
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        kurulan, svg = self._icinde()
+        kurulan = kurulan or "data-yazi-kur" in a
+        if kurulan and a.get("data-metin"):
+            self.metinler.append(a["data-metin"])
+        if tag not in self.BOS:
+            self._yigin.append((tag, kurulan, svg or tag == "svg"))
+
+    def handle_startendtag(self, tag, attrs):
+        a = dict(attrs)
+        if self._icinde()[0] and a.get("data-metin"):
+            self.metinler.append(a["data-metin"])
+
+    def handle_endtag(self, tag):
+        while self._yigin:
+            if self._yigin.pop()[0] == tag:
+                break
+
+    def handle_data(self, data):
+        kurulan, svg = self._icinde()
+        if kurulan and not svg and data.strip():
+            self.metinler.append(data)
+
+
+def kurulan_metinler(html: str) -> list[str]:
+    p = _Kurulanlar()
+    p.feed(html)
+    return p.metinler
+
+
+def _tr_buyuk(metin: str) -> str:
+    return metin.replace("i", "İ").replace("ı", "I").upper()
+
+
+def glif_altkumesi(veri: dict, metinler: list[str]) -> dict:
+    """glifler.json'un yalnız bu metinlerde (ve büyük harfli hâllerinde) geçen harfleri: sahne yalnız kullandığını yükler."""
+    harfler = set()
+    for m in metinler:
+        harfler |= set(m) | set(_tr_buyuk(m))
+    harita = {ch: ad for ch, ad in veri["harita"].items() if ch in harfler}
+    adlar = set(harita.values()) | set(HEP)
+    return {**{k: v for k, v in veri.items() if k not in ("harita", "glifler")},
+            "harita": harita,
+            "glifler": {ad: g for ad, g in veri["glifler"].items() if ad in adlar}}
+
+
+def ornek_glifleri() -> str:
+    veri = json.loads(GLIFLER.read_text(encoding="utf-8"))
+    alt = glif_altkumesi(veri, kurulan_metinler(ORNEK.read_text(encoding="utf-8")))
+    return json.dumps(alt, ensure_ascii=False, separators=(",", ":")) + "\n"
+
+
 def main() -> int:
     tokens = load_tokens(TOKENS)
     failures = contrast_failures(tokens)
@@ -95,6 +166,7 @@ def main() -> int:
         return 1
     CSS_OUT.parent.mkdir(parents=True, exist_ok=True)
     CSS_OUT.write_text(css_from_tokens(tokens), encoding="utf-8")
+    ORNEK_GLIFLER.write_text(ornek_glifleri(), encoding="utf-8")
     return 0
 
 

@@ -54,7 +54,7 @@ def _olc(sayfa: Path, genislik: int) -> dict[str, str]:
             adres = _sarmal(adres, genislik, 900, Path(gecici))
         r = _calistir([f"--window-size={max(genislik, ASGARI)},900", "--virtual-time-budget=4000", "--dump-dom", adres],
                       Path(profil))
-    olcum = dict(re.findall(r'data-(tasma|yukseklik|sahney)="(\w+)"', r.stdout))
+    olcum = dict(re.findall(r'data-(tasma|yukseklik|sahney|kurulum|ayni)="([\w-]+)"', r.stdout))
     if "tasma" not in olcum:
         raise RuntimeError(f"data-tasma not found (exit {r.returncode}): {r.stderr[-400:]}")
     return olcum
@@ -62,6 +62,13 @@ def _olc(sayfa: Path, genislik: int) -> dict[str, str]:
 
 def tasma_var_mi(sayfa: Path, genislik: int) -> bool:
     return _olc(sayfa, genislik)["tasma"] == "true"
+
+
+def kimlik_ani(sayfa: Path, genislik: int = 1280) -> tuple[str, bool]:
+    """The order the logo parts started building in (e.g. "kor-c-yazi-isaret", "yok" if nothing was built)
+    and whether every [data-yazi-kur] element ended with its source markup."""
+    olcum = _olc(sayfa, genislik)
+    return olcum.get("kurulum", ""), olcum.get("ayni") == "true"
 
 
 def ekran_goruntusu(sayfa: Path, cikti: Path, genislik: int, tema: str, azalt: bool, js: bool,

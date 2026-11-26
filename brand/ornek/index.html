@@ -6,6 +6,7 @@
 <title>COUNCIL tasarım sistemi 0.2, canlı örnek</title>
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/council.css">
+<link rel="preload" href="glifler.json" as="fetch" crossorigin>
 <style>
 .ia { display: inline-block; }
 .ik { display: none; }
@@ -19,7 +20,8 @@ img, svg { max-inline-size: 100%; }
 
 .o-ust { position: relative; z-index: 2; background: var(--zemin); border-block-end: 1px solid var(--cizgi); }
 .o-ust__ic { max-inline-size: 1200px; margin-inline: auto; padding: var(--ara-3) var(--ara-4); display: flex; flex-wrap: wrap; align-items: center; gap: var(--ara-3) var(--ara-6); box-sizing: border-box; }
-.o-ust img { block-size: 32px; inline-size: auto; }
+.o-logo { display: block; color: var(--murekkep); }
+.o-logo svg { display: block; block-size: 32px; inline-size: auto; }
 .o-tema { display: flex; flex-wrap: wrap; gap: var(--ara-2); margin-inline-start: auto; }
 .o-sayfa { max-inline-size: 1200px; margin-inline: auto; padding: 0 var(--ara-4); box-sizing: border-box; }
 .o-bolum { padding-block: var(--ara-12); border-block-end: 1px solid var(--cizgi); }
@@ -70,8 +72,7 @@ img, svg { max-inline-size: 100%; }
 <body>
 <header class="o-ust">
   <div class="o-ust__ic">
-    <img class="ia" src="../logo/council-logo.svg" alt="COUNCIL" height="32">
-    <img class="ik" src="../logo/council-logo-koyu.svg" alt="COUNCIL" height="32">
+    <div class="o-logo" data-yazi-kur><svg focusable="false" viewBox="0 0 1762 400" role="img" aria-label="COUNCIL"><defs><mask id="ust-kesik" maskUnits="userSpaceOnUse" x="0" y="0" width="400" height="400"><rect width="400" height="400" fill="white"/><path data-kur="isaret" transform="translate(200 200)" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0" fill="none" stroke="black" stroke-width="48"/></mask></defs><g fill="none" stroke-width="28"><circle data-kur="kor" class="s-kor" cx="200" cy="200" r="112" mask="url(#ust-kesik)"/><path data-kur="c" transform="translate(200 200) rotate(45)" stroke="currentColor" d="M168 0A168 168 0 1 1 0 -168"/><path data-kur="isaret" transform="translate(200 200)" stroke="currentColor" d="M-56 0A56 56 0 0 1 56 0A56 56 0 0 0 168 0"/></g><g data-kur="yazi" data-metin="COUNCIL" data-ara="60" fill="currentColor" transform="translate(470 298) scale(0.28 -0.28)"><path transform="translate(0 0)" d="M636 103Q595 62 545.5 37.0Q496 12 442.5 4.0Q389 -4 335.5 4.0Q282 12 232.5 37.0Q183 62 142 103Q101 144 76.0 193.5Q51 243 43.0 296.5Q35 350 43.0 403.5Q51 457 76.0 506.5Q101 556 142 597Q183 638 232.5 663.0Q282 688 335.5 696.0Q389 704 442.5 696.0Q496 688 545.5 663.0Q595 638 636 597L566 527Q529 563 483.5 581.5Q438 600 389.0 600.0Q340 600 294.5 581.5Q249 563 212 527Q176 490 157.5 444.5Q139 399 139.0 350.0Q139 301 157.5 255.5Q176 210 212 173Q249 137 294.5 118.5Q340 100 389.0 100.0Q438 100 483.5 118.5Q529 137 566 173Z"/><path transform="translate(715 0)" d="M735 350Q735 292 717.5 239.5Q700 187 667.5 143.5Q635 100 591.5 67.5Q548 35 495.5 17.5Q443 0 385 0Q327 0 274.5 17.5Q222 35 178.5 67.5Q135 100 102.5 143.5Q70 187 52.5 239.5Q35 292 35 350Q35 408 52.5 460.5Q70 513 102.5 556.5Q135 600 178.5 632.5Q222 665 274.5 682.5Q327 700 385 700Q443 700 495.5 682.5Q548 665 591.5 632.5Q635 600 667.5 556.5Q700 513 717.5 460.5Q735 408 735 350ZM635 350Q635 402 615.5 447.0Q596 492 561.5 526.5Q527 561 482.0 580.5Q437 600 385 600Q333 600 288.0 580.5Q243 561 208.5 526.5Q174 492 154.5 447.0Q135 402 135 350Q135 298 154.5 253.0Q174 208 208.5 173.5Q243 139 288.0 119.5Q333 100 385 100Q437 100 482.0 119.5Q527 139 561.5 173.5Q596 208 615.5 253.0Q635 298 635 350Z"/><path transform="translate(1545 0)" d="M55 300V700H155V300Q155 259 170.5 222.5Q186 186 213.5 158.5Q241 131 277.5 115.5Q314 100 355 100Q396 100 432.5 115.5Q469 131 496.5 158.5Q524 186 539.5 222.5Q555 259 555 300V700H655V300Q655 238 631.5 183.5Q608 129 567.0 88.0Q526 47 471.5 23.5Q417 0 355 0Q293 0 238.5 23.5Q184 47 143.0 88.0Q102 129 78.5 183.5Q55 238 55 300Z"/><path transform="translate(2315 0)" d="M55 0V400Q55 462 78.5 516.5Q102 571 143.0 612.0Q184 653 238.5 676.5Q293 700 355 700Q417 700 471.5 676.5Q526 653 567.0 612.0Q608 571 631.5 516.5Q655 462 655 400V0H555V400Q555 441 539.5 477.5Q524 514 496.5 541.5Q469 569 432.5 584.5Q396 600 355 600Q314 600 277.5 584.5Q241 569 213.5 541.5Q186 514 170.5 477.5Q155 441 155 400V0Z"/><path transform="translate(3085 0)" d="M636 103Q595 62 545.5 37.0Q496 12 442.5 4.0Q389 -4 335.5 4.0Q282 12 232.5 37.0Q183 62 142 103Q101 144 76.0 193.5Q51 243 43.0 296.5Q35 350 43.0 403.5Q51 457 76.0 506.5Q101 556 142 597Q183 638 232.5 663.0Q282 688 335.5 696.0Q389 704 442.5 696.0Q496 688 545.5 663.0Q595 638 636 597L566 527Q529 563 483.5 581.5Q438 600 389.0 600.0Q340 600 294.5 581.5Q249 563 212 527Q176 490 157.5 444.5Q139 399 139.0 350.0Q139 301 157.5 255.5Q176 210 212 173Q249 137 294.5 118.5Q340 100 389.0 100.0Q438 100 483.5 118.5Q529 137 566 173Z"/><path transform="translate(3800 0)" d="M55 0V700H155V0Z"/><path transform="translate(4070 0)" d="M55 0V700H155V100H455V0Z"/></g></svg></div>
     <nav class="c-gezinme" aria-label="Bölümler">
       <a href="#renk">Renk</a><a href="#yazi">Yazı</a><a href="#aralik">Boşluk</a><a href="#bilesenler">Bileşenler</a><a href="#simgeler">Simgeler</a><a href="#amblemler">Amblemler</a><a href="#sahneler">Sahneler</a>
     </nav>
@@ -85,7 +86,7 @@ img, svg { max-inline-size: 100%; }
 
 <main class="o-sayfa">
 <section class="o-kahraman" aria-labelledby="bas">
-  <h1 id="bas" class="yazi-baslik-xl" data-yazi-kur data-glifler="../font/glifler.json">Birçok üye, tek hafıza</h1>
+  <h1 id="bas" class="yazi-baslik-xl" data-yazi-kur data-glifler="glifler.json">Birçok üye, tek hafıza</h1>
   <p class="yazi-govde-l">COUNCIL tasarım sistemi 0.2. Bu sayfa sistemin kendisiyle yazılmıştır: her renk, ölçü ve bileşen <code class="yazi-kod">brand/</code> altındaki dosyalardan gelir.</p>
 </section>
 
@@ -386,12 +387,12 @@ img, svg { max-inline-size: 100%; }
         </svg>
       </figure>
       <div class="s-tur__metin"><div class="s-tur__paneller">
-<article class="s-tur__panel"><p class="yazi-etiket">1 / 6 · TAMAM</p><h3 class="yazi-baslik-m">Hafıza</h3><p class="yazi-govde-l">Dalga bir notu hafızaya yazar, sonra başka bir cihaz okur. Telefon, bilgisayar ve sunucu aynı hafızayı paylaşır.</p></article>
-<article class="s-tur__panel"><p class="yazi-etiket">2 / 6 · DENEMEDE</p><h3 class="yazi-baslik-m">Kişisel gelişim</h3><p class="yazi-govde-l">Yardımcı öğrendiğini kaydeder, tek satırla haber verir; istersen geri alınır.</p></article>
-<article class="s-tur__panel"><p class="yazi-etiket">3 / 6 · YOLDA</p><h3 class="yazi-baslik-m">Adı henüz yazılmadı</h3><p class="yazi-govde-l">Bu parça yolda. Testi ve ölçümü geçince eklenir.</p></article>
-<article class="s-tur__panel"><p class="yazi-etiket">4 / 6 · YOLDA</p><h3 class="yazi-baslik-m">Adı henüz yazılmadı</h3><p class="yazi-govde-l">Bu parça yolda. Testi ve ölçümü geçince eklenir.</p></article>
-<article class="s-tur__panel"><p class="yazi-etiket">5 / 6 · YOLDA</p><h3 class="yazi-baslik-m">Adı henüz yazılmadı</h3><p class="yazi-govde-l">Bu parça yolda. Testi ve ölçümü geçince eklenir.</p></article>
-<article class="s-tur__panel"><p class="yazi-etiket">6 / 6 · YOLDA</p><h3 class="yazi-baslik-m">Adı henüz yazılmadı</h3><p class="yazi-govde-l">Bu parça yolda. Testi ve ölçümü geçince eklenir.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">1 / 6</p><h3 class="yazi-baslik-m">Amblem</h3><p class="yazi-govde-l">COUNCIL, bütün yardımcıların paylaştığı tek bir hafıza. Amblemi aynı zamanda bir yol haritası.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">2 / 6</p><h3 class="yazi-baslik-m">Altı özellik</h3><p class="yazi-govde-l">Dış halka COUNCIL'in altı temel özelliğidir. Dolu parça hazır demek; içi boş çerçeve yolda.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">3 / 6 · TAMAM</p><h3 class="yazi-baslik-m">Hafıza</h3><p class="yazi-govde-l">Dalga bir notu hafızaya yazar, sonra başka bir cihaz okur. Telefon, bilgisayar ve sunucu aynı hafızayı paylaşır.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">4 / 6 · DENEMEDE</p><h3 class="yazi-baslik-m">Kişisel gelişim</h3><p class="yazi-govde-l">Yardımcı öğrendiğini kaydeder, tek satırla haber verir; istersen geri alınır.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">5 / 6 · YOLDA</p><h3 class="yazi-baslik-m">Yolda</h3><p class="yazi-govde-l">Öteki dördünün adı henüz yazılmadı. Bir özellik testini ve ölçümünü geçince eklenir, parçası dolar.</p></article>
+<article class="s-tur__panel"><p class="yazi-etiket">6 / 6</p><h3 class="yazi-baslik-m">1.0.0</h3><p class="yazi-govde-l">Altısı da dolduğunda parçalar yeniden tek bir C olur ve sürüm 1.0.0 çıkar. Henüz değil: amblem, varılacak yerin resmi.</p></article>
       </div></div>
     </div>
   </section>
@@ -439,11 +440,24 @@ const menuAyarla = (acik) => {
 menuD.addEventListener("click", () => menuAyarla(!menu.hasAttribute("data-acik")));
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && menu.hasAttribute("data-acik")) { menuAyarla(false); menuD.focus(); } });
 
-// Denetim: yatay taşma var mı
+// Denetim: yatay taşma var mı; kimlik anında logo parçaları hangi sırayla kuruldu, sonunda kaynak işaretleme geri geldi mi
 if (new URLSearchParams(location.search).get("denetim") === "1") {
+  const kaynak = fetch(location.href.split("?")[0]).then((r) => r.text()).then((t) => new DOMParser().parseFromString(t, "text/html"));
+  const baslangic = new Map();
+  new MutationObserver(() => {
+    for (const p of document.querySelectorAll(".o-logo .s-ciz")) {
+      const rol = p.closest("[data-kur]")?.dataset.kur, d = Number(p.style.getPropertyValue("--d"));
+      if (rol) baslangic.set(rol, Math.min(d, baslangic.get(rol) ?? Infinity));
+    }
+  }).observe(document.querySelector(".o-logo"), { subtree: true, childList: true, attributes: true });
   addEventListener("load", () => {
     const olc = () => { kok.dataset.tasma = String(kok.scrollWidth > innerWidth); kok.dataset.yukseklik = String(kok.scrollHeight); kok.dataset.sahney = String(document.getElementById("sahneler").offsetTop); };
     (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => setTimeout(olc, 600));
+    setTimeout(async () => {   // kimlik anı en fazla 1,8 sn sürer
+      const asil = [...(await kaynak).querySelectorAll("[data-yazi-kur]")];
+      kok.dataset.kurulum = [...baslangic].sort((a, b) => a[1] - b[1]).map(([rol]) => rol).join("-") || "yok";
+      kok.dataset.ayni = String([...document.querySelectorAll("[data-yazi-kur]")].every((e, i) => e.innerHTML === asil[i]?.innerHTML));
+    }, 2400);
   });
 }
 </script>

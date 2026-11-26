@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   hareketAzaltildi, azaltmaIzle, yaklas, cizimDongusu, gorunurlukBekcisi, kokuIsaretle,
 } from "../../brand/js/sahne/ortak.js";
-import { glifYollari, zamanla, SURE } from "../../brand/js/sahne/yazi-kur.js";
+import { glifYollari, zamanla, SURE, baslat as yaziKur, amblemiKur } from "../../brand/js/sahne/yazi-kur.js";
 import { TUR, GECIS, amblemSvg } from "../../brand/js/sahne/cizgi-soz.js";
 import { bolumBul, koltukAcilari, doluluk, etiketOpak } from "../../brand/js/sahne/kurul-turu.js";
 import { readFileSync } from "node:fs";
@@ -244,4 +244,73 @@ test("amblemSvg: söz carries the words, the kor O is the same in both forms", (
   const kor = (s) => s.match(/<circle[^>]*s-kor[^>]*>/)[0].replace(/url\(#[^)]+\)/, "");
   assert.equal(kor(cizgi), kor(soz));
   assert.ok(!/#[0-9a-fA-F]{3,8}\b/.test(cizgi + soz.replace(/href="#[^"]+"|url\(#[^)]+\)/g, "")));
+});
+
+// A page with one heading to build; getComputedStyle is the first thing the build touches, so it marks "built".
+function kurulacakSayfa(url) {
+  const kok = {
+    ownerDocument: null,
+    baseURI: "http://ornek.test/",
+    documentElement: { classList: { add() {}, remove() {} } },
+    defaultView: { addEventListener() {} },
+  };
+  const baslik = { dataset: {}, textContent: "Tek hafıza", childNodes: [], querySelector: () => null, getAttribute: () => url };
+  kok.querySelectorAll = () => [baslik];
+  kok.querySelector = () => baslik;
+  return kok;
+}
+
+async function kimlikAni(url, saat) {
+  const onceki = { mm: globalThis.matchMedia, f: globalThis.fetch, gcs: globalThis.getComputedStyle };
+  globalThis.matchMedia = () => sahteMq(false);
+  globalThis.fetch = async () => ({ ok: true, json: async () => GLIFLER });
+  globalThis.getComputedStyle = () => { throw new Error("kuruldu"); };
+  try { globalThis.sessionStorage?.clear(); } catch { /* node without web storage */ }   // a fresh session each time
+  try {
+    await yaziKur(kurulacakSayfa(url), { saat });
+    return false;
+  } catch (e) {
+    if (e.message !== "kuruldu") throw e;
+    return true;
+  } finally {
+    globalThis.matchMedia = onceki.mm; globalThis.fetch = onceki.f; globalThis.getComputedStyle = onceki.gcs;
+  }
+}
+
+test("the identity moment builds when the glyphs arrive early and never wipes a heading the visitor is already reading", async () => {
+  assert.ok(SURE.gec + SURE.okunur <= SURE.en, "a late start still ends inside the identity limit");
+  assert.equal(await kimlikAni("erken.json", () => SURE.gec - 1), true);
+  assert.equal(await kimlikAni("gec.json", () => SURE.gec + 1), false);
+  assert.equal(await kimlikAni("cok-gec.json", () => 2200), false);
+});
+
+function sahteParca(rol, uzunluk) {
+  const attrs = {}, siniflar = new Set();
+  return {
+    dataset: { kur: rol }, attrs, siniflar,
+    classList: { add: (c) => siniflar.add(c) },
+    getTotalLength: () => uzunluk,
+    setAttribute(a, v) { attrs[a] = v; },
+    get d() { return Number(/--d:(\d+)/.exec(attrs.style)[1]); },
+  };
+}
+
+test("amblemiKur draws the kor O first, then the C, the wave last, and the wordmark inside the limit", () => {
+  const kor = sahteParca("kor", 704), c = sahteParca("c", 792), maske = sahteParca("isaret", 528), dalga = sahteParca("isaret", 528);
+  const yazi = { dataset: { kur: "yazi", metin: "COUNCIL", ara: "60" }, innerHTML: "" };
+  const svg = { querySelectorAll: () => [kor, c, maske, yazi, dalga] };
+  const onceki = globalThis.getComputedStyle;
+  globalThis.getComputedStyle = () => ({ fill: "currentColor" });
+  let son;
+  try { son = amblemiKur(svg, GLIFLER, 0); } finally { globalThis.getComputedStyle = onceki; }
+  assert.ok(kor.d < c.d && c.d < dalga.d, `${kor.d} ${c.d} ${dalga.d}`);
+  assert.equal(maske.d, dalga.d, "the cut in the kor O opens with the wave");
+  for (const p of [kor, c, maske, dalga]) {
+    assert.ok(p.siniflar.has("s-ciz"));
+    assert.match(p.attrs["stroke-dasharray"], /^\d+(\.\d)? \d+(\.\d)?$/);
+  }
+  const yazilar = [...yazi.innerHTML.matchAll(/--d:(\d+)/g)].map((m) => Number(m[1]));
+  assert.ok(yazilar.length >= 7, "every letter of COUNCIL is drawn");
+  assert.ok(Math.min(...yazilar) > kor.d);
+  assert.ok(son <= SURE.okunur, `the logo is whole by ${son} ms`);
 });

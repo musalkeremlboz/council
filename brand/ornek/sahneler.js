@@ -5,9 +5,11 @@ import { baslat as kurulTuru } from "../js/sahne/kurul-turu.js";
 
 const bolum = (id) => document.getElementById(id);
 
+// Kimlik anı hemen başlar: glifler ile özellik listesi aynı anda yüklenir.
+const kimlik = yaziKur(document);
 let ozellikler = null;
 try { ozellikler = await fetch("../js/ozellikler.json").then((r) => r.json()); } catch { /* dosya olarak açılmışsa duran hâl kalır */ }
 
-await yaziKur(document);
+await kimlik;
 cizgiSoz(bolum("cizgi-soz-bolum"));
 if (ozellikler) kurulTuru(bolum("kurul-turu"), ozellikler);

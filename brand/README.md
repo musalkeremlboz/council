@@ -113,7 +113,7 @@ Kurallar:
 
 Modüller `brand/js/sahne/` altındadır.
 
-- **Kendini kuran yazı** (`yazi-kur.js`): kimlik anı. Açılışta logo ve ilk başlık, gerçek glif geometrisinden (`brand/font/glifler.json`) kurulur. Oturumda bir kez.
+- **Kendini kuran yazı** (`yazi-kur.js`): kimlik anı. Açılışta logo ve ilk başlık, gerçek glif geometrisinden (`brand/font/glifler.json`) kurulur. Oturumda bir kez. Sayfa yalnız kurduğu harfleri yükler: örnek sayfanın alt kümesi `brand/ornek/glifler.json`dır, `python brand/build.py` yazar ve sayfa onu `preload` ile erkenden ister. Glifler açılıştan 400 ms sonra hâlâ gelmemişse kurulum yapılmaz; okunmaya başlanmış başlık silinmez.
 - **Çizgi ve söz** (`cizgi-soz.js`): logonun çizgi ve söz biçimi arasında bir kez geçiş. Logo tanıtılırken kullanılır.
 - **Kurul turu** (`kurul-turu.js`): "nasıl çalışır" bölümü. Kaydırma sahnenin zamanıdır, altı adımda amblemi, altı özelliği ve hafızanın nasıl çalıştığını anlatır.
 
@@ -140,7 +140,7 @@ Dış halkanın altı parçası sistemin altı temel özelliğidir. Bugünkü du
 Depo kökünden:
 
 ```
-python brand/build.py                    # tokens.json -> brand/css/tokens.css, karşıtlığı denetler
+python brand/build.py                    # tokens.json -> brand/css/tokens.css, karşıtlığı denetler; örnek sayfanın glif alt kümesi
 python brand/simge/build_simge.py        # simgeler
 python brand/logo/build_logo.py          # logo SVG'leri (font sanal ortamının python'u gerekir)
 python brand/font/build_font.py          # Council Halka (font sanal ortamının python'u gerekir)
@@ -163,7 +163,7 @@ Font, logo ve README görseli komutları bu ortamın python'uyla çalıştırıl
 ~/.cache/council-brand-venv/bin/python -m pytest tests/test_brand_font.py tests/test_brand_logo.py -q
 ```
 
-Üretim komutları çıktıyı değiştirmemelidir: değiştiriyorsa kaynak ile dosya ayrışmıştır. Tek istisna `build_font.py`: `CouncilHalka.ttf` ve `.woff2` her üretimde yeniden yazılır, çünkü `head` tablosundaki değişiklik zamanı güncellenir. Konturlar, ölçümler ve öteki tablolar aynı kalır. Yazı tipinde glif değişikliği yoksa bu iki dosya depoya geri alınır (`git checkout brand/font/CouncilHalka.ttf brand/font/CouncilHalka.woff2`). Logo SVG'leri her seferinde birebir aynı çıkar.
+Üretim komutları çıktıyı değiştirmemelidir: değiştiriyorsa kaynak ile dosya ayrışmıştır. `build_font.py` da buna uyar: `head` tablosunun oluşturma ve değişiklik zamanı sabittir (`STAMP`), yazı tipi her üretimde birebir aynı çıkar. Logo SVG'leri de her seferinde birebir aynı çıkar.
 
 ## Nasıl denetlenir
 

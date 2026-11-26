@@ -18,6 +18,9 @@ from pathops import Path
 
 FAMILY = "Council Halka"
 VERSION = "0.2"
+# head.created / head.modified: fixed, so a rebuild writes the same bytes (fontTools would stamp the build time).
+# The value is the 0.2 release build (2026-11-26 00:36:41 UTC, seconds since 1904); change it only with the glyphs.
+STAMP = 3878498201
 UPM = 1000
 H = 700          # cap height, also the lowercase ascender
 XH = 500         # x-height
@@ -376,6 +379,8 @@ def build(out_dir):
                 usWinDescent=-DESC, sCapHeight=H, sxHeight=XH, usWeightClass=500)
     fb.setupPost()
     addOpenTypeFeaturesFromString(fb.font, kern_feature())
+    fb.font["head"].created = fb.font["head"].modified = STAMP
+    fb.font.recalcTimestamp = False
     out = pathlib.Path(out_dir)
     fb.font.save(out / "CouncilHalka.ttf")
     fb.font.flavor = "woff2"

@@ -34,8 +34,8 @@ BILESENLER = {
               '<button class="c-dugme c-dugme--k">Küçük</button>'
               '<button class="c-dugme c-dugme--b">Büyük</button></p>'),
     "Alan": ("Girdi", 160, "Düz köşeli, kesiksiz, 44 px metin alanı. Etiketi her zaman görünür.",
-             '<label for="a1" style="display:block;margin-block-end:var(--ara-2)">Not başlığı</label>'
-             '<input id="a1" class="c-alan" value="Proje notu" style="max-inline-size:320px">'),
+             '<div class="c-alan" style="max-inline-size:320px"><label class="c-alan__etiket" for="a1">Not başlığı</label>'
+             '<input id="a1" class="c-alan__giris" value="Proje notu"></div>'),
     "Kart": ("Yüzey", 200, "Düz kare yüzey. Tıklanan kartta sabit kesik vardır, içine ikinci düğme konmaz.",
              '<div style="display:flex;gap:var(--ara-4);flex-wrap:wrap">'
              '<div class="c-kart" style="max-inline-size:240px"><p>Toplantı kararı</p></div>'

@@ -155,3 +155,10 @@ def test_geometry_matches_font():
 def test_geometry_covers_cmap():
     geo = json.loads(GEO.read_text(encoding="utf-8"))
     assert geo["harita"] == {chr(cp): n for cp, n in CMAP.items()}
+
+
+def test_build_is_reproducible(tmp_path):
+    # head.created/modified are fixed: a rebuild must write the committed bytes, so `git status` stays clean.
+    build_font.build(tmp_path)
+    for name in ("CouncilHalka.ttf", "CouncilHalka.woff2", "glifler.json"):
+        assert (tmp_path / name).read_bytes() == (FONT_DIR / name).read_bytes(), name

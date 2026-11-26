@@ -80,3 +80,57 @@ def test_preview_css_variables_are_defined(tmp_path):
             kullanilan.setdefault(v, p.name)
     eksik = {v: p for v, p in kullanilan.items() if v not in tanimli}
     assert not eksik, eksik
+
+
+# Form controls carry only the control classes; wrapper classes (c-alan) go on the surrounding block.
+KONTROL = {"c-alan__giris", "c-isaret", "c-radyo"}
+
+
+def _sinif_agaci(html):
+    """Every element as (tag, its c- classes, the c- classes of its ancestors)."""
+    from html.parser import HTMLParser
+
+    BOS = {"input", "img", "br", "meta", "link", "hr", "circle", "rect", "path"}
+    out, yigin = [], []
+
+    class P(HTMLParser):
+        def handle_starttag(self, tag, attrs):
+            sinif = {c for c in (dict(attrs).get("class") or "").split() if c.startswith("c-")}
+            ata = set().union(*(s for _, s in yigin)) if yigin else set()
+            out.append((tag, sinif, ata))
+            if tag not in BOS:
+                yigin.append((tag, sinif))
+
+        def handle_startendtag(self, tag, attrs):
+            sinif = {c for c in (dict(attrs).get("class") or "").split() if c.startswith("c-")}
+            out.append((tag, sinif, set().union(*(s for _, s in yigin)) if yigin else set()))
+
+        def handle_endtag(self, tag):
+            while yigin:
+                if yigin.pop()[0] == tag:
+                    break
+
+    P().feed(html)
+    return out
+
+
+def test_preview_classes_sit_on_the_right_elements(tmp_path):
+    import re
+    _yaz(tmp_path)
+    css = (BRAND / "css" / "council.css").read_text(encoding="utf-8")
+    tanimli = set(re.findall(r"\.(c-[\w-]+)", css))
+    for p in (tmp_path / "project/components").glob("*/preview.html"):
+        for tag, sinif, ata in _sinif_agaci(p.read_text(encoding="utf-8")):
+            assert sinif <= tanimli, (p.parent.name, sinif - tanimli)
+            if tag in ("input", "textarea", "select"):
+                assert sinif and sinif <= KONTROL, (p.parent.name, tag, sinif)
+            for c in sinif:
+                if "__" in c:   # a BEM part lives inside its block
+                    assert c.split("__")[0] in ata, (p.parent.name, c)
+
+
+def test_alan_preview_is_the_field_component(tmp_path):
+    _yaz(tmp_path)
+    html = (tmp_path / "project/components/Alan/preview.html").read_text(encoding="utf-8")
+    assert '<div class="c-alan" ' in html and '<label class="c-alan__etiket" for="a1">' in html
+    assert '<input id="a1" class="c-alan__giris"' in html

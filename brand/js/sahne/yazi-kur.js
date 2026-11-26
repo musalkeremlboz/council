@@ -17,8 +17,9 @@
 
 import { hareketAzaltildi, azaltmaIzle, kokuIsaretle } from "./ortak.js";
 
-// ms. Başlık en geç `okunur` anında tamamdır; kimlik anı `en` sınırını geçmez.
-export const SURE = { ciz: 420, harf: 40, ilke: 60, yazi: 420, okunur: 1200, en: 1800 };
+// ms. Başlık en geç `okunur` anında tamamdır; kimlik anı `en` sınırını geçmez. Glifler sayfa açıldıktan
+// `gec` ms sonra hâlâ gelmemişse kurulum yapılmaz: ziyaretçinin okumaya başladığı başlık silinmez.
+export const SURE = { ciz: 420, harf: 40, ilke: 60, yazi: 420, okunur: 1200, en: 1800, gec: 400 };
 const PARCA = { kor: 0, c: 120, isaret: 300 };   // önce kor O, sonra C, en son dalga
 const LOGO_YAZI = 160;
 const UST = 960, ALT = -260;                       // yazı tipinin çıkış ve inişi (build_font.py ASC, DESC)
@@ -143,7 +144,7 @@ function yaziyiKur(el, veri, gecikme) {
   return son;
 }
 
-function amblemiKur(svg, veri, gecikme) {
+export function amblemiKur(svg, veri, gecikme) {
   let son = 0;
   for (const p of svg.querySelectorAll("[data-kur]")) {
     const rol = p.dataset.kur;
@@ -213,9 +214,10 @@ const oturum = (yaz) => {
   } catch { return false; }
 };
 
-// Sayfadaki [data-yazi-kur] öğelerini bir kez kurar. Hareket azaltılmışsa, bu oturumda zaten kurulduysa
-// ya da glifler yüklenemezse öğeler olduğu gibi (yazı tipiyle) kalır.
-export async function baslat(kok = document) {
+// Sayfadaki [data-yazi-kur] öğelerini bir kez kurar. Hareket azaltılmışsa, bu oturumda zaten kurulduysa,
+// glifler yüklenemezse ya da geç gelirse (saat() > sinir; saat sayfanın açılışından beri geçen ms) öğeler
+// olduğu gibi (yazı tipiyle) kalır.
+export async function baslat(kok = document, { sinir = SURE.gec, saat = () => performance.now() } = {}) {
   const doc = kok.ownerDocument || kok;
   kokuIsaretle(doc);
   const ogeler = [...kok.querySelectorAll("[data-yazi-kur]")];
@@ -223,7 +225,7 @@ export async function baslat(kok = document) {
   if (!ogeler.length || !url || hareketAzaltildi() || oturum(false)) return;
   let veri;
   try { veri = await glifleriYukle(new URL(url, doc.baseURI).href); } catch { return; }
-  if (hareketAzaltildi()) return;
+  if (hareketAzaltildi() || saat() > sinir) return;
   oturum(true);
   const logo = ogeler.some((e) => e.querySelector("svg"));
   await Promise.all(ogeler.map((e) => kur(e, veri, {
